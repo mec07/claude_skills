@@ -46,12 +46,30 @@ This symlinks all skills into `~/.claude/skills/`. No dependencies beyond the sh
 ./install.sh --uninstall llm-docs   # Uninstall a specific skill
 ```
 
-### Skill-specific dependencies
+### Dependencies
 
-- **Sleep** and **JIRA** tools require [Bun](https://bun.sh/).
-- **JIRA**, **TechDebt**, **WOP**, and **STANDUP** require `JIRA_API_TOKEN` and `JIRA_EMAIL` in `~/.claude/.env`.
-- **ReviewPR** and **Worktree** require the [GitHub CLI](https://cli.github.com/) (`gh`).
-- **STANDUP** optionally uses a Clockify API key (`CLOCKIFY_API_KEY` in `~/.claude/.env`).
+The installer itself only needs `git` and a POSIX shell. Individual skills have their own runtime dependencies:
+
+| Dependency | Required by | Install |
+|------------|-------------|---------|
+| [GitHub CLI](https://cli.github.com/) (`gh`) | ReviewPR, WOP, STANDUP, Worktree | `brew install gh` / [github.com/cli/cli](https://github.com/cli/cli#installation) |
+| [Bun](https://bun.sh/) | JIRA, Sleep, TechDebt, WOP, STANDUP | `curl -fsSL https://bun.sh/install \| bash` |
+| [Python 3](https://www.python.org/) | TechDebt, STANDUP, Worktree | Usually pre-installed on macOS/Linux |
+| `curl` | JIRA, TechDebt, STANDUP, Worktree | Usually pre-installed on macOS/Linux |
+| `git` | ReviewPR, Worktree, STANDUP | `brew install git` / `apt install git` |
+
+**llm-docs** and **Sleep** have no external dependencies beyond what Claude Code provides (Sleep needs Bun only for its tool script).
+
+### API keys
+
+Some skills need credentials in `~/.claude/.env`:
+
+```bash
+JIRA_API_TOKEN=...    # JIRA, TechDebt, WOP, STANDUP, Worktree
+JIRA_EMAIL=...        # JIRA, TechDebt, WOP, STANDUP, Worktree
+JIRA_BASE_URL=...     # JIRA, TechDebt, WOP, STANDUP, Worktree
+CLOCKIFY_API_KEY=...  # STANDUP (optional)
+```
 
 ## Adding a new skill
 
