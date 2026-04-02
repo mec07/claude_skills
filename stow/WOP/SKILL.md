@@ -1,5 +1,5 @@
 ---
-name: wop
+name: WOP
 description: Work in Progress sync — updates ticket statuses, PR states, and the WIP Obsidian page from live Jira/GitHub data. USE WHEN wop, work in progress, update wip, sync tickets, what's the state of things, check my PRs, stale tickets.
 ---
 
@@ -16,12 +16,12 @@ Status sync skill. Answers "what's the current state of things?" by pulling live
 ## Configuration
 
 ```
-Repo:          /Users/freddylem/dev/powerx/data
+Repo:          $HOME/dev/powerx/data
 GitHub org:    powerxai/data
-Jira tool:     ~/.claude/skills/_JIRA/Tools/Jira.ts
+Jira tool:     ~/.claude/skills/JIRA/Tools/Jira.ts
 WIP page:      {VAULT}/PAI/PAI Work In Progress.md
 Open Loops:    ~/.claude/skills/PAI/USER/OPEN_LOOPS.md
-Vault base:    /Users/freddylem/Library/CloudStorage/GoogleDrive-fredlemi@gmail.com/My Drive/Obsidian/Obsidian Vault
+Vault base:    $HOME/Library/CloudStorage/GoogleDrive-fredlemi@gmail.com/My Drive/Obsidian/Obsidian Vault
 ```
 
 ## Workflow Routing

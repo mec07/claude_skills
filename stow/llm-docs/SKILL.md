@@ -1,4 +1,9 @@
-# Skill: llm-docs
+---
+name: llm-docs
+description: Generate LLM-optimised documentation for any codebase. USE WHEN llm-docs, generate docs, LLM documentation, document codebase.
+---
+
+# llm-docs
 
 Generate a comprehensive, accurate, LLM-optimised documentation layer for any codebase. The output enables Claude Code, Copilot, Cursor, and other LLM agents to navigate, understand, and modify the codebase effectively.
 

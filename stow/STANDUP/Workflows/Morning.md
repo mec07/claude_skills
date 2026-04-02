@@ -29,7 +29,7 @@ for e in entries:
 ### 2. Pull Git commits (last 24h)
 
 ```bash
-cd /Users/freddylem/dev/powerx/data
+cd $HOME/dev/powerx/data
 git log --oneline --since="24 hours ago" --author="fred" --all 2>/dev/null || echo "  No commits in last 24h"
 ```
 
@@ -47,17 +47,17 @@ gh pr list --repo powerxai/data --search "review-requested:@me" --json number,ti
 
 ```bash
 # Tickets updated by Fred in last 24h
-bun ~/.claude/skills/_JIRA/Tools/Jira.ts search "assignee=currentUser() AND updated >= -1d ORDER BY updated DESC" --fields key,summary,status
+bun ~/.claude/skills/JIRA/Tools/Jira.ts search "assignee=currentUser() AND updated >= -1d ORDER BY updated DESC" --fields key,summary,status
 ```
 
 ### 5. Identify today's priorities
 
 ```bash
 # In-progress tickets
-bun ~/.claude/skills/_JIRA/Tools/Jira.ts search "assignee=currentUser() AND status='In Development' ORDER BY priority DESC" --fields key,summary,priority
+bun ~/.claude/skills/JIRA/Tools/Jira.ts search "assignee=currentUser() AND status='In Development' ORDER BY priority DESC" --fields key,summary,priority
 
 # Sprint tickets not started
-bun ~/.claude/skills/_JIRA/Tools/Jira.ts search "assignee=currentUser() AND sprint in openSprints() AND status='New' ORDER BY priority DESC" --fields key,summary,priority
+bun ~/.claude/skills/JIRA/Tools/Jira.ts search "assignee=currentUser() AND sprint in openSprints() AND status='New' ORDER BY priority DESC" --fields key,summary,priority
 ```
 
 ### 6. Read Work In Progress for context

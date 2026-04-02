@@ -1,5 +1,5 @@
 ---
-name: standup
+name: STANDUP
 description: Morning standup prep — pulls last 24h from Clockify, Jira, GitHub, and git log. USE WHEN standup, what did I do yesterday, standup notes, morning prep, daily standup, scrum update.
 ---
 
@@ -15,11 +15,11 @@ Retrospective standup prep. Looks backwards ~24h and compiles what happened into
 ## Configuration
 
 ```
-Repo:          /Users/freddylem/dev/powerx/data
+Repo:          $HOME/dev/powerx/data
 GitHub org:    powerxai/data
-Jira tool:     ~/.claude/skills/_JIRA/Tools/Jira.ts
+Jira tool:     ~/.claude/skills/JIRA/Tools/Jira.ts
 Clockify tool: ~/.claude/skills/_CLOCKIFY/Tools/Clockify.ts (if exists) or REST API
-Vault base:    /Users/freddylem/Library/CloudStorage/GoogleDrive-fredlemi@gmail.com/My Drive/Obsidian/Obsidian Vault
+Vault base:    $HOME/Library/CloudStorage/GoogleDrive-fredlemi@gmail.com/My Drive/Obsidian/Obsidian Vault
 WIP page:      {VAULT}/PAI/PAI Work In Progress.md
 ```
 

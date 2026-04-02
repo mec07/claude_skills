@@ -6,7 +6,7 @@
 
 ```bash
 # All assigned tickets, any status except Done
-bun ~/.claude/skills/_JIRA/Tools/Jira.ts search "assignee=currentUser() AND status!=Done ORDER BY status ASC, updated DESC" --fields key,summary,status,updated
+bun ~/.claude/skills/JIRA/Tools/Jira.ts search "assignee=currentUser() AND status!=Done ORDER BY status ASC, updated DESC" --fields key,summary,status,updated
 ```
 
 ### 2. Pull open PRs from GitHub
