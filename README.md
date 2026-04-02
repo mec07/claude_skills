@@ -6,7 +6,7 @@ A collection of personal [Claude Code](https://docs.anthropic.com/en/docs/claude
 
 | Skill | Slash Command | Description |
 |-------|---------------|-------------|
-| **ReviewPR** | `/ReviewPR [PR#]` | Fetches a PR diff, analyses changes (parallel agents for large PRs), and creates a pending GitHub review with inline comments. You review and submit from the GitHub UI. |
+| **ReviewPR** | `/ReviewPR [PR#]` | Reviews a PR in the repo Claude Code is open in (detected via `git remote`). Fetches the diff, analyses changes (parallel agents for large PRs), and creates a pending GitHub review with inline comments. You review and submit from the GitHub UI. |
 | **Sleep** | `/sleep <duration> [follow-up]` | Delays execution for a duration (`30`, `10m`, `1h`, `2d`), then optionally runs a follow-up skill or prompt. |
 | **llm-docs** | `/llm-docs` | 9-phase pipeline that generates comprehensive, LLM-optimised documentation for any codebase. Produces `docs/llm/`, `CLAUDE.md`, and Copilot instructions. |
 | **JIRA** | `/Jira <command>` | Jira REST API integration. Fetch tickets, search with JQL, parse Atlassian Document Format descriptions, and create plans from tickets. |
