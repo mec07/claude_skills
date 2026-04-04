@@ -45,19 +45,23 @@ gh pr list --repo powerxai/data --search "review-requested:@me" --json number,ti
 
 ### 4. Pull Jira ticket activity
 
-```bash
-# Tickets updated by Fred in last 24h
-bun ~/.claude/skills/JIRA/Tools/Jira.ts search "assignee=currentUser() AND updated >= -1d ORDER BY updated DESC" --fields key,summary,status
+Use the Atlassian MCP tool `searchJiraIssuesUsingJql` with JQL:
+```
+assignee=currentUser() AND updated >= -1d ORDER BY updated DESC
 ```
 
 ### 5. Identify today's priorities
 
-```bash
-# In-progress tickets
-bun ~/.claude/skills/JIRA/Tools/Jira.ts search "assignee=currentUser() AND status='In Development' ORDER BY priority DESC" --fields key,summary,priority
+Use the Atlassian MCP tool `searchJiraIssuesUsingJql` for each query:
 
-# Sprint tickets not started
-bun ~/.claude/skills/JIRA/Tools/Jira.ts search "assignee=currentUser() AND sprint in openSprints() AND status='New' ORDER BY priority DESC" --fields key,summary,priority
+In-progress tickets:
+```
+assignee=currentUser() AND status='In Development' ORDER BY priority DESC
+```
+
+Sprint tickets not started:
+```
+assignee=currentUser() AND sprint in openSprints() AND status='New' ORDER BY priority DESC
 ```
 
 ### 6. Read Work In Progress for context

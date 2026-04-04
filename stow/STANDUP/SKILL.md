@@ -17,7 +17,7 @@ Retrospective standup prep. Looks backwards ~24h and compiles what happened into
 ```
 Repo:          $HOME/dev/powerx/data
 GitHub org:    powerxai/data
-Jira tool:     ~/.claude/skills/JIRA/Tools/Jira.ts
+Jira:          Atlassian MCP (searchJiraIssuesUsingJql)
 Clockify tool: ~/.claude/skills/_CLOCKIFY/Tools/Clockify.ts (if exists) or REST API
 Vault base:    $HOME/Library/CloudStorage/GoogleDrive-fredlemi@gmail.com/My Drive/Obsidian/Obsidian Vault
 WIP page:      {VAULT}/PAI/PAI Work In Progress.md
@@ -36,7 +36,7 @@ All data is pulled from existing tools — no raw API calls needed:
 | Source | Tool | What it provides |
 |--------|------|-----------------|
 | **Clockify** | `Clockify.ts` or REST API | Yesterday's time entries with descriptions |
-| **Jira** | `Jira.ts search` | Tickets with status changes in last 24h |
+| **Jira** | Atlassian MCP `searchJiraIssuesUsingJql` | Tickets with status changes in last 24h |
 | **GitHub** | `gh` CLI | PRs opened/merged/reviewed, PR review comments |
 | **Git** | `git log` | Commits from last 24h |
 

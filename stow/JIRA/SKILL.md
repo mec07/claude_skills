@@ -1,20 +1,58 @@
 ---
 name: Jira
-description: Jira ticket access via REST API. USE WHEN jira, ticket, issue, DEV-, sprint, board, backlog, create plan, fetch ticket, ticket details, story points, acceptance criteria.
+description: Jira integration via Atlassian MCP + issue link fallback. USE WHEN jira, ticket, issue, DEV-, sprint, board, backlog, create plan, fetch ticket, ticket details, story points, acceptance criteria.
 ---
 
 # Jira
 
-PowerX Jira integration via REST API v3. Fetches tickets, parses Atlassian Document Format descriptions, and supports plan creation from tickets.
+Jira integration powered by the official Atlassian Rovo MCP Server. Most operations use the MCP's native tools. Issue linking uses a local CLI fallback until the MCP adds support.
 
-## Configuration
+## Architecture
 
-- **API Token:** `~/.claude/.env` -> `JIRA_API_TOKEN`
-- **Email:** `~/.claude/.env` -> `JIRA_EMAIL`
-- **Base URL:** `~/.claude/.env` -> `JIRA_BASE_URL`
-- **Project Key:** `DEV`
+| Operation | Method | Tool |
+|-----------|--------|------|
+| Get issue | MCP | `getJiraIssue` |
+| Search (JQL) | MCP | `searchJiraIssuesUsingJql` |
+| Create issue | MCP | `createJiraIssue` |
+| Edit issue | MCP | `editJiraIssue` |
+| Transition | MCP | `transitionJiraIssue` |
+| List transitions | MCP | `getTransitionsForJiraIssue` |
+| Add comment | MCP | `addCommentToJiraIssue` |
+| Add worklog | MCP | `addWorklogToJiraIssue` |
+| List projects | MCP | `getVisibleJiraProjects` |
+| Issue types | MCP | `getJiraProjectIssueTypesMetadata` |
+| User lookup | MCP | `lookupJiraAccountId` |
+| **Link issues** | **CLI fallback** | `bun Jira.ts link` |
 
-## Token Extraction (CRITICAL)
+## MCP Setup
+
+The Atlassian MCP server is configured automatically by `install.sh`. It uses OAuth 2.1 — on first use a browser window opens for authorization. No API tokens required for MCP operations.
+
+Configuration in `~/.claude/settings.json`:
+```json
+{
+  "mcpServers": {
+    "atlassian": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote@latest", "https://mcp.atlassian.com/v1/mcp"]
+    }
+  }
+}
+```
+
+## Issue Linking (CLI Fallback)
+
+> **DEPRECATION NOTICE:** This fallback exists because the Atlassian MCP does not yet support issue linking.
+> Remove `Jira.ts` once the MCP adds a `createIssueLink` or equivalent tool.
+> Track: https://community.atlassian.com/forums/Rovo-questions/MCP-Server-create-edit-work-item-links/qaq-p/3109569
+
+### Configuration
+
+Requires API credentials in `~/.claude/.env` (only needed for linking):
+- `JIRA_API_TOKEN` — Atlassian API token
+- `JIRA_EMAIL` — Account email
+
+### Token Extraction (CRITICAL)
 
 The JIRA_API_TOKEN contains `=` characters. **NEVER use `cut -d=`** — it truncates the token.
 
@@ -22,138 +60,32 @@ The JIRA_API_TOKEN contains `=` characters. **NEVER use `cut -d=`** — it trunc
 ```bash
 JIRA_API_TOKEN=$(sed -n 's/^JIRA_API_TOKEN=//p' ~/.claude/.env)
 JIRA_EMAIL=$(sed -n 's/^JIRA_EMAIL=//p' ~/.claude/.env)
-JIRA_BASE_URL=$(sed -n 's/^JIRA_BASE_URL=//p' ~/.claude/.env)
 ```
 
-## Authentication
+### Usage
 
-Basic auth with email:token pair:
 ```bash
-curl -s -u "${JIRA_EMAIL}:${JIRA_API_TOKEN}" \
-  -H "Content-Type: application/json" \
-  "${JIRA_BASE_URL}/rest/api/3/issue/DEV-6156"
+bun ~/.claude/skills/JIRA/Tools/Jira.ts link <TICKET_A> <RELATIONSHIP> <TICKET_B>
 ```
 
-## ADF Description Parsing
+**Relationships:**
+`blocks | blocked_by | duplicates | duplicated_by | relates_to | tests | tested_by | split_to | split_from`
 
-Jira returns descriptions in Atlassian Document Format (JSON). Convert to readable markdown:
-
+**Examples:**
 ```bash
-# Fetch ticket and parse description to markdown in one go:
-JIRA_API_TOKEN=$(sed -n 's/^JIRA_API_TOKEN=//p' ~/.claude/.env)
-JIRA_EMAIL=$(sed -n 's/^JIRA_EMAIL=//p' ~/.claude/.env)
-JIRA_BASE_URL=$(sed -n 's/^JIRA_BASE_URL=//p' ~/.claude/.env)
-
-curl -s -u "${JIRA_EMAIL}:${JIRA_API_TOKEN}" \
-  "${JIRA_BASE_URL}/rest/api/3/issue/ISSUE-KEY" | \
-  python3 -c "
-import json, sys
-
-def adf_to_md(node, depth=0):
-    if not node or not isinstance(node, dict):
-        return ''
-    t = node.get('type', '')
-    content = node.get('content', [])
-    text = node.get('text', '')
-    marks = node.get('marks', [])
-    attrs = node.get('attrs', {})
-    result = ''
-
-    # Apply marks
-    for mark in marks:
-        mt = mark.get('type', '')
-        if mt == 'strong': text = f'**{text}**'
-        elif mt == 'em': text = f'*{text}*'
-        elif mt == 'code': text = f'\`{text}\`'
-        elif mt == 'link': text = f'[{text}]({mark.get(\"attrs\", {}).get(\"href\", \"\")})'
-
-    if t == 'text': return text
-    elif t == 'hardBreak': return '\n'
-    elif t == 'paragraph':
-        inner = ''.join(adf_to_md(c, depth) for c in content)
-        return inner + '\n\n'
-    elif t == 'heading':
-        level = attrs.get('level', 1)
-        inner = ''.join(adf_to_md(c, depth) for c in content)
-        return '#' * level + ' ' + inner + '\n\n'
-    elif t == 'bulletList':
-        return ''.join(adf_to_md(c, depth) for c in content)
-    elif t == 'orderedList':
-        return ''.join(adf_to_md(c, depth) for c in content)
-    elif t == 'listItem':
-        inner = ''.join(adf_to_md(c, depth+1) for c in content).strip()
-        return '  ' * depth + '- ' + inner + '\n'
-    elif t == 'codeBlock':
-        lang = attrs.get('language', '')
-        inner = ''.join(adf_to_md(c, depth) for c in content)
-        return f'\`\`\`{lang}\n{inner}\`\`\`\n\n'
-    elif t == 'blockquote':
-        inner = ''.join(adf_to_md(c, depth) for c in content)
-        return '> ' + inner.replace('\n', '\n> ') + '\n\n'
-    elif t == 'rule': return '---\n\n'
-    elif t == 'table':
-        rows = [adf_to_md(c, depth) for c in content]
-        return ''.join(rows) + '\n'
-    elif t == 'tableRow':
-        cells = [adf_to_md(c, depth).strip() for c in content]
-        return '| ' + ' | '.join(cells) + ' |\n'
-    elif t in ('tableCell', 'tableHeader'):
-        return ''.join(adf_to_md(c, depth) for c in content)
-    elif t == 'mediaSingle' or t == 'media':
-        return '[media attachment]\n\n'
-    elif t == 'inlineCard':
-        url = attrs.get('url', '')
-        return f'[{url}]({url})'
-    elif t == 'doc':
-        return ''.join(adf_to_md(c, depth) for c in content)
-    else:
-        return ''.join(adf_to_md(c, depth) for c in content)
-
-data = json.load(sys.stdin)
-fields = data.get('fields', {})
-summary = fields.get('summary', 'No summary')
-status = fields.get('status', {}).get('name', 'Unknown')
-assignee = (fields.get('assignee') or {}).get('displayName', 'Unassigned')
-priority = (fields.get('priority') or {}).get('name', 'None')
-issue_type = (fields.get('issuetype') or {}).get('name', 'Unknown')
-story_points = fields.get('customfield_10016', 'N/A')
-labels = ', '.join(fields.get('labels', [])) or 'None'
-desc = fields.get('description')
-desc_md = adf_to_md(desc) if desc else 'No description'
-
-# Subtasks
-subtasks = fields.get('subtasks', [])
-subtask_md = ''
-if subtasks:
-    subtask_md = '\n## Subtasks\n\n'
-    for st in subtasks:
-        st_key = st.get('key', '')
-        st_summary = st.get('fields', {}).get('summary', '')
-        st_status = st.get('fields', {}).get('status', {}).get('name', '')
-        subtask_md += f'- [{st_key}] {st_summary} ({st_status})\n'
-
-print(f'# {data.get(\"key\", \"\")} — {summary}')
-print(f'\n**Type:** {issue_type} | **Status:** {status} | **Priority:** {priority}')
-print(f'**Assignee:** {assignee} | **Story Points:** {story_points} | **Labels:** {labels}')
-print(f'\n## Description\n\n{desc_md}')
-if subtask_md: print(subtask_md)
-"
+bun ~/.claude/skills/JIRA/Tools/Jira.ts link DEV-5230 blocked_by DEV-6345
+bun ~/.claude/skills/JIRA/Tools/Jira.ts link DEV-6345 blocks DEV-5230
 ```
 
 ## Workflow Routing
 
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
-| **Fetch** | "fetch ticket", "get DEV-XXXX", "show issue", ticket URL | Fetch and display a single ticket |
-| **Plan** | "create plan for DEV-XXXX", "plan from ticket" | Fetch ticket + create implementation plan |
-| **Search** | "find tickets", "search jira", "my tickets" | JQL search |
-| **Sprint** | "current sprint", "sprint board", "what's in sprint" | Active sprint tickets |
-
-## Fetch Workflow
-
-1. Extract issue key from user input (e.g., `DEV-6156` from URL or text)
-2. Run the API call with ADF parsing (see above)
-3. Display formatted output
+| **Fetch** | "fetch ticket", "get DEV-XXXX", "show issue" | Use MCP `getJiraIssue` |
+| **Plan** | "create plan for DEV-XXXX", "plan from ticket" | Fetch via MCP + create plan file |
+| **Search** | "find tickets", "search jira", "my tickets" | Use MCP `searchJiraIssuesUsingJql` |
+| **Sprint** | "current sprint", "sprint board" | Use MCP search with `sprint in openSprints()` JQL |
+| **Link** | "link tickets", "DEV-X blocks DEV-Y" | Use CLI fallback `Jira.ts link` |
 
 ## Plan Workflow
 
@@ -172,7 +104,7 @@ if subtask_md: print(subtask_md)
 
 ### Steps
 
-1. Fetch ticket using Fetch workflow
+1. Fetch ticket using MCP `getJiraIssue`
 2. Analyze description, acceptance criteria, subtasks
 3. Identify which monorepo folders the ticket references
 4. Determine the parent-most relevant folder
@@ -191,45 +123,3 @@ branch: DEV-6182-travel-backend-add-missing-user-fields
 ```
 This is read by `/Worktree DEV-XXXX` to use the correct branch name.
 If Fred has copied the exact branch name from Jira → paste it here to override the auto-generated slug.
-
-## Search Workflow
-
-```bash
-# Search with JQL
-curl -s -u "${JIRA_EMAIL}:${JIRA_API_TOKEN}" \
-  -G "${JIRA_BASE_URL}/rest/api/3/search" \
-  --data-urlencode "jql=project=DEV AND assignee=currentUser() AND status!=Done ORDER BY updated DESC" \
-  --data-urlencode "maxResults=20" \
-  --data-urlencode "fields=key,summary,status,priority,assignee"
-```
-
-## API Quick Reference
-
-**Headers (all requests):**
-```bash
-JIRA_API_TOKEN=$(sed -n 's/^JIRA_API_TOKEN=//p' ~/.claude/.env)
-JIRA_EMAIL=$(sed -n 's/^JIRA_EMAIL=//p' ~/.claude/.env)
-JIRA_BASE_URL=$(sed -n 's/^JIRA_BASE_URL=//p' ~/.claude/.env)
-# Then: curl -s -u "${JIRA_EMAIL}:${JIRA_API_TOKEN}" ...
-```
-
-**Get issue:**
-```bash
-GET /rest/api/3/issue/{issueKey}
-```
-
-**Search (JQL):**
-```bash
-GET /rest/api/3/search?jql={jql}&maxResults=20&fields=key,summary,status,priority
-```
-
-**Get comments:**
-```bash
-GET /rest/api/3/issue/{issueKey}/comment
-```
-
-**Get sprint board:**
-```bash
-GET /rest/agile/1.0/board/{boardId}/sprint?state=active
-GET /rest/agile/1.0/sprint/{sprintId}/issue
-```

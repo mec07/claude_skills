@@ -141,18 +141,199 @@ uninstall_skill() {
     fi
 }
 
+# --- Atlassian MCP Server Configuration ---
+#
+# The official Atlassian Rovo MCP Server (https://mcp.atlassian.com/v1/mcp)
+# provides rich Jira tools (create, get, edit, search, transition, comment, etc.)
+# via the Model Context Protocol. It uses OAuth 2.1 — on first use a browser
+# window opens for authorization. No API tokens or env vars are required.
+
+SETTINGS_FILE="$HOME/.claude/settings.json"
+
+atlassian_mcp_is_configured() {
+    [ -f "$SETTINGS_FILE" ] && python3 -c "
+import json, sys
+with open(sys.argv[1]) as f:
+    data = json.load(f)
+sys.exit(0 if 'atlassian' in data.get('mcpServers', {}) else 1)
+" "$SETTINGS_FILE" 2>/dev/null
+}
+
+configure_atlassian_mcp() {
+    if ! command -v node >/dev/null 2>&1; then
+        printf "\n  Warning: Node.js not found — required for Atlassian MCP server.\n"
+        printf "  Install Node.js (v18+) and re-run to enable the Jira MCP integration.\n"
+        return 1
+    fi
+
+    if atlassian_mcp_is_configured; then
+        printf "  %-20s already configured — skipping\n" "Atlassian MCP"
+        return 0
+    fi
+
+    python3 -c "
+import json, os, sys
+
+path = sys.argv[1]
+data = {}
+if os.path.exists(path):
+    with open(path) as f:
+        data = json.load(f)
+
+data.setdefault('mcpServers', {})['atlassian'] = {
+    'command': 'npx',
+    'args': ['-y', 'mcp-remote@latest', 'https://mcp.atlassian.com/v1/mcp']
+}
+
+with open(path, 'w') as f:
+    json.dump(data, f, indent=2)
+    f.write('\n')
+" "$SETTINGS_FILE" || {
+        printf "  Warning: failed to configure Atlassian MCP in settings.json\n"
+        return 1
+    }
+
+    printf "  %-20s configured in %s\n" "Atlassian MCP" "$SETTINGS_FILE"
+    printf "\n"
+    printf "  Note: The Atlassian MCP server uses OAuth 2.1 for authentication.\n"
+    printf "  On first use, a browser window will open for you to authorize access\n"
+    printf "  to your Atlassian instance. No API tokens or env vars are required\n"
+    printf "  for MCP operations.\n"
+}
+
+# --- Jira Link Fallback Credentials ---
+#
+# The Jira.ts CLI tool (issue linking only) requires API credentials in
+# ~/.claude/.env because the Atlassian MCP does not yet support issue linking.
+
+ENV_FILE="$HOME/.claude/.env"
+
+env_file_has_var() {
+    [ -f "$ENV_FILE" ] && grep -q "^$1=" "$ENV_FILE" 2>/dev/null
+}
+
+configure_jira_credentials() {
+    local missing=""
+    for var in JIRA_API_TOKEN JIRA_EMAIL; do
+        if ! env_file_has_var "$var"; then
+            missing="$missing $var"
+        fi
+    done
+
+    if [ -z "$missing" ]; then
+        printf "  %-20s credentials present in %s\n" "Jira link CLI" "$ENV_FILE"
+        return 0
+    fi
+
+    printf "\n  The Jira issue link CLI needs API credentials in %s.\n" "$ENV_FILE"
+    printf "  (Only needed for issue linking — all other Jira ops use MCP OAuth.)\n"
+    printf "  Missing:%s\n\n" "$missing"
+
+    # Check if vars are already in the environment (e.g. from ~/.config/jira/credentials)
+    local found_in_env=""
+    if [ -n "${JIRA_API_TOKEN:-}" ] && [ -n "${JIRA_EMAIL:-}" ]; then
+        found_in_env=1
+        printf "  Found JIRA_API_TOKEN and JIRA_EMAIL in your environment.\n"
+        printf "  Write them to %s? [Y/n] " "$ENV_FILE"
+        read -r answer
+        case "$answer" in
+            [nN]|[nN][oO]) found_in_env="" ;;
+        esac
+    fi
+
+    mkdir -p "$(dirname "$ENV_FILE")"
+    touch "$ENV_FILE"
+
+    if [ -n "$found_in_env" ]; then
+        for var in JIRA_API_TOKEN JIRA_EMAIL; do
+            if ! env_file_has_var "$var"; then
+                eval "val=\$$var"
+                printf "%s=%s\n" "$var" "$val" >> "$ENV_FILE"
+            fi
+        done
+        printf "  %-20s credentials written to %s\n" "Jira link CLI" "$ENV_FILE"
+        return 0
+    fi
+
+    printf "  Enter credentials now? [Y/n] "
+    read -r answer
+    case "$answer" in
+        [nN]|[nN][oO])
+            printf "  Skipped — add JIRA_API_TOKEN and JIRA_EMAIL to %s later.\n" "$ENV_FILE"
+            return 0
+            ;;
+    esac
+
+    for var in JIRA_API_TOKEN JIRA_EMAIL; do
+        if ! env_file_has_var "$var"; then
+            printf "  %s: " "$var"
+            read -r val
+            if [ -n "$val" ]; then
+                printf "%s=%s\n" "$var" "$val" >> "$ENV_FILE"
+            fi
+        fi
+    done
+    printf "  %-20s credentials written to %s\n" "Jira link CLI" "$ENV_FILE"
+}
+
+remove_atlassian_mcp() {
+    if ! atlassian_mcp_is_configured; then
+        printf "  %-20s not configured — skipping\n" "Atlassian MCP"
+        return 0
+    fi
+
+    python3 -c "
+import json, sys
+
+path = sys.argv[1]
+with open(path) as f:
+    data = json.load(f)
+
+servers = data.get('mcpServers', {})
+servers.pop('atlassian', None)
+if not servers:
+    data.pop('mcpServers', None)
+
+with open(path, 'w') as f:
+    json.dump(data, f, indent=2)
+    f.write('\n')
+" "$SETTINGS_FILE" || {
+        printf "  Warning: failed to remove Atlassian MCP from settings.json\n"
+        return 1
+    }
+
+    printf "  %-20s removed from %s\n" "Atlassian MCP" "$SETTINGS_FILE"
+}
+
 # --- Main ---
 
 mkdir -p "$TARGET_DIR"
+
+# Check if JIRA is among the skills being processed
+JIRA_INCLUDED=0
+for skill in $SKILLS; do
+    case "$skill" in
+        JIRA|jira) JIRA_INCLUDED=1 ;;
+    esac
+done
 
 if [ "$UNINSTALL" = 1 ]; then
     printf "Uninstalling skills from %s\n" "$TARGET_DIR"
     for skill in $SKILLS; do
         uninstall_skill "$skill"
     done
+    if [ "$JIRA_INCLUDED" = 1 ]; then
+        remove_atlassian_mcp
+    fi
 else
     printf "Installing skills to %s\n" "$TARGET_DIR"
     for skill in $SKILLS; do
         install_skill "$skill"
     done
+    if [ "$JIRA_INCLUDED" = 1 ]; then
+        printf "\nConfiguring Atlassian MCP server for Jira integration...\n"
+        configure_atlassian_mcp
+        printf "\nChecking Jira issue link credentials...\n"
+        configure_jira_credentials
+    fi
 fi

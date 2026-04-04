@@ -18,7 +18,7 @@ Status sync skill. Answers "what's the current state of things?" by pulling live
 ```
 Repo:          $HOME/dev/powerx/data
 GitHub org:    powerxai/data
-Jira tool:     ~/.claude/skills/JIRA/Tools/Jira.ts
+Jira:          Atlassian MCP (searchJiraIssuesUsingJql, getJiraIssue)
 WIP page:      {VAULT}/PAI/PAI Work In Progress.md
 Open Loops:    ~/.claude/skills/PAI/USER/OPEN_LOOPS.md
 Vault base:    $HOME/Library/CloudStorage/GoogleDrive-fredlemi@gmail.com/My Drive/Obsidian/Obsidian Vault

@@ -185,7 +185,7 @@ open "${TICKET_URL}"
 When creating a group of tickets that represent phases or sequential work (e.g. "Phase 1, Phase 2, Phase 3..."), add `blocked_by` relationships from the parent/umbrella ticket to each phase ticket using the Jira CLI:
 
 ```bash
-bun ~/.claude/skills/_JIRA/Tools/Jira.ts link <UMBRELLA_TICKET> blocked_by <PHASE_TICKET>
+bun ~/.claude/skills/JIRA/Tools/Jira.ts link <UMBRELLA_TICKET> blocked_by <PHASE_TICKET>
 ```
 
 This makes the dependency chain visible in Jira. Do this for:
@@ -193,7 +193,7 @@ This makes the dependency chain visible in Jira. Do this for:
 - Sequential phases: phase N+1 `blocked_by` phase N (enforces order)
 - Any ticket explicitly described as "depends on" another
 
-**Relationship enum** (see `Jira.ts link` command):
+**Relationship enum** (see `Jira.ts link` command — issue linking fallback, pending MCP support):
 `blocks | blocked_by | duplicates | duplicated_by | relates_to | tests | tested_by | split_to | split_from`
 
 ---

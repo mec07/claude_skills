@@ -4,9 +4,9 @@
 
 ### 1. Pull all assigned Jira tickets
 
-```bash
-# All assigned tickets, any status except Done
-bun ~/.claude/skills/JIRA/Tools/Jira.ts search "assignee=currentUser() AND status!=Done ORDER BY status ASC, updated DESC" --fields key,summary,status,updated
+Use the Atlassian MCP tool `searchJiraIssuesUsingJql` with JQL:
+```
+assignee=currentUser() AND status!=Done ORDER BY status ASC, updated DESC
 ```
 
 ### 2. Pull open PRs from GitHub
