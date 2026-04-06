@@ -247,7 +247,7 @@ configure_jira_credentials() {
     if [ -n "$found_in_env" ]; then
         for var in JIRA_API_TOKEN JIRA_EMAIL; do
             if ! env_file_has_var "$var"; then
-                eval "val=\$$var"
+                eval "val=\"\$$var\""
                 printf "%s=%s\n" "$var" "$val" >> "$ENV_FILE"
             fi
         done
@@ -332,7 +332,7 @@ else
     done
     if [ "$JIRA_INCLUDED" = 1 ]; then
         printf "\nConfiguring Atlassian MCP server for Jira integration...\n"
-        configure_atlassian_mcp
+        configure_atlassian_mcp || true
         printf "\nChecking Jira issue link credentials...\n"
         configure_jira_credentials
     fi

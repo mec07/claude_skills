@@ -68,7 +68,6 @@ Some skills need credentials in `~/.claude/.env`:
 ```bash
 JIRA_API_TOKEN=...    # JIRA issue linking fallback, TechDebt
 JIRA_EMAIL=...        # JIRA issue linking fallback, TechDebt
-JIRA_BASE_URL=...     # TechDebt
 CLOCKIFY_API_KEY=...  # STANDUP (optional)
 ```
 
