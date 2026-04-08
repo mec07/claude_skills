@@ -1,18 +1,9 @@
 ---
-name: UncleBob
+name: CodeReview
 description: Uncle Bob style opinionated code review using Clean Code principles, severity tiers, and 5 review lenses. USE WHEN user asks for brutal review, clean code review, uncle bob review, or codebase critique.
-triggers:
-  - uncle bob
-  - clean code review
-  - bob review
-  - brutal review
-  - review codebase
-  - code review
-  - opinionated review
-tier: deferred
 ---
 
-# UncleBob
+# CodeReview
 
 Uncle Bob (Robert C. Martin) style code review. Direct, opinionated, line-number-cited, no rubber-stamping.
 

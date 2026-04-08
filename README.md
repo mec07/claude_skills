@@ -14,7 +14,8 @@ A collection of personal [Claude Code](https://docs.anthropic.com/en/docs/claude
 | **Worktree** | `/Worktree <ticket>` | Spin up isolated git worktrees for Jira tickets. Works in the worktree, pushes a branch, creates a draft PR, and reports back. Supports parallel execution. |
 | **WOP** | `/wop` | Work in Progress sync. Pulls live data from Jira and GitHub, detects staleness and status mismatches, and updates the WIP Obsidian page. |
 | **STANDUP** | `/standup` | Morning standup prep. Pulls the last 24h from Clockify, Jira, GitHub, and git log and compiles it into a ready-to-use standup format. |
-| **UncleBob** | `/UncleBob` | Uncle Bob (Robert C. Martin) style opinionated code review. 5 lenses (Architecture, Type Safety, State Management, Testing, Pragmatics), 4 severity tiers, file:line citations, and a priority table. Supports full codebase or single-file review. |
+| **CodeReview** | `/CodeReview` | Uncle Bob (Robert C. Martin) style opinionated code review. 5 lenses (Architecture, Type Safety, State Management, Testing, Pragmatics), 4 severity tiers, file:line citations, and a priority table. Supports full codebase or single-file review. |
+| **ModelRouting** | *(always on)* | Routes subagents to the right model (opus/sonnet/haiku) based on task type. Opus for reasoning, sonnet for code, haiku for mechanical tasks. Advisory with deviation policy. |
 
 ## Tools
 
