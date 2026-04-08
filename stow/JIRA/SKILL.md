@@ -22,29 +22,43 @@ Jira integration powered by the official Atlassian Rovo MCP Server. Most operati
 | List projects | MCP | `getVisibleJiraProjects` |
 | Issue types | MCP | `getJiraProjectIssueTypesMetadata` |
 | User lookup | MCP | `lookupJiraAccountId` |
-| **Link issues** | **CLI fallback** | `bun Jira.ts link` |
+| Link issues | MCP | `createIssueLink` |
+| Link issues (legacy) | CLI fallback | `bun Jira.ts link` |
 
 ## MCP Setup
 
-The Atlassian MCP server is configured automatically by `install.sh`. It uses OAuth 2.1 — on first use a browser window opens for authorization. No API tokens required for MCP operations.
+The Atlassian MCP server is registered via `claude mcp add` (user scope) and managed natively by Claude Code. OAuth 2.1 authentication is handled automatically — on first use, Claude Code opens a browser for authorization. No API tokens or `mcp-remote` proxy required.
 
-Configuration in `~/.claude/settings.json`:
-```json
-{
-  "mcpServers": {
-    "atlassian": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote@latest", "https://mcp.atlassian.com/v1/mcp"]
-    }
-  }
-}
+Registration (handled by `install.sh`):
+```bash
+claude mcp add --transport http -s user atlassian https://mcp.atlassian.com/v1/mcp
 ```
+
+### OAuth Authorization
+
+Claude Code manages OAuth tokens internally. When the server needs authentication, Claude Code will prompt automatically.
+
+**Troubleshooting: MCP tools not available**
+
+If `searchJiraIssuesUsingJql`, `getJiraIssue`, etc. are not appearing as available tools:
+
+1. Check the server is registered: `claude mcp get atlassian`
+2. Check server health: `claude mcp list` — look for `atlassian` and its status
+3. **If it shows "Needs authentication":** type `/mcp` inside Claude Code, select `atlassian` from the list, and complete the OAuth flow in the browser. This is the most reliable fix as of Claude Code 2.1.x — simply restarting Claude Code may not trigger the OAuth flow due to a known bug.
+4. If not registered, add it manually:
+   ```bash
+   claude mcp add --transport http -s user atlassian https://mcp.atlassian.com/v1/mcp
+   ```
+5. **Restart Claude Code** after any changes
+
+> **Note:** As of Claude Code 2.1.80+, there is a known issue where HTTP OAuth MCP servers show "Needs authentication" but never automatically trigger the browser OAuth flow on startup. The `/mcp` command is the reliable workaround.
+
+**Migrating from mcp-remote:** If you have a legacy `mcpServers.atlassian` entry in `~/.claude/settings.json` using `mcp-remote`, remove it and re-run `install.sh`. The installer handles cleanup automatically.
 
 ## Issue Linking (CLI Fallback)
 
-> **DEPRECATION NOTICE:** This fallback exists because the Atlassian MCP does not yet support issue linking.
-> Remove `Jira.ts` once the MCP adds a `createIssueLink` or equivalent tool.
-> Track: https://community.atlassian.com/forums/Rovo-questions/MCP-Server-create-edit-work-item-links/qaq-p/3109569
+> **DEPRECATION NOTICE:** The Atlassian MCP now supports `createIssueLink` natively. This CLI fallback can be removed. Prefer the MCP tool for new linking operations.
+> Original tracking issue: https://community.atlassian.com/forums/Rovo-questions/MCP-Server-create-edit-work-item-links/qaq-p/3109569
 
 ### Configuration
 

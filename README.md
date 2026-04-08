@@ -14,6 +14,7 @@ A collection of personal [Claude Code](https://docs.anthropic.com/en/docs/claude
 | **Worktree** | `/Worktree <ticket>` | Spin up isolated git worktrees for Jira tickets. Works in the worktree, pushes a branch, creates a draft PR, and reports back. Supports parallel execution. |
 | **WOP** | `/wop` | Work in Progress sync. Pulls live data from Jira and GitHub, detects staleness and status mismatches, and updates the WIP Obsidian page. |
 | **STANDUP** | `/standup` | Morning standup prep. Pulls the last 24h from Clockify, Jira, GitHub, and git log and compiles it into a ready-to-use standup format. |
+| **UncleBob** | `/UncleBob` | Uncle Bob (Robert C. Martin) style opinionated code review. 5 lenses (Architecture, Type Safety, State Management, Testing, Pragmatics), 4 severity tiers, file:line citations, and a priority table. Supports full codebase or single-file review. |
 
 ## Tools
 
@@ -34,7 +35,9 @@ cd claude_skills
 ./install.sh
 ```
 
-This symlinks all skills into `~/.claude/skills/`. When the JIRA skill is included, the installer also configures the Atlassian MCP server in `~/.claude/settings.json` and checks for issue linking credentials. GNU stow is not required.
+This symlinks all skills into `~/.claude/skills/`. When the JIRA skill is included, the installer also registers the Atlassian MCP server via `claude mcp add` and checks for issue linking credentials. GNU stow is not required.
+
+> **After installation:** If the Atlassian MCP shows "Needs authentication" (check with `claude mcp list`), type `/mcp` inside Claude Code and select `atlassian` to complete the OAuth flow. This manual step is required due to a known issue in Claude Code 2.1.80+ where the OAuth browser flow doesn't trigger automatically.
 
 ### Options
 

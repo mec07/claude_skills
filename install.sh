@@ -145,60 +145,80 @@ uninstall_skill() {
 #
 # The official Atlassian Rovo MCP Server (https://mcp.atlassian.com/v1/mcp)
 # provides rich Jira tools (create, get, edit, search, transition, comment, etc.)
-# via the Model Context Protocol. It uses OAuth 2.1 — on first use a browser
-# window opens for authorization. No API tokens or env vars are required.
+# via the Model Context Protocol. It uses OAuth 2.1 — on first use Claude Code
+# opens a browser window for authorization. No API tokens or env vars are required.
+#
+# Registered via `claude mcp add` (user scope) so Claude Code manages the
+# connection and OAuth lifecycle natively. No mcp-remote proxy needed.
 
+ATLASSIAN_MCP_URL="https://mcp.atlassian.com/v1/mcp"
 SETTINGS_FILE="$HOME/.claude/settings.json"
 
 atlassian_mcp_is_configured() {
-    [ -f "$SETTINGS_FILE" ] && python3 -c "
+    claude mcp get atlassian >/dev/null 2>&1
+}
+
+# Remove legacy mcp-remote config from settings.json if present
+remove_legacy_atlassian_mcp() {
+    [ -f "$SETTINGS_FILE" ] || return 0
+    python3 -c "
 import json, sys
-with open(sys.argv[1]) as f:
+
+path = sys.argv[1]
+with open(path) as f:
     data = json.load(f)
-sys.exit(0 if 'atlassian' in data.get('mcpServers', {}) else 1)
-" "$SETTINGS_FILE" 2>/dev/null
+
+servers = data.get('mcpServers', {})
+if 'atlassian' not in servers:
+    sys.exit(0)
+
+servers.pop('atlassian')
+if not servers:
+    data.pop('mcpServers', None)
+
+with open(path, 'w') as f:
+    json.dump(data, f, indent=2)
+    f.write('\n')
+print('  Removed legacy mcp-remote atlassian entry from settings.json')
+" "$SETTINGS_FILE" 2>/dev/null || true
+}
+
+# Remove stale mcp-remote OAuth tokens
+remove_legacy_mcp_auth() {
+    local auth_dir="$HOME/.mcp-auth"
+    if [ -d "$auth_dir" ] && [ "$(ls -A "$auth_dir" 2>/dev/null)" ]; then
+        rm -rf "$auth_dir"
+        printf "  Removed stale mcp-remote tokens from %s\n" "$auth_dir"
+    fi
 }
 
 configure_atlassian_mcp() {
-    if ! command -v node >/dev/null 2>&1; then
-        printf "\n  Warning: Node.js not found — required for Atlassian MCP server.\n"
-        printf "  Install Node.js (v18+) and re-run to enable the Jira MCP integration.\n"
+    if ! command -v claude >/dev/null 2>&1; then
+        printf "\n  Warning: claude CLI not found — cannot configure Atlassian MCP.\n"
         return 1
     fi
+
+    # Clean up legacy configuration first
+    remove_legacy_atlassian_mcp
+    remove_legacy_mcp_auth
 
     if atlassian_mcp_is_configured; then
         printf "  %-20s already configured — skipping\n" "Atlassian MCP"
         return 0
     fi
 
-    python3 -c "
-import json, os, sys
-
-path = sys.argv[1]
-data = {}
-if os.path.exists(path):
-    with open(path) as f:
-        data = json.load(f)
-
-data.setdefault('mcpServers', {})['atlassian'] = {
-    'command': 'npx',
-    'args': ['-y', 'mcp-remote@latest', 'https://mcp.atlassian.com/v1/mcp']
-}
-
-with open(path, 'w') as f:
-    json.dump(data, f, indent=2)
-    f.write('\n')
-" "$SETTINGS_FILE" || {
-        printf "  Warning: failed to configure Atlassian MCP in settings.json\n"
+    printf "  Registering Atlassian MCP server with Claude Code...\n"
+    claude mcp add --transport http -s user atlassian "$ATLASSIAN_MCP_URL" || {
+        printf "  Warning: failed to add Atlassian MCP server.\n"
+        printf "  To add manually, run:\n"
+        printf "    claude mcp add --transport http -s user atlassian %s\n" "$ATLASSIAN_MCP_URL"
         return 1
     }
 
-    printf "  %-20s configured in %s\n" "Atlassian MCP" "$SETTINGS_FILE"
+    printf "  %-20s registered (user scope)\n" "Atlassian MCP"
     printf "\n"
-    printf "  Note: The Atlassian MCP server uses OAuth 2.1 for authentication.\n"
-    printf "  On first use, a browser window will open for you to authorize access\n"
-    printf "  to your Atlassian instance. No API tokens or env vars are required\n"
-    printf "  for MCP operations.\n"
+    printf "  OAuth will be triggered automatically on first use in Claude Code.\n"
+    printf "  Restart Claude Code after install to connect.\n"
 }
 
 # --- Jira Link Fallback Credentials ---
@@ -277,32 +297,17 @@ configure_jira_credentials() {
 }
 
 remove_atlassian_mcp() {
+    # Clean up legacy config if present
+    remove_legacy_atlassian_mcp
+    remove_legacy_mcp_auth
+
     if ! atlassian_mcp_is_configured; then
         printf "  %-20s not configured — skipping\n" "Atlassian MCP"
         return 0
     fi
 
-    python3 -c "
-import json, sys
-
-path = sys.argv[1]
-with open(path) as f:
-    data = json.load(f)
-
-servers = data.get('mcpServers', {})
-servers.pop('atlassian', None)
-if not servers:
-    data.pop('mcpServers', None)
-
-with open(path, 'w') as f:
-    json.dump(data, f, indent=2)
-    f.write('\n')
-" "$SETTINGS_FILE" || {
-        printf "  Warning: failed to remove Atlassian MCP from settings.json\n"
-        return 1
-    }
-
-    printf "  %-20s removed from %s\n" "Atlassian MCP" "$SETTINGS_FILE"
+    claude mcp remove -s user atlassian 2>/dev/null || true
+    printf "  %-20s removed\n" "Atlassian MCP"
 }
 
 # --- Main ---
