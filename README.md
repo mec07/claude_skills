@@ -7,13 +7,13 @@ A collection of personal [Claude Code](https://docs.anthropic.com/en/docs/claude
 | Skill | Slash Command | Description |
 |-------|---------------|-------------|
 | **ReviewPR** | `/ReviewPR [PR#]` | Reviews a PR in the repo Claude Code is open in (detected via `git remote`). If no PR number is given, discovers the PR for your current branch. Fetches the diff, analyses changes with `gh` (parallel agents for large PRs), and creates a pending GitHub review with inline comments. You review and submit from the GitHub UI. |
-| **Sleep** | `/sleep <duration> [follow-up]` | Delays execution for a duration, then optionally runs a follow-up skill or prompt. Defaults to seconds like bash (e.g. `30`), or specify a unit: `s`, `m`, `h`, `d` (e.g. `10m`, `1h`, `2d`). |
+| **Sleep** | `/Sleep <duration> [follow-up]` | Delays execution for a duration, then optionally runs a follow-up skill or prompt. Defaults to seconds like bash (e.g. `30`), or specify a unit: `s`, `m`, `h`, `d` (e.g. `10m`, `1h`, `2d`). |
 | **llm-docs** | `/llm-docs` | 9-phase pipeline that generates comprehensive, LLM-optimised documentation for any codebase. Produces `docs/llm/`, `CLAUDE.md`, and Copilot instructions. |
 | **JIRA** | `/Jira <command>` | Jira integration via Atlassian MCP Server. Fetch, search, create, edit, transition, comment, and worklog via MCP; issue linking via CLI fallback. |
 | **TechDebt** | `/TechDebt <description>` | Create a well-formed Jira tech debt ticket from a quick description, with duplicate detection, without leaving your flow. |
 | **Worktree** | `/Worktree <ticket>` | Spin up isolated git worktrees for Jira tickets. Works in the worktree, pushes a branch, creates a draft PR, and reports back. Supports parallel execution. |
-| **WOP** | `/wop` | Work in Progress sync. Pulls live data from Jira and GitHub, detects staleness and status mismatches, and updates the WIP Obsidian page. |
-| **STANDUP** | `/standup` | Morning standup prep. Pulls the last 24h from Clockify, Jira, GitHub, and git log and compiles it into a ready-to-use standup format. |
+| **WOP** | `/WOP` | Work in Progress sync. Pulls live data from Jira and GitHub, detects staleness and status mismatches, and updates the WIP Obsidian page. |
+| **STANDUP** | `/STANDUP` | Morning standup prep. Pulls the last 24h from Clockify, Jira, GitHub, and git log and compiles it into a ready-to-use standup format. |
 | **CodeReview** | `/CodeReview` | Uncle Bob (Robert C. Martin) style opinionated code review. 5 lenses (Architecture, Type Safety, State Management, Testing, Pragmatics), 4 severity tiers, file:line citations, and a priority table. Supports full codebase or single-file review. |
 | **ModelRouting** | *(always on)* | Routes subagents to the right model (opus/sonnet/haiku) based on task type. Opus for reasoning, sonnet for code, haiku for mechanical tasks. Advisory with deviation policy. |
 
