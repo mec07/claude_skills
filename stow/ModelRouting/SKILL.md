@@ -14,7 +14,8 @@ Route subagents to the right model based on task type. Opus for reasoning-heavy 
 | Planning, architecture, brainstorming, design | `opus` | Best reasoning for complex decisions |
 | Code review | `opus` | Deep reasoning catches subtle issues |
 | Debugging / root cause analysis | `opus` | Complex reasoning needed |
-| Code implementation, feature work, refactoring | `sonnet` | Fast and capable for writing code |
+| Refactoring | `opus` | Cross-cutting changes need deep reasoning to avoid getting stuck |
+| Code implementation, feature work | `sonnet` | Fast and capable for writing code |
 | Test writing | `sonnet` | Follows patterns, doesn't need deepest reasoning |
 | Simple lookups, renames, file searches, formatting | `haiku` | Cheapest, fast enough for mechanical tasks |
 
@@ -31,6 +32,6 @@ Agent(model: "haiku", prompt: "Rename userId to accountId across these files..."
 ## Deviation Policy
 
 - Default to the table assignment
-- Deviation is allowed when context warrants it (e.g., a refactor touching complex cross-service boundaries might warrant opus instead of sonnet)
+- Deviation is allowed when context warrants it (e.g., a trivial rename-style refactor might warrant sonnet instead of opus)
 - When deviating, state why briefly in the agent prompt
 - This skill applies only to subagent dispatch — the main conversation model is the user's choice
