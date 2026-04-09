@@ -35,3 +35,12 @@ Agent(model: "haiku", prompt: "Rename userId to accountId across these files..."
 - Deviation is allowed when context warrants it (e.g., a trivial rename-style refactor might warrant sonnet instead of opus)
 - When deviating, state why briefly in the agent prompt
 - This skill applies only to subagent dispatch — the main conversation model is the user's choice
+
+## Self-Improvement
+
+When a subagent produces a poor result and the likely cause is the model choice (e.g., haiku struggled with a task that needed deeper reasoning, or opus was overkill for something mechanical), update the Model Assignment Table in this file with the new scenario. This keeps the routing table comprehensive and grounded in real experience.
+
+How to apply:
+1. Identify the task type that was misrouted
+2. Add a new row to the table, or refine an existing row's scope, to cover the scenario
+3. Include a brief rationale so future routing decisions are informed

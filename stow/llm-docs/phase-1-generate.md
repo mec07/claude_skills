@@ -90,7 +90,28 @@ This is how you discover real architecture, not by guessing from folder structur
 
 Find commands from `package.json` scripts, `Makefile` targets, CI config steps, `pyproject.toml` scripts, or equivalent. Only commands found in these files may appear in your documentation.
 
-**1g. Hunt for gotchas**
+**1g. Inventory all scripts**
+
+Systematically locate every script across the repository. Scripts can live in many places — this step must be thorough:
+- `package.json` `scripts` blocks (root and every nested package in monorepos)
+- Shell scripts (`.sh`, `.bash`, `.zsh`) — search all directories, not just `scripts/` or `bin/`
+- `Makefile` / `Justfile` / `Taskfile.yml` targets (root and nested)
+- Python scripts used as tools (`.py` files in `scripts/`, `tools/`, `bin/`, or similar)
+- CI workflow steps that invoke custom scripts (`.github/workflows/`, `.gitlab-ci.yml`, etc.)
+- Docker entrypoint scripts
+- Any other executable files or task-runner configurations
+
+For each script, record: its location, what it does (read it — do not guess from the filename), when it's used (build, dev, CI, deploy, ad-hoc), and any arguments it accepts.
+
+Additionally, for each script ecosystem you find:
+- **Shared utilities:** Identify reusable modules available to scripts (DB connectors, API clients, message queue helpers, common utilities). These are critical — agents writing new scripts need to know what already exists.
+- **Credentials and environment variables:** Note which env vars scripts need and how credentials are obtained (e.g., AWS Secrets Manager, env files, service tokens). These often differ from the main application's credential patterns.
+- **Auth patterns:** If scripts interact with authenticated APIs or services, document which auth methods work for scripts and which don't. This is a common source of wasted time.
+- **Scaffolding pattern:** How are new scripts structured? (e.g., own directory with `package.json`, or single file in a scripts folder). Identify the canonical example to follow.
+
+In monorepos, pay particular attention to which package or project each script belongs to, and whether scripts at different levels share patterns or conventions.
+
+**1h. Hunt for gotchas**
 
 Search for `HACK`, `FIXME`, `XXX`, `WORKAROUND`, `IMPORTANT`, `NOTE:`, `TODO` comments across source files. Read the flagged files to understand what the warnings are about.
 
@@ -100,6 +121,7 @@ Search for `HACK`, `FIXME`, `XXX`, `WORKAROUND`, `IMPORTANT`, `NOTE:`, `TODO` co
 - What are the major components? (cite directories and entry files you read)
 - How do they connect? (cite import chains or API calls you traced)
 - What commands exist? (cite config files where you found them)
+- What scripts exist and where do they live? (cite every location you found them)
 - What conventions are used? (cite repeated patterns across files you read)
 
 ### Large repos
@@ -121,6 +143,7 @@ docs/llm/
 ├── architecture.md
 ├── conventions.md
 ├── workflows.md
+├── scripts.md
 ├── gotchas.md
 ├── glossary.md              (only if warranted — see spec below)
 ├── dependency-map.md
@@ -157,6 +180,7 @@ Required content:
 - Tech stack with evidence: `Technology — found in path/to/config`
 - Repo layout: every top-level directory with a one-line description of what it **actually contains** (not what you think it might contain)
 - Key entry points: exact file paths to main server file, app entry, CLI entry, etc.
+- Script locations: brief summary of where scripts live, linking to `docs/llm/scripts.md` for the full inventory
 - Links to every other `docs/llm/` file
 - Index of all module docs with one-line descriptions
 
@@ -169,6 +193,7 @@ Required content:
 - Data flow: trace at least one real request/event through the system with file paths at each step
 - Data structure index: for every kind of data structure the project uses (DB schemas, API types, search indices, message formats, config schemas, etc.), document where definitions live, where the access/query layer lives, naming conventions, and relationships between structures
 - External dependencies: databases, APIs, queues, caches — with the config file where each is configured
+- Operational scripts: brief summary of what scripts exist for operations, maintenance, data repair, backfills, etc. — link to `docs/llm/scripts.md` for the full inventory. Do not duplicate the scripts inventory here; just note that scripts are part of the system's operational surface and where to find them.
 - Infrastructure shape (only if deployment config exists in repo)
 
 Format flows like:
@@ -228,6 +253,67 @@ Format:
 ```
 
 Only include sections for commands that actually exist. If a workflow requires environment variables, list exactly which ones (from `.env.example` or equivalent). If steps must happen in order, number them and explain why.
+
+#### `docs/llm/scripts.md`
+Comprehensive inventory of every script in the repository. This is the go-to file when an agent needs to create, extend, or find a script.
+
+**Purpose:** Enable agents to quickly answer: "Does a script for X already exist?", "Can an existing script be extended to do Y?", "Where should a new script live, and what patterns should it follow?"
+
+**Top-level sections (in order):**
+
+**1. All Script Locations** — summary table of every directory that contains scripts:
+
+```markdown
+| Location | Language | Purpose | Docs |
+|----------|----------|---------|------|
+| `path/to/scripts/` | Python | Data pipelines, batch operations | [README](link) |
+| `other/scripts/` | Shell | Deployment, delivery | — |
+```
+
+**2. Decision: Where to Put a New Script** — scenario-based routing table. This is the most important section for agents creating new scripts:
+
+```markdown
+| Scenario | Location | Why |
+|----------|----------|-----|
+| Data pipeline / batch processing | `path/to/scripts/` | Python ecosystem, shared utilities available |
+| Reuse existing service logic | `app/scripts/` | Direct imports, no auth overhead |
+| One-off DB operation | Depends on which codebase has the logic | |
+```
+
+Base the scenarios on actual patterns observed in the repo. Include "Why" to help agents make judgement calls for scenarios not explicitly listed.
+
+**3. Per-ecosystem sections** — group scripts by language/runtime, not just by directory. Each ecosystem section should include:
+
+- **Run pattern:** A single line showing how to run any script in this group (e.g., `poetry run python scripts/<script>.py [OPTIONS]`)
+- **Shared utilities:** Table of reusable modules available to scripts in this ecosystem (DB connectors, API clients, message queue wrappers, etc.) with module path and purpose. Agents writing new scripts must know these exist.
+- **Environment variables / credentials:** Table of env vars needed to run scripts, with purpose. Scripts often need different credentials than the main application.
+- **Key patterns:** Important patterns with code examples (e.g., "direct function import bypasses HTTP and auth entirely"). Show a real snippet from the codebase.
+- **Existing scripts inventory:** Table listing each script with purpose and link to per-script README where one exists:
+
+```markdown
+| Script | Purpose | Docs |
+|--------|---------|------|
+| `scriptName/` | What it does | [README](link) or — |
+```
+
+**4. Auth patterns for scripts** (if the repo has authentication) — table showing which auth methods work for scripts and how to use them:
+
+```markdown
+| Method | Works On | How |
+|--------|----------|-----|
+| Service token | Service-auth endpoints | `get_token(secret)` |
+| Direct import | Any logic — bypasses auth | Import function, pass DB instance |
+```
+
+Include gotchas about auth inline (e.g., "Service tokens do NOT work on user-auth endpoints"). These traps belong here, not in gotchas.md, because agents need them when writing scripts.
+
+**5. Script-specific gotchas** — any traps, ordering requirements, or non-obvious constraints specific to running or writing scripts. Keep these next to the scripts rather than in the general gotchas.md.
+
+**General rules:**
+- Every script directory gets a README — created by this phase if one doesn't exist (see "Script directory READMEs" under Local context files). Link to these from the "Docs" column of the All Script Locations table.
+- Where per-script READMEs exist, link to them rather than duplicating their content. `scripts.md` is an index and decision guide, not a copy of every script's docs.
+- In monorepos, add a cross-reference table showing which scripts exist in which packages, making it easy to spot gaps and shared patterns.
+- Document the scaffolding pattern for new scripts (e.g., "each TypeScript script is its own directory with `package.json`, `tsconfig.json`, and `src/index.ts` — follow the example at `path/to/example/`").
 
 #### `docs/llm/gotchas.md`
 The most valuable file. Things that waste time or cause subtle bugs.
@@ -314,6 +400,7 @@ The canonical LLM documentation lives in `docs/llm/`. Start with `docs/llm/overv
 2. Check for impacts: `docs/llm/dependency-map.md`
 3. Check for traps: `docs/llm/gotchas.md`
 4. Follow project patterns: `docs/llm/conventions.md`
+5. Before creating/modifying scripts: `docs/llm/scripts.md`
 ```
 
 Do not use `@` file includes — they load full file contents into every conversation, wasting context on documentation irrelevant to the current task.
@@ -345,6 +432,32 @@ In directories that have a module doc, add a short `README.md` (or `CLAUDE.md` i
 - Max 2-3 lines of critical local info (e.g., "run codegen before editing types here")
 
 Do not duplicate the module doc. These are pointers only.
+
+#### Script directory READMEs
+For every directory that contains scripts (identified in Step 1g), create a `README.md` if one does not already exist. If one exists, do not overwrite it — link to it from `scripts.md` and move on.
+
+**Top section — overview and orientation:**
+- What this directory is and what kind of scripts live here
+- **Scripts overview table** with columns: Script | Purpose | When to Use. The "When to Use" column describes the symptoms or situations that indicate reaching for this script, not just what it does. If one script is the primary tool for a common task, label it (e.g., "**Primary tool** for X").
+- How to run scripts in this directory (the ecosystem run pattern)
+- Prerequisites (dependencies, env vars, credentials)
+- Link to `docs/llm/scripts.md` for the full inventory and decision guide
+- How to add a new script here (scaffolding pattern, naming conventions)
+
+**Per-script sections** — for each non-trivial script, include a dedicated section:
+- **When to use:** Bullet list of specific scenarios — the symptoms or situations where this script is the right tool
+- **How it works:** Numbered steps explaining the internal mechanics. Include just enough domain context for a reader unfamiliar with the system to understand what the script does and its side effects (e.g., a brief diagram of the data flow the script operates on)
+- **Safety features:** Backups, dry-run modes, recovery procedures — if the script modifies data, document what protections exist
+- **Recommended workflow:** If the script has multiple modes (scan, dry-run, fix), document the safe order of operations. Users should never be left guessing whether to start with `--fix` or `--scan`
+- **Usage examples:** Multiple real command lines with inline comments showing different scenarios (basic use, filtered use, dry-run, production run). Use the actual command prefix for the ecosystem (e.g., `poetry run python scripts/...`)
+- **Options:** Complete list of all arguments with defaults, types, and explanations. Call out dangerous options with warnings and explain the consequences of misuse
+- **Environment variables:** Required env vars listed per-script, with purpose
+- **Performance characteristics:** Expected throughput, message counts, time estimates for representative workloads — helps users plan and monitor
+- **Troubleshooting:** Common error messages with their causes and solutions. This saves enormous amounts of debugging time
+
+For simple/trivial scripts (one-liners, straightforward utilities), a brief entry in the overview table is sufficient — not every script needs a full section.
+
+Keep these practical and self-contained — a developer navigating to the directory should be able to understand, run, and create scripts without leaving.
 
 ---
 

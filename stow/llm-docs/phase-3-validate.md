@@ -64,6 +64,21 @@ Every command documented (in `workflows.md` or elsewhere) must be defined in an 
 
 For each command: check `package.json` scripts, `Makefile`, CI configs, or `docker-compose` files. If the command isn't defined anywhere, remove it.
 
+### Check 2b: Script verification
+
+Every script documented in `scripts.md` and script directory READMEs must exist and be accurately described.
+
+For each script documented:
+- Verify the script file exists at the stated path
+- Verify the run command is correct (check `package.json` scripts, shebangs, or ecosystem conventions)
+- Verify stated arguments/options match the script's actual argument parser
+- Verify environment variables listed are actually used by the script
+- Verify shared utilities referenced actually exist at the stated paths
+
+For each script directory README: verify it covers all scripts in that directory (check for undocumented scripts).
+
+For `scripts.md`: verify the decision table scenarios match the actual script distribution, and that the "All Script Locations" table is complete (search for script directories not listed).
+
 ### Check 3: Architectural claim verification
 
 Every claim about what a component does, how components communicate, what depends on what, or how data flows must be traceable to actual code.

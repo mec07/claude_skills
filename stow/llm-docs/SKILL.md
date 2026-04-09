@@ -92,6 +92,7 @@ Every phase instruction file must be read alongside these rules. These are non-n
 
 - Every file path referenced must exist. Verify with `ls` or Glob before writing it into a doc.
 - Every command documented must come from `package.json` scripts, `Makefile`, CI config, or equivalent. Do not invent commands.
+- Every script documented must exist at the stated path. Verify run commands, arguments, and environment variables against the actual script code.
 - Every architectural claim must be traceable to actual imports, calls, or config in source code.
 - For every inter-component communication path: find the sender code AND the receiver code. Verify the mechanism and the data contract.
 
@@ -139,6 +140,7 @@ docs/llm/
 ├── architecture.md          # Components, boundaries, communication, data flow
 ├── conventions.md           # Evidenced patterns and standards
 ├── workflows.md             # Exact commands for every common task
+├── scripts.md               # Comprehensive inventory of all scripts across the repo
 ├── gotchas.md               # Traps, surprises, hidden coupling
 ├── glossary.md              # Repo-specific terms (only if warranted)
 ├── dependency-map.md        # System-wide module graph and change impact
@@ -171,6 +173,7 @@ The canonical LLM documentation lives in `docs/llm/`. Start with `docs/llm/overv
 2. Check for impacts: `docs/llm/dependency-map.md`
 3. Check for traps: `docs/llm/gotchas.md`
 4. Follow project patterns: `docs/llm/conventions.md`
+5. Before creating/modifying scripts: `docs/llm/scripts.md`
 ```
 
 Do not use `@` file includes in CLAUDE.md. This file is loaded into every Claude Code conversation — keeping it minimal avoids wasting context on documentation irrelevant to the current task. The agent should read specific docs as needed.
@@ -182,6 +185,8 @@ These areas require special attention across all phases, as they are where bugs 
 **Inter-component communication:** Every point where one part of the system talks to another must be documented with sender file, receiver file, mechanism, data contract location, and downstream effects.
 
 **Data structure discoverability:** Every schema, table definition, index definition, type definition, and contract must be findable in one step. Docs must never copy these structures — they must point precisely to the source-of-truth files and document the relationships between them.
+
+**Script discoverability:** Repos — especially monorepos — accumulate scripts across many locations: `package.json` scripts, shell scripts, `Makefile` targets, CI workflows, Python scripts, `Taskfile` targets, and more. These must be comprehensively inventoried in `docs/llm/scripts.md` so that agents can quickly determine whether a script already exists, whether an existing script can be extended, or whether a new script is needed (and where to put it).
 
 ---
 

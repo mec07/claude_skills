@@ -47,11 +47,12 @@ Read all of the following files **that exist**, in this order:
 5. `docs/llm/dependency-map.md`
 6. `docs/llm/conventions.md`
 7. `docs/llm/workflows.md`
-8. `docs/llm/gotchas.md`
-9. `docs/llm/glossary.md`
-10. `.github/copilot-instructions.md`
-11. `docs/README.md`
-12. Any local context files (`README.md` or `CLAUDE.md` in subdirectories)
+8. `docs/llm/scripts.md`
+9. `docs/llm/gotchas.md`
+10. `docs/llm/glossary.md`
+11. `.github/copilot-instructions.md`
+12. `docs/README.md`
+13. Any local context files (`README.md` or `CLAUDE.md` in subdirectories, including script directory READMEs)
 
 If a file in this list does not exist, log it as a gap in `_review.md` (type: `gap`, detail: "expected file missing").
 
@@ -82,6 +83,9 @@ You need to write a test for an existing feature. Can you find where tests live,
 
 **Scenario F: Understanding a failure**
 A CI build or deployment failed. Can you find the CI/CD configuration, understand the pipeline, and trace the failure to a specific step? Do the workflows and architecture docs cover this path?
+
+**Scenario G: Writing or running a script**
+You need to perform a one-off operation (data backfill, batch update, repair). Can you find whether a script for this already exists? If one exists, can you determine how to run it (credentials, env vars, arguments)? If you need a new script, can you determine where to put it, what patterns to follow, and what shared utilities are available? Does the decision table in `scripts.md` guide you to the right location? Do the script directory READMEs give you enough to get started?
 
 For each scenario, trace your path through the documentation and **log every point where you get stuck or uncertain** to `_review.md`.
 

@@ -56,6 +56,8 @@ Check whether the docs adequately cover:
 
 **Change impact:** If an agent modifies a module, can it immediately determine what else might break? Is this covered consistently in both the module docs and `dependency-map.md`?
 
+**Script discoverability:** Does `scripts.md` exist and comprehensively inventory all scripts? Are script directories covered with READMEs? Can an agent quickly answer: "Does a script for X already exist?", "Where should a new script go?", and "What patterns should it follow?" Check the actual repo for scripts and script directories, and compare against what `scripts.md` covers.
+
 ### 1d. Verbosity assessment
 
 Look for:
@@ -71,6 +73,7 @@ Look for:
 - Does `architecture.md` reflect the real system shape, including inter-component communication and data structure locations?
 - Does `dependency-map.md` show the system-wide module graph with change impact?
 - Does `workflows.md` list real commands with real sources?
+- Does `scripts.md` comprehensively inventory all scripts across the repo? Does it include the decision table, per-ecosystem sections, auth patterns, and shared utilities? Are all script directories covered with READMEs?
 - Does `conventions.md` cite real patterns with real file paths?
 - Does `gotchas.md` capture real traps with real evidence?
 - Does `glossary.md` contain terms that actually need defining? If not, it should be removed.
@@ -165,11 +168,12 @@ When adding or expanding data structure documentation:
 After making changes, verify:
 
 1. **All module docs exist** for every significant area of the codebase
-2. **All cross-links resolve** — every `[text](path)` points to a file that exists
-3. **No orphan docs** — every doc is reachable from `overview.md` or `CLAUDE.md`
-4. **`CLAUDE.md` is minimal** — pointer only, no `@` includes
-5. **No duplication** — no fact stated in more than one place
-6. **Module boundaries match code** — each doc covers one coherent area
+2. **All script directories have READMEs** and `scripts.md` covers all script locations
+3. **All cross-links resolve** — every `[text](path)` points to a file that exists
+4. **No orphan docs** — every doc is reachable from `overview.md` or `CLAUDE.md`
+5. **`CLAUDE.md` is minimal** — pointer only, no `@` includes
+6. **No duplication** — no fact stated in more than one place
+7. **Module boundaries match code** — each doc covers one coherent area
 
 This is a structural check only. Factual accuracy verification is Phase 3's job.
 
