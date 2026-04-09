@@ -4,6 +4,47 @@ You are working with full filesystem access to the repository. Your job is to ex
 
 **This phase is exploration and writing only. Do not verify your output — that is Phase 3's job.** Focus your full effort on understanding the codebase deeply and documenting it accurately.
 
+---
+
+## Checklist
+
+Track your progress against this checklist. Update `state.md` after completing each item.
+
+```
+- [ ] 0: Read baseline assessment (_original_docs.md)
+- [ ] 1a: Map repo structure
+- [ ] 1b: Read existing docs
+- [ ] 1c: Identify tech stack
+- [ ] 1d: Understand each major directory
+- [ ] 1e: Trace key flows
+- [ ] 1f: Identify real commands
+- [ ] 1g: Inventory all scripts
+- [ ] 1h: Hunt for gotchas
+- [ ] GATE: Confirm all exploration complete (answer 7 questions)
+- [ ] 2: Write documentation
+- [ ] review: Self-review checklist
+```
+
+---
+
+## Inputs and Outputs
+
+**Inputs (read from disk):**
+- `~/.claude/MEMORY/llm-docs/<repo-slug>/_original_docs.md` — Phase 0's assessment of existing documentation
+- `~/.claude/MEMORY/llm-docs/<repo-slug>/state.md` — current progress state
+- The target repository codebase (full filesystem access)
+
+**Outputs (written to disk):**
+- `docs/llm/**` in the target repo — all documentation files
+- `CLAUDE.md` in the target repo root
+- `.github/copilot-instructions.md` in the target repo
+- `docs/README.md` in the target repo
+- Local context files in important subdirectories
+- `~/.claude/MEMORY/llm-docs/<repo-slug>/_explore_<area>.md` — per-area exploration notes (working files, consumed during writing phase)
+- `~/.claude/MEMORY/llm-docs/<repo-slug>/state.md` — updated with progress
+
+---
+
 ## CRITICAL RULES — read before doing anything
 
 **DO NOT HALLUCINATE. DO NOT GUESS. DO NOT INFER FROM FILENAMES.**
@@ -22,19 +63,25 @@ You are working with full filesystem access to the repository. Your job is to ex
 
 ## Step 0: Read the baseline assessment
 
-Read `docs/llm/_original_documentation.md` (produced by Phase 0). This tells you:
+Read `~/.claude/MEMORY/llm-docs/<repo-slug>/_original_docs.md` (produced by Phase 0). This tells you:
 - What documentation already exists and where it lives
 - How reliable each doc is (confidence scores from spot-checking claims against code)
 - Which docs to trust as starting facts and which to treat with skepticism
 - What areas of the codebase have no documentation at all (these need the most thorough exploration)
 
-For every doc rated **high confidence**, read the original doc now and treat its verified claims as starting facts — build on them. For **medium confidence** docs, read them but verify key claims as you explore. For **low confidence** docs, note their existence but do not build on their claims without independent verification from source code.
+For every doc rated **high confidence**, read the original doc now and treat its verified claims as starting hypotheses — build on them but verify each specific claim you incorporate against source code. High confidence means the sample looked good, not that every claim is correct. For any claim you carry forward from a baseline doc into your generated docs, confirm it against at least one source file. This prevents anchoring bias where a mostly-correct doc has a few wrong claims that propagate unchecked. For **medium confidence** docs, read them but verify key claims as you explore. For **low confidence** docs, note their existence but do not build on their claims without independent verification from source code.
 
-If `_original_documentation.md` reports that no documentation exists at all, proceed to Step 1 with no starting assumptions — rely entirely on source code exploration.
+If `_original_docs.md` reports that no documentation exists at all, proceed to Step 1 with no starting assumptions — rely entirely on source code exploration.
+
+**Structure independence:** Build the `docs/llm/` structure from the codebase's actual architecture, not from the existing documentation's structure. Existing docs may use a taxonomy (e.g., grouped by team, by deployment environment, by historical project phase) that doesn't serve LLM agents well. The `docs/llm/` structure should reflect code boundaries, not doc boundaries.
+
+**Update state:** Mark step 0 complete in `state.md`.
 
 ---
 
 ## Step 1: Systematic exploration (write NOTHING yet)
+
+**HARD GATE: Do NOT write any documentation until ALL exploration steps (1a through 1h) are complete and the completion criteria are satisfied.** Premature writing produces docs that reflect partial understanding. Complete all exploration first, then write from comprehensive knowledge.
 
 You must complete ALL of the following before writing any documentation file. Do not skip ahead.
 
@@ -44,13 +91,19 @@ List all directories to a reasonable depth, excluding generated/dependency direc
 
 Record what you find. Identify the top-level organisation pattern.
 
+**Update state:** Mark step 1a complete in `state.md`.
+
 **1b. Read existing documentation**
 
-`_original_documentation.md` indexes all existing documentation with confidence scores. Use it as your reading guide:
+`_original_docs.md` indexes all existing documentation with confidence scores. Use it as your reading guide:
 - Read all **high-confidence** docs fully — these are your most reliable sources
 - Read all **medium-confidence** docs — useful context but verify key claims as you encounter them
 - Skim **low-confidence** docs for structural information only — do not trust their factual claims
 - Also search for any markdown files that Phase 0 may have missed (unusual locations, non-standard names, etc.) and read those too
+
+**Re-investigation for medium/low-confidence areas:** Areas covered by medium- or low-confidence existing docs need *more* exploration, not less. Stale documentation creates a false sense of understanding — the agent (and human) may assume an area is well-understood when it isn't. For areas where existing docs scored medium or low, explore with the same thoroughness as undocumented areas. Do not assume the existing doc's claims are even directionally correct.
+
+**Update state:** Mark step 1b complete in `state.md`.
 
 **1c. Identify the tech stack from actual config files**
 
@@ -66,6 +119,8 @@ Read these files where they exist — do not guess from folder names:
 
 For every technology you list in the docs, you must be able to point to the config file or dependency declaration where you found it.
 
+**Update state:** Mark step 1c complete in `state.md`.
+
 **1d. Understand each major directory**
 
 For every top-level directory (and significant nested directories):
@@ -75,6 +130,8 @@ For every top-level directory (and significant nested directories):
 4. Understand what it actually does — not what its name implies
 
 **A directory named `services/` might contain service definitions, or service workers, or microservice configs, or something else entirely. You do not know until you read the files inside it.**
+
+**Update state:** Mark step 1d complete in `state.md`.
 
 **1e. Trace key flows**
 
@@ -86,9 +143,13 @@ Read enough source code to understand at least one complete flow through the sys
 
 This is how you discover real architecture, not by guessing from folder structure.
 
+**Update state:** Mark step 1e complete in `state.md`.
+
 **1f. Identify real commands**
 
 Find commands from `package.json` scripts, `Makefile` targets, CI config steps, `pyproject.toml` scripts, or equivalent. Only commands found in these files may appear in your documentation.
+
+**Update state:** Mark step 1f complete in `state.md`.
 
 **1g. Inventory all scripts**
 
@@ -111,9 +172,17 @@ Additionally, for each script ecosystem you find:
 
 In monorepos, pay particular attention to which package or project each script belongs to, and whether scripts at different levels share patterns or conventions.
 
+**Update state:** Mark step 1g complete in `state.md`.
+
 **1h. Hunt for gotchas**
 
 Search for `HACK`, `FIXME`, `XXX`, `WORKAROUND`, `IMPORTANT`, `NOTE:`, `TODO` comments across source files. Read the flagged files to understand what the warnings are about.
+
+**Update state:** Mark step 1h complete in `state.md`.
+
+---
+
+### Exploration completion gate
 
 **Step 1 is complete only when you can answer these questions from evidence:**
 - What does this repo do?
@@ -124,17 +193,53 @@ Search for `HACK`, `FIXME`, `XXX`, `WORKAROUND`, `IMPORTANT`, `NOTE:`, `TODO` co
 - What scripts exist and where do they live? (cite every location you found them)
 - What conventions are used? (cite repeated patterns across files you read)
 
+**If you cannot answer all seven questions with cited evidence, go back and explore more before proceeding.**
+
+**Update state:** Mark the GATE step complete in `state.md`.
+
+---
+
+### Parallelisation: Exploration phase
+
+If the repo has **10+ major directories**, parallelise exploration using subagents. If the repo is smaller, run exploration sequentially — subagent overhead is not worth it.
+
+**Protocol:**
+
+1. Complete steps 1a-1c yourself (structure mapping, doc reading, tech stack identification). These provide the shared context subagents need.
+2. Identify major areas for parallel exploration (one per top-level directory or logical grouping).
+3. Dispatch one subagent per area. Each subagent handles steps 1d and 1e for its assigned area, plus 1g and 1h within that area.
+4. Each subagent writes its findings to `~/.claude/MEMORY/llm-docs/<repo-slug>/_explore_<area>.md`.
+5. When all subagents complete, read all `_explore_*.md` files and synthesise the results. Fill any gaps. Complete steps 1f and 1g at the repo-wide level (commands and scripts may span areas).
+
+**Subagent prompt template for exploration:**
+
+Each subagent must receive ALL of the following inline — do not reference external instruction files:
+- The area to explore (directory path, scope)
+- The CRITICAL RULES section (do not hallucinate, do not guess, etc.)
+- Instructions for steps 1d, 1e, 1g, 1h scoped to their area
+- The tech stack summary from step 1c (so they understand the ecosystem)
+- The output file path: `~/.claude/MEMORY/llm-docs/<repo-slug>/_explore_<area>.md`
+- Instructions to structure output as: Purpose, Key Files, Internal Structure, Flows Traced, Scripts Found, Gotchas Found, Dependencies (internal and external), Communication Patterns
+
+**Model selection:** Use `sonnet` for exploration subagents. This is mechanical reading and summarising work.
+
+**If a subagent fails** to produce its `_explore_<area>.md` file: re-dispatch once. If it fails again, the orchestrating agent explores that area sequentially. Note the gap in `state.md`.
+
+---
+
 ### Large repos
 
 If the repo has more than ~20 top-level directories or is a monorepo with multiple packages:
 
 - **Prioritise breadth over depth.** Map the full structure and read configs/entry points for every module. Deep-dive the 5–10 most important or most-connected modules. For others, read at minimum the entry point and package config.
-- **Use subagents for parallel exploration** if the runtime supports it. Each subagent can explore one major area independently.
+- **Use subagents for parallel exploration** as described above. Each subagent can explore one major area independently.
 - **Document your coverage.** At the end of Step 1, note which modules you explored in depth vs. surveyed. Phase 2 will fill gaps.
 
 ---
 
 ## Step 2: Write the documentation
+
+**HARD GATE: Confirm that ALL exploration steps (1a through 1h) are complete and the completion criteria are satisfied before proceeding.** If any exploration step is unchecked in `state.md`, go back and complete it.
 
 ### Output structure
 ```
@@ -167,6 +272,42 @@ docs/README.md
 - **Never copy schemas, types, or table definitions into markdown.** Point to the source file.
 - **When in doubt, leave it out.** A gap is better than a fabrication.
 - **Every fact in one place.** If information belongs in a module doc, put it there and link from top-level docs. Do not restate the same fact in multiple files.
+
+---
+
+### Parallelisation: Writing phase
+
+If you need to write **5+ documentation files**, parallelise writing using subagents. If fewer, write sequentially.
+
+**Protocol:**
+
+1. Plan all doc files to write. For each, determine what exploration data it needs.
+2. Dispatch one subagent per doc file. Each subagent writes exactly one file.
+3. Each subagent receives inline:
+   - The file specification from the relevant section below
+   - All exploration notes relevant to that file (from `_explore_*.md` files and your synthesised notes)
+   - The CRITICAL RULES and Writing Rules sections
+   - The target file path in the repo
+   - The cross-link targets (list of other docs being created, so links can be correct)
+4. When all subagents complete, review the full set for consistency, cross-link correctness, and coverage gaps. Fix any issues.
+
+**HARD CONSTRAINT:** Do NOT dispatch parallel doc-writing subagents until `overview.md` and `architecture.md` are COMPLETE. These two files establish structural decisions that all other docs depend on. Write them first (sequentially or as a pair), verify they exist on disk, then dispatch all remaining doc-writing subagents in parallel. During the merge step, the orchestrating agent must review all cross-references across docs and fix any that don't resolve. **Duplication scan:** After fixing cross-references, scan all generated docs for the same fact appearing in multiple files. For each duplicate: keep the fact in its canonical location (module-specific details in the module doc, cross-cutting information in the top-level doc) and replace the other occurrence with a link. Log any duplicates found and resolved.
+
+**If a writing subagent fails** to produce its doc file: the orchestrating agent writes that doc itself during the merge step using the exploration notes. Note the fallback in `state.md`.
+
+**Model selection:**
+- Use `sonnet` for writing individual doc files from clear exploration notes.
+- Use `opus` for the merge/review step — it requires synthesis, consistency checking, and judgment.
+
+**Subagent prompt template for writing:**
+
+Each subagent must receive ALL of the following inline:
+- The exact file specification (copied from the relevant section below)
+- The exploration notes relevant to this file
+- The full Writing Rules section
+- The CRITICAL RULES section
+- A list of all other doc files being created (for cross-linking)
+- The target output file path
 
 ---
 
@@ -416,6 +557,8 @@ If a `CLAUDE.md` already exists, read it first. Preserve any existing project-sp
 
 Do NOT rewrite it from scratch. Append/improve only.
 
+**Exception:** If Phase 0 scored `.github/copilot-instructions.md` as **low confidence** (many claims wrong or stale), the preservation rule does not apply. Rewrite the file from scratch using verified information from your exploration. Note in `state.md` that the original was replaced due to low confidence score.
+
 **If this file does not exist:** Create `.github/` directory if needed, then create the file containing:
 - One-line repo description
 - Tech stack summary
@@ -458,6 +601,43 @@ For every directory that contains scripts (identified in Step 1g), create a `REA
 For simple/trivial scripts (one-liners, straightforward utilities), a brief entry in the overview table is sufficient — not every script needs a full section.
 
 Keep these practical and self-contained — a developer navigating to the directory should be able to understand, run, and create scripts without leaving.
+
+**Update state:** Mark step 2 (write) complete in `state.md`.
+
+---
+
+## Self-review checklist
+
+After writing all documentation, run through this checklist before declaring the phase complete. Do not skip this step.
+
+### Path verification
+- [ ] Every file path referenced in any doc exists in the repo (spot-check at least 20 paths across all docs)
+- [ ] Every `docs/llm/modules/<name>.md` corresponds to a real directory in the codebase
+- [ ] Every local context file points to a module doc that exists
+
+### Command verification
+- [ ] Every command in `workflows.md` traces to a `package.json` script, `Makefile` target, CI config, or equivalent
+- [ ] Every run pattern in `scripts.md` matches the actual way scripts are invoked
+
+### Content verification
+- [ ] No documentation claims "X probably does Y" or "X likely does Y" — either verified or marked `<!-- TODO: verify -->`
+- [ ] No schemas, types, or table definitions have been copied into markdown (all point to source files)
+- [ ] No content has been invented that is not traceable to a source file
+
+### Cross-link verification
+- [ ] Every `[text](path)` link in every doc resolves to a file that exists
+- [ ] `overview.md` links to every other `docs/llm/` file
+- [ ] `overview.md` indexes all module docs
+- [ ] Every module doc has a "Related docs" section with links
+
+### Structural verification
+- [ ] `CLAUDE.md` is minimal — pointer only, no `@` includes, no duplicated content
+- [ ] `docs/README.md` lists all `docs/llm/` files
+- [ ] No fact is stated in more than one file (facts live in one place, other files link)
+
+Fix any issues found. Then mark the review step complete in `state.md`.
+
+**Update state:** Mark step `review` complete in `state.md`. Update the phase to complete with timestamp.
 
 ---
 

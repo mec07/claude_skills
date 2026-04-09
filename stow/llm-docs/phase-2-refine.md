@@ -4,6 +4,41 @@ Phase 1 generated documentation from scratch. Your job is to assess its **struct
 
 ---
 
+## Checklist
+
+Complete every item in order. Update `state.md` after each step.
+
+- [ ] 0: Read inputs (baseline reference, all Phase 1 output, codebase structure)
+- [ ] 1a: Module boundary assessment
+- [ ] 1b: Duplication assessment
+- [ ] 1c: Coverage assessment
+- [ ] 1d: Verbosity assessment
+- [ ] 1e: Top-level doc assessment
+- [ ] 2: Plan changes
+- [ ] 3: Execute changes
+- [ ] 4: Structural sanity check
+- [ ] 5: Self-review gate
+
+---
+
+## Inputs and Outputs
+
+**Inputs:**
+- `~/.claude/MEMORY/llm-docs/<repo-slug>/_original_docs.md` — Phase 0 reliability assessment of existing documentation
+- `~/.claude/MEMORY/llm-docs/<repo-slug>/state.md` — current pipeline state
+- `docs/llm/**` — all documentation files produced by Phase 1
+- `CLAUDE.md`, `.github/copilot-instructions.md`, `docs/README.md` — entry point files from Phase 1
+- Local context files in subdirectories — produced by Phase 1
+- The codebase itself — for verifying new content added during expansion
+
+**Outputs:**
+- All `docs/llm/` files restructured and expanded as needed
+- `CLAUDE.md`, `.github/copilot-instructions.md`, `docs/README.md` updated if necessary
+- Local context files added, removed, or updated as needed
+- `~/.claude/MEMORY/llm-docs/<repo-slug>/state.md` updated with Phase 2 complete
+
+---
+
 ## CRITICAL RULES
 
 - **You are a structural reviewer, not a fact-checker.** If a doc says "X uses Y", you do not need to verify that claim — Phase 3 will. But if a doc conflates three unrelated subsystems into one module doc, fix the structure.
@@ -14,7 +49,9 @@ Phase 1 generated documentation from scratch. Your job is to assess its **struct
 
 ## Baseline reference
 
-Read `docs/llm/_original_documentation.md` for the reliability assessment of all existing documentation. When your generated docs conflict with a **high-confidence** original doc on structural matters (e.g., what the major components are, where key boundaries lie), the original doc is more likely to be correct — verify against source code. For **low-confidence** originals, trust the generated docs and verify against source code if in doubt.
+Read `~/.claude/MEMORY/llm-docs/<repo-slug>/_original_docs.md` for the reliability assessment of all existing documentation. When your generated docs conflict with a **high-confidence** original doc on structural matters (e.g., what the major components are, where key boundaries lie), the original doc is more likely to be correct — verify against source code. For **low-confidence** originals, trust the generated docs and verify against source code if in doubt.
+
+> **Update state:** Mark step 0 complete in `state.md` after reading all inputs.
 
 ---
 
@@ -36,6 +73,8 @@ For each module doc in `docs/llm/modules/`:
 
 Let the actual code structure guide you. Don't split based on what you think the architecture should be — split based on what has distinct code, distinct entry points, distinct dependencies, and distinct communication patterns.
 
+> **Update state:** Mark step 1a complete in `state.md`.
+
 ### 1b. Duplication assessment
 
 Look for:
@@ -45,6 +84,8 @@ Look for:
 - `CLAUDE.md`, `copilot-instructions.md`, and `overview.md` all saying the same things
 
 **The rule: every fact should live in exactly one place.** Other files should link to it, not restate it.
+
+> **Update state:** Mark step 1b complete in `state.md`.
 
 ### 1c. Coverage assessment
 
@@ -58,6 +99,8 @@ Check whether the docs adequately cover:
 
 **Script discoverability:** Does `scripts.md` exist and comprehensively inventory all scripts? Are script directories covered with READMEs? Can an agent quickly answer: "Does a script for X already exist?", "Where should a new script go?", and "What patterns should it follow?" Check the actual repo for scripts and script directories, and compare against what `scripts.md` covers.
 
+> **Update state:** Mark step 1c complete in `state.md`.
+
 ### 1d. Verbosity assessment
 
 Look for:
@@ -67,6 +110,8 @@ Look for:
 - Hedging language ("This likely...", "This appears to...") — either it's verified or it should be marked `<!-- TODO: verify -->`
 - Sections that exist but contain no real information
 - Schemas, types, or data structures copied into markdown when they should just be pointed to
+
+> **Update state:** Mark step 1d complete in `state.md`.
 
 ### 1e. Top-level doc assessment
 
@@ -78,6 +123,8 @@ Look for:
 - Does `gotchas.md` capture real traps with real evidence?
 - Does `glossary.md` contain terms that actually need defining? If not, it should be removed.
 - Is `CLAUDE.md` minimal — a pointer only, no `@` includes, no duplicated content?
+
+> **Update state:** Mark step 1e complete in `state.md`.
 
 ---
 
@@ -106,6 +153,8 @@ Based on your assessment, decide:
 
 **What to restructure at the top level:**
 - Any top-level doc that isn't pulling its weight
+
+> **Update state:** Mark step 2 complete in `state.md`.
 
 ---
 
@@ -144,6 +193,14 @@ If a module doc doesn't answer all nine after your edits, it's not done.
 - `.github/copilot-instructions.md` is the concise human-readable entry point. Add links to `docs/llm/` for depth — don't bloat it.
 - Local context files are max 5 lines: what this is, link to module doc, critical local caveat if any.
 
+### Local context file maintenance
+
+When module boundaries change in Step 1a (modules split, merged, or removed), update corresponding local context files:
+- **Module split:** Create new local context files in the new module directories, each pointing to the correct new module doc.
+- **Module removed:** Delete the local context file for the removed module.
+- **Module renamed:** Update the local context file's pointer to the renamed module doc.
+- **Boundary shift:** If files moved between modules, ensure local context files in affected directories point to the correct module doc.
+
 ### Communication documentation rules
 
 When adding or expanding communication documentation:
@@ -161,6 +218,8 @@ When adding or expanding data structure documentation:
 - **Document relationships.** If a search index mirrors a DB table, say so and point to both definitions and the sync code.
 - **Document naming conventions.** If there's a pattern to how tables/types/fields are named, state it.
 
+> **Update state:** Mark step 3 complete in `state.md`.
+
 ---
 
 ## Step 4: Structural sanity check
@@ -176,6 +235,32 @@ After making changes, verify:
 7. **Module boundaries match code** — each doc covers one coherent area
 
 This is a structural check only. Factual accuracy verification is Phase 3's job.
+
+> **Update state:** Mark step 4 complete in `state.md`.
+
+---
+
+## Step 5: Self-review gate
+
+Before marking Phase 2 complete, verify all three of the following. If any check fails, go back and fix it before proceeding.
+
+### Gate 1: Module doc 9-question test
+
+Re-read every module doc in `docs/llm/modules/`. For each one, confirm it answers all 9 questions from the module doc quality bar above. List any that fail and which questions they miss. Fix them now.
+
+### Gate 2: Cross-link integrity
+
+Check every markdown link (`[text](path)`) across all `docs/llm/` files, `CLAUDE.md`, `.github/copilot-instructions.md`, `docs/README.md`, and local context files. Every link must resolve to a file that exists. Fix or remove any that don't.
+
+### Gate 3: No duplication
+
+Scan all documentation files for facts stated in more than one place. If you find any, move the fact to its canonical location and replace duplicates with links. Every fact lives in exactly one place.
+
+**All three gates must pass.** If you made fixes during this step, re-run the failed gate(s) to confirm they now pass.
+
+**Escalation:** If a gate fails after 3 fix-and-recheck cycles, stop looping. Log the failing gate and the specific failures to `state.md` as a known issue. Proceed to Phase 3 — the validation phase will investigate and catch remaining problems. Do not loop indefinitely on the self-review gate.
+
+> **Update state:** Mark step 5 complete and Phase 2 complete in `state.md`.
 
 ---
 
