@@ -69,10 +69,16 @@ For each question, use this structured format:
 
 ```
 **Q[N]: [Specific question]**
+- **Doc origin:** preserved | generated | hybrid (preserved, modified by Phase 5)
 - **Why it matters:** [What an agent trying to do X would get stuck on]
 - **What I checked:** [Source files examined, what they showed]
 - **Can defer?** Yes / No — [If yes: docs work without this but have a gap. If no: this blocks agent work in the area.]
 ```
+
+To determine the origin for each question's associated doc file, read `_manifest.md` from `~/.claude/MEMORY/llm-docs/<repo-slug>/`. Cross-reference each question's target doc against the manifest entries:
+- **preserved** — the doc existed in a previous run and was kept as-is
+- **generated** — the doc was freshly written in this run
+- **hybrid** — the doc was preserved from a previous run but Phase 5 partially updated it
 
 **Deferred answers:** If the user says 'defer' or 'skip' for a question, mark it `deferred` in `_review.md` (not `open`). Deferred issues are documented as known gaps in the final docs with `<!-- DEFERRED: [question] -->` markers. These are not failures — they are acknowledged limitations.
 

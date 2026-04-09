@@ -27,6 +27,7 @@ Use this to track progress. Mark each item `[x]` in `state.md` as you complete i
 **Outputs:**
 - Updated documentation files with resolved issues fixed in place
 - Updated `~/.claude/MEMORY/llm-docs/<repo-slug>/_review.md` with resolution statuses, evidence, and final summary
+- Updated `~/.claude/MEMORY/llm-docs/<repo-slug>/_manifest.md` — disposition changed from `preserved` to `modified_by_phase_5` for any preserved doc that Phase 5 edits
 
 ---
 
@@ -69,6 +70,7 @@ When you resolve an issue:
    - Status: `resolved`
    - Resolution: what you found and what you changed
    - Evidence: which source file(s) you read
+4. **If you modified a preserved doc** (check `_manifest.md` — any doc with disposition `preserved`): update `_manifest.md` to change that doc's disposition from `preserved` to `modified_by_phase_5`. This signals Phase 6 to apply 80%+ validation scrutiny to the modified file.
 
 **Updating state:** After updating docs for all resolved issues, mark step 5c complete in `state.md`.
 

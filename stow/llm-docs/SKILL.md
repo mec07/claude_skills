@@ -29,6 +29,9 @@ Generate a comprehensive, accurate, LLM-optimised documentation layer for any co
 **Resume from a specific phase:**
 > Run llm-docs from phase: validate
 
+**Fresh run (ignore existing docs, regenerate everything):**
+> Run llm-docs fresh
+
 ---
 
 ## State management
@@ -36,6 +39,8 @@ Generate a comprehensive, accurate, LLM-optimised documentation layer for any co
 All working files and state live in `~/.claude/MEMORY/llm-docs/<repo-slug>/`, where `<repo-slug>` is the repository directory name (e.g., `my-project`). This keeps working files out of the target repo and enables context recovery.
 
 ### State file: `state.md`
+
+The template below shows Phase 1's sub-steps as an example. **When each phase agent starts, it must expand its phase entry** by copying the checklist from its phase instruction file into `state.md`. For example, when Phase 3 starts, the agent replaces `- [ ] 3: Validate` with the full 18-item checklist from `phase-3-validate.md`. This ensures recovery can resume at the exact sub-step.
 
 ```markdown
 # llm-docs State
@@ -67,6 +72,11 @@ updated: ISO-timestamp
 - [ ] 6: Validate (pass 2)
 - [ ] 7: Clarity Review 2
 - [ ] 8: Ask Human
+
+## Coverage Tiering (if applicable)
+- Tier 1: [list or "not applicable"]
+- Tier 2: [list or "not applicable"]
+- Tier 3: [list or "not applicable"]
 ```
 
 ### Working files in MEMORY
@@ -75,6 +85,7 @@ updated: ISO-timestamp
 |---|---|---|---|---|
 | `state.md` | Orchestrator | All phases | Never (permanent record) | Phase progress and repo path |
 | `_original_docs.md` | Phase 0 | Phases 1, 2, 3, 4 | Phase 8 cleanup | Existing doc assessment |
+| `_manifest.md` | Phase 1 | Phases 2, 6, 7, 8 | Phase 8 cleanup | File disposition: preserved vs generated vs orphaned, tier assignments |
 | `_audit.md` | Phase 3 | Phases 6, 8 | Phase 8 cleanup | Validation findings ledger |
 | `_review.md` | Phase 4 | Phases 5, 7, 8 | Phase 8 cleanup | Clarity review findings |
 | `_explore_<area>.md` | Phase 1 subagents | Phase 1 merge | End of Phase 1 | Per-area exploration output |
@@ -82,15 +93,47 @@ updated: ISO-timestamp
 | `_scenario_<name>.md` | Phase 4 subagents | Phase 4 merge | End of Phase 4 | Per-scenario simulation output |
 | `_discover_<dirname>.md` | Phase 0 subagents | Phase 0 merge | End of Phase 0 | Per-directory doc discovery output |
 
+### Manifest format (`_manifest.md`)
+
+All phases that read the manifest expect this exact format:
+
+```markdown
+# File Manifest
+
+## Top-level docs
+| File | Disposition | Confidence | Lines | Notes |
+|------|-------------|------------|-------|-------|
+| overview.md | preserved | high | 152 | |
+| architecture.md | generated | medium | 0 | Rewritten — medium confidence |
+| scripts.md | generated | n/a | 0 | New to spec |
+| glossary.md | skipped | n/a | 0 | Not warranted |
+
+## Module docs
+| File | Disposition | Confidence | Lines | Notes |
+|------|-------------|------------|-------|-------|
+| modules/auth.md | preserved | high | 89 | |
+| modules/payments.md | generated | n/a | 0 | New module discovered |
+| modules/legacy.md | orphaned | medium | 45 | Module deleted from codebase |
+
+## Tiering (if applicable)
+- Tier 1: auth, api, frontend
+- Tier 2: notifications, billing, admin
+- Tier 3: utils, config, scripts
+```
+
+**Disposition values:** `preserved` (kept from previous run), `generated` (written from scratch), `orphaned` (module deleted — flagged for Phase 2 deletion), `skipped` (not warranted for this repo), `modified_by_phase_5` (preserved doc updated by Phase 5 to resolve issues).
+
+Phase 5 MUST update a doc's disposition from `preserved` to `modified_by_phase_5` when it edits a preserved doc. This signals Phase 6 to apply increased validation scrutiny.
+
 **File lifecycle by phase end:**
-- **End of Phase 0:** `state.md` + `_original_docs.md` (subagent `_discover_*` files already merged and deleted)
-- **End of Phase 1:** `state.md` + `_original_docs.md` (subagent `_explore_*` files already merged and deleted)
-- **End of Phase 2:** `state.md` + `_original_docs.md`
-- **End of Phase 3:** `state.md` + `_original_docs.md` + `_audit.md` (subagent `_validate_*` files already merged and deleted)
-- **End of Phase 4:** `state.md` + `_original_docs.md` + `_audit.md` + `_review.md` (subagent `_scenario_*` files already merged and deleted)
-- **End of Phase 5:** `state.md` + `_original_docs.md` + `_audit.md` + `_review.md` (updated in place)
-- **End of Phase 6:** `state.md` + `_original_docs.md` + `_audit.md` (rebuilt) + `_review.md`
-- **End of Phase 7:** `state.md` + `_original_docs.md` + `_audit.md` + `_review.md` (updated)
+- **End of Phase 0:** `state.md` + `_original_docs.md`
+- **End of Phase 1:** `state.md` + `_original_docs.md` + `_manifest.md`
+- **End of Phase 2:** `state.md` + `_original_docs.md` + `_manifest.md`
+- **End of Phase 3:** `state.md` + `_original_docs.md` + `_manifest.md` + `_audit.md`
+- **End of Phase 4:** `state.md` + `_original_docs.md` + `_manifest.md` + `_audit.md` + `_review.md`
+- **End of Phase 5:** `state.md` + `_original_docs.md` + `_manifest.md` + `_audit.md` + `_review.md`
+- **End of Phase 6:** `state.md` + `_original_docs.md` + `_manifest.md` + `_audit.md` (rebuilt) + `_review.md`
+- **End of Phase 7:** `state.md` + `_original_docs.md` + `_manifest.md` + `_audit.md` + `_review.md`
 - **End of Phase 8:** `state.md` only (all `_` files deleted)
 
 ---
@@ -194,6 +237,8 @@ When the pipeline completes (after Phase 8, or after Phase 7 if Phase 8 is skipp
 | 4: Clarity Review | Always (4 scenarios) | One subagent per scenario |
 | Other phases | Generally not worth parallelising | Sequential execution |
 
+**Batching for large repos:** For repos requiring 30+ parallel subagents (e.g., 40+ module docs to write or validate), dispatch in waves of 10-15 subagents. Wait for each wave to complete before dispatching the next. This keeps coordination overhead manageable and limits the blast radius of failures. Within each wave, apply the standard failure recovery protocol (re-dispatch once, then sequential fallback).
+
 ### Subagent dispatch protocol
 
 1. **Define tasks:** List the independent work units (areas to explore, docs to write, docs to validate, scenarios to simulate)
@@ -213,7 +258,7 @@ When the pipeline completes (after Phase 8, or after Phase 7 if Phase 8 is skipp
 
 **Failure recovery:** For any failed subagent:
 1. **Re-dispatch once** with the same task. Subagent failures are often transient (context limits, temporary errors).
-2. **If it fails again:** Fall back to sequential processing — the orchestrating agent performs that subagent's work itself.
+2. **If it fails again:** Fall back to sequential processing — the orchestrating agent performs that subagent's work itself. **Write the output to the same file the subagent would have written** (e.g., `_explore_<area>.md`, `_validate_<doc>.md`, `_scenario_<name>.md`). This ensures the merge step finds the output regardless of whether a subagent or the orchestrator produced it.
 3. **Log the failure** in `state.md` as a note under the current phase: `<!-- Subagent failure: [area/doc/scenario], fell back to sequential -->`
 4. **Never block the pipeline** on a failed subagent. The sequential fallback ensures forward progress.
 
@@ -370,6 +415,10 @@ For repos with more than ~20 top-level directories, 50+ source files in a single
   - Document your tier assignments in `state.md` so Phase 2 knows what to fill in.
 - **Use subagents for parallel exploration.** Dispatch one subagent per major area. Each writes its findings to `_explore_<area>.md` in the MEMORY directory. The orchestrating agent merges results.
 - **Module docs are more important than top-level docs** for large repos. An agent working in a specific area needs the module doc to be thorough. Top-level docs provide navigation and system-wide context.
+
+### Known limitation: preserved doc validation depth
+
+When re-running the skill on a repo with existing docs, high-confidence files are preserved to save tokens. Preserved docs that are never modified by Phase 5 receive only Phase 0 spot-check validation (up to 10 claims) plus Phase 3's standard audit. They do NOT receive the increased 80% validation that modified preserved docs get in Phase 6. Phase 7 alerts the user to any unmodified preserved docs, and Phase 8 gives the user the option to request deeper validation or accept them as-is. For repos where code has changed significantly since the last run, consider using `Run llm-docs fresh` to regenerate everything.
 
 ---
 

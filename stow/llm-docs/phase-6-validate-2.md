@@ -61,6 +61,8 @@ Do not batch state updates. If context is lost between steps, the recovery proto
 
 Delete the contents of `~/.claude/MEMORY/llm-docs/<repo-slug>/_audit.md` and start a fresh audit. The Phase 3 audit is stale — the docs have changed since then. Do not carry over previous findings.
 
+**Recovery note:** If Phase 6 fails after clearing `_audit.md` but before completing the new audit, the Phase 3 findings are lost. On resume, Phase 6 will re-run the full audit from scratch — this is safe because the audit is derived from docs + source code, both of which are still on disk. The previous audit's findings are not needed for the rebuild; they were stale after Phases 4-5 anyway.
+
 Create the fresh `_audit.md` with the same format specified in `phase-3-validate.md`:
 
 ```markdown
@@ -90,6 +92,8 @@ The self-resolve phase (Phase 5) added new content to the docs based on issues f
 - It may have introduced inconsistencies with surrounding content
 
 Validate this new content with the same rigour as everything else. When you encounter content that looks like a Phase 5 addition (gap fills, new sections, expanded explanations), give it extra scrutiny — check every claim against source code.
+
+**Increased scrutiny for modified preserved docs:** Read `~/.claude/MEMORY/llm-docs/<repo-slug>/_manifest.md` to identify which docs were `preserved` by Phase 1. For any preserved doc that Phase 5 subsequently modified, validate 80%+ of claims (not the usual spot-check level). The boundary between old preserved content and new Phase 5 additions is where inconsistencies are most likely to hide.
 
 ### 3. Check for regressions (Step 6.11)
 

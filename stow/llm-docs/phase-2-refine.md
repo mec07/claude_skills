@@ -29,12 +29,14 @@ Complete every item in order. Update `state.md` after each step.
 - `docs/llm/**` — all documentation files produced by Phase 1
 - `CLAUDE.md`, `.github/copilot-instructions.md`, `docs/README.md` — entry point files from Phase 1
 - Local context files in subdirectories — produced by Phase 1
+- `~/.claude/MEMORY/llm-docs/<repo-slug>/_manifest.md` — Phase 1 file disposition (preserved, generated, orphaned, tier assignments)
 - The codebase itself — for verifying new content added during expansion
 
 **Outputs:**
 - All `docs/llm/` files restructured and expanded as needed
 - `CLAUDE.md`, `.github/copilot-instructions.md`, `docs/README.md` updated if necessary
 - Local context files added, removed, or updated as needed
+- Updated `~/.claude/MEMORY/llm-docs/<repo-slug>/_manifest.md` — updated after module boundary changes (new modules added, orphaned docs deleted, modules split/merged)
 - `~/.claude/MEMORY/llm-docs/<repo-slug>/state.md` updated with Phase 2 complete
 
 ---
@@ -70,6 +72,8 @@ For each module doc in `docs/llm/modules/`:
 - **Are there major parts of the codebase with no module doc?** These are coverage gaps that need filling.
 
 - **Are there module docs for things too trivial to warrant one?** These should be folded into a parent doc or removed.
+
+- **Check the manifest for orphaned and missing docs.** Read `_manifest.md`. Any module doc marked `orphaned` (module no longer in codebase) should be deleted in Step 3. Any module marked as a coverage gap should get a new doc in Step 3. Cross-reference tier assignments from the manifest to ensure Tier 1 modules have full docs and Tier 2 have summaries.
 
 Let the actual code structure guide you. Don't split based on what you think the architecture should be — split based on what has distinct code, distinct entry points, distinct dependencies, and distinct communication patterns.
 
@@ -209,6 +213,8 @@ When adding or expanding communication documentation:
 - **Always note the mechanism.** Don't just say "A talks to B" — say how (HTTP, gRPC, queue, event, direct import, etc.).
 - **Don't document internals as communication.** Focus on boundaries between distinct parts of the system, not function calls within a module.
 - **Highlight coupled changes.** If changing one side requires changing the other, say so explicitly.
+
+**Update the manifest after restructuring.** After completing Step 3, update `_manifest.md` to reflect any module boundary changes: new module docs created (add as `generated`), orphaned module docs deleted (remove entry), modules split (replace old entry with new entries). This keeps the manifest current for Phases 3-8.
 
 ### Data structure documentation rules
 

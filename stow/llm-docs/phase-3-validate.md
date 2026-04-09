@@ -27,6 +27,7 @@ Use this to track progress. Mark each item `[x]` in `state.md` as you complete i
 - [ ] 3o. Merge subagent outputs (if parallelised)
 - [ ] 3p. Update `_audit.md` summary with final tallies
 - [ ] 3q. Update `state.md` — mark Phase 3 complete
+- [ ] 3r: Check 10b — internal consistency across generated docs
 
 ---
 
@@ -96,7 +97,7 @@ Update `_audit.md` continuously as you work. Every finding goes in the ledger im
 
 1. **List all doc files** to validate: everything under `docs/llm/`, plus `CLAUDE.md`, `.github/copilot-instructions.md`, `docs/README.md`, and any local context files.
 
-2. **Dispatch one subagent per doc file.** Each subagent receives:
+2. **Dispatch one subagent per doc file** (use `sonnet` model — validation is systematic checking, not creative synthesis). Each subagent receives:
    - The full text of the doc file it is responsible for
    - The full audit procedure (all 10 checks below) scoped to that single file
    - The rules section above
@@ -243,6 +244,18 @@ Low-confidence original docs do not warrant a contradiction check — the genera
 **Note:** If parallelised, this check must be performed by the orchestrating agent after merging, since it requires cross-file comparison against the original docs.
 
 **Updating state:** After completing Check 10, mark step 3n complete in `state.md`.
+
+### Check 10b: Internal consistency across generated docs
+
+Scan the generated documentation set for contradictions BETWEEN generated docs (not comparing to originals — that was Check 10):
+- Does module A's doc claim it communicates with module B via REST, while module B's doc says it receives from A via gRPC?
+- Do two docs describe different responsibilities for the same component?
+- Are the same file paths described differently in different docs?
+- Does `architecture.md` describe a flow that contradicts what a module doc says?
+
+For each internal contradiction: trace the source code, determine which doc is correct, fix the incorrect one. Log each finding to `_audit.md`.
+
+**Update state:** Mark step 3r complete in `state.md`.
 
 ---
 

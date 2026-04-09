@@ -20,6 +20,7 @@ Track your progress against this checklist. Update `state.md` after completing e
 - [ ] 1f: Identify real commands
 - [ ] 1g: Inventory all scripts
 - [ ] 1h: Hunt for gotchas
+- [ ] 1i: Assign module coverage tiers (if 20+ modules)
 - [ ] GATE: Confirm all exploration complete (answer 7 questions)
 - [ ] 2: Write documentation
 - [ ] review: Self-review checklist
@@ -74,6 +75,26 @@ For every doc rated **high confidence**, read the original doc now and treat its
 If `_original_docs.md` reports that no documentation exists at all, proceed to Step 1 with no starting assumptions — rely entirely on source code exploration.
 
 **Structure independence:** Build the `docs/llm/` structure from the codebase's actual architecture, not from the existing documentation's structure. Existing docs may use a taxonomy (e.g., grouped by team, by deployment environment, by historical project phase) that doesn't serve LLM agents well. The `docs/llm/` structure should reflect code boundaries, not doc boundaries.
+
+### Build the expected file manifest
+
+Before proceeding to exploration, build a manifest of every file the skill spec says should exist. Check each against disk:
+
+1. List the expected top-level docs: `overview.md`, `architecture.md`, `conventions.md`, `workflows.md`, `scripts.md`, `gotchas.md`, `dependency-map.md` (plus `glossary.md` if warranted).
+2. List the expected entry points: `CLAUDE.md`, `.github/copilot-instructions.md`, `docs/README.md`.
+3. Module docs (`docs/llm/modules/<name>.md`) cannot be listed yet — they depend on exploration results. They will be added to the manifest after Step 1. **After exploration, compare discovered modules against existing module docs. For each discovered module with no existing doc: mark as `generate` (coverage gap). For each existing module doc whose module no longer exists in the codebase: mark as `orphaned`. Record both gaps and orphans in the manifest for Phase 2.**
+4. For each file, check if it exists in the target repo and count its lines.
+5. **Write the manifest to `~/.claude/MEMORY/llm-docs/<repo-slug>/_manifest.md`** using the format specified in SKILL.md (section "Manifest format"). **You must read that section before writing the manifest** — it defines the exact markdown table format with columns: File, Disposition, Confidence, Lines, Notes. Disposition values are: `preserved`, `generated`, `orphaned`, `skipped`, `modified_by_phase_5`. This file is read by Phases 2, 6, 7, and 8.
+
+**File disposition rules (unless `--fresh` was specified):**
+- **File exists + >20 lines + Phase 0 scored `high-confidence`:** Mark as `preserve` — do not rewrite this file in Step 2.
+- **File exists + >20 lines + Phase 0 scored `medium-confidence`:** Mark as `generate` — the doc has substance but Phase 0 found staleness concerns. Rewrite from scratch using exploration findings.
+- **File exists + >20 lines + Phase 0 scored `low-confidence`:** Mark as `generate` — the doc is unreliable. Rewrite from scratch.
+- **File exists + >20 lines + NOT assessed by Phase 0** (e.g., `docs/llm/` file from a previous llm-docs run that Phase 0 didn't individually assess): Mark as `preserve` — treat previous llm-docs output as trustworthy by default.
+- **File missing or stub (<=20 lines):** Mark as `generate` — write this file from scratch in Step 2.
+- **`--fresh` mode:** If the user invoked with "Run llm-docs fresh", mark ALL files as `generate` regardless of what exists. Skip the existence and confidence checks entirely.
+
+After exploration (Step 1) identifies modules, update the manifest with module doc entries following the same rules.
 
 **Update state:** Mark step 0 complete in `state.md`.
 
@@ -180,6 +201,19 @@ Search for `HACK`, `FIXME`, `XXX`, `WORKAROUND`, `IMPORTANT`, `NOTE:`, `TODO` co
 
 **Update state:** Mark step 1h complete in `state.md`.
 
+**1i. Assign module coverage tiers (repos with 20+ modules only)**
+
+If exploration identified 20+ modules warranting documentation, assign coverage tiers:
+- **Tier 1** (full module docs — 10 max): Most important or most-connected modules. Criteria: highest dependency count, entry points, or cross-module import frequency.
+- **Tier 2** (summary module docs — 15-20): Medium importance. Docs include: purpose, location, key files, dependencies, dependents. No deep flow tracing.
+- **Tier 3** (overview mention only): Remaining modules. One-line description and path in `overview.md`. No individual module doc.
+
+Record tier assignments in `state.md` AND in `_manifest.md` so all subsequent phases know the coverage expectations.
+
+For repos with <20 modules, skip tiering — all modules get full docs.
+
+**Update state:** Mark step 1i complete in `state.md`.
+
 ---
 
 ### Exploration completion gate
@@ -240,6 +274,24 @@ If the repo has more than ~20 top-level directories or is a monorepo with multip
 ## Step 2: Write the documentation
 
 **HARD GATE: Confirm that ALL exploration steps (1a through 1h) are complete and the completion criteria are satisfied before proceeding.** If any exploration step is unchecked in `state.md`, go back and complete it.
+
+### Per-file skip logic
+
+Before writing any file, consult the manifest built in Step 0. For each file:
+
+- **Disposition `preserve`:** This file already exists with substantial content from a previous run. **Do not overwrite it.** Move on to the next file. Phase 2 will assess whether it needs structural updates.
+- **Disposition `generate`:** This file is missing or a stub. Write it from scratch following the specs below.
+
+After completing all writing, **update `_manifest.md`** in the MEMORY directory with final module doc dispositions and tier assignments (the pre-exploration manifest only had top-level docs). Then **emit the file disposition summary** to the user:
+
+```
+Phase 1 file disposition:
+- PRESERVED (N): [list of files kept from previous run]
+- GENERATED (N): [list of files written from scratch]
+- SKIPPED (N): [list of files not warranted for this repo, e.g., glossary.md]
+```
+
+This summary is mandatory. It tells the user exactly what changed and enables informed use of the `--fresh` flag if they want a full regeneration next time.
 
 ### Output structure
 ```
@@ -634,6 +686,12 @@ After writing all documentation, run through this checklist before declaring the
 - [ ] `CLAUDE.md` is minimal — pointer only, no `@` includes, no duplicated content
 - [ ] `docs/README.md` lists all `docs/llm/` files
 - [ ] No fact is stated in more than one file (facts live in one place, other files link)
+
+### Preserved file verification (re-run only)
+- [ ] Every `preserved` file's referenced paths still exist (modules may have been renamed/deleted since last run)
+- [ ] Every `generated` file meets the same quality standards as a fresh run — no shortcuts because other files were preserved
+- [ ] Cross-links between `preserved` and `generated` files resolve in both directions
+- [ ] `_manifest.md` written to MEMORY with correct dispositions for all files (including module docs and tier assignments if applicable)
 
 Fix any issues found. Then mark the review step complete in `state.md`.
 

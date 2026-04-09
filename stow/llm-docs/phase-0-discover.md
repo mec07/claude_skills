@@ -91,6 +91,8 @@ If the repo has more than 10 module-level READMEs, you do not need to deeply ass
 3. Deeply assess 2-3 representative examples from each quality group
 4. Assign the group confidence based on the representative samples
 
+**Contradiction warning:** During batch assessment, watch for contradictions within groups. If READMEs in the same quality group make conflicting claims about the same module, component, or responsibility, note the conflict explicitly in `_original_docs.md`. Do not assign a single confidence score to a group with internal contradictions — split the conflicting READMEs into separate assessments.
+
 ### Parallelisation for large repos
 
 If the repo contains **50 or more documentation files**, you may dispatch parallel subagents to read and categorise files concurrently. Split the work by directory tree — one subagent per top-level directory that contains documentation files. Each subagent:

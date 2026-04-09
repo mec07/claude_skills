@@ -101,7 +101,7 @@ After reading all the docs, simulate realistic scenarios that match this repo's 
 
 ### Parallelisation
 
-Dispatch one subagent per scenario. Each subagent receives:
+Dispatch one subagent per scenario (use `opus` model — scenario simulation requires judgment and creative thinking about how an agent would navigate docs). Each subagent receives:
 - The full text of all documentation files (or instructions to read them)
 - One assigned scenario (adapted to the repo's architecture)
 - The `_review.md` issue format from above

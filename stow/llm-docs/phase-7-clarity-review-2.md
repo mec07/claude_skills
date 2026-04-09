@@ -79,6 +79,8 @@ For each resolved issue you re-check:
 - If the fix is incomplete or incorrect, change the status to `open` with a note explaining why
 - Log your re-check in the Phase 7 Findings section regardless of outcome
 
+**Deduplication rule:** When re-checking a Phase 4/5 issue, UPDATE the original entry's status directly (do not create a duplicate entry in Phase 7 Findings). Only add NEW entries to Phase 7 Findings for issues that Phase 4 never identified — genuinely new gaps found in this pass. This prevents `_review.md` from accumulating duplicate entries with conflicting statuses.
+
 Update `state.md`: mark step 7.2 complete.
 
 ### 3. Use different scenarios (Step 7.3)
@@ -92,6 +94,13 @@ Update `state.md`: mark step 7.3 complete.
 ### 4. Check skip condition (Step 7.6)
 
 After completing your review, check `~/.claude/MEMORY/llm-docs/<repo-slug>/_review.md`. Count all issues across both Phase 4 and Phase 7 findings.
+
+**Preserved doc check:** Before declaring Phase 8 skippable, read `~/.claude/MEMORY/llm-docs/<repo-slug>/_manifest.md`. Check the disposition column for each doc:
+- Docs with disposition `preserved` were kept from a previous run and **never touched by Phase 5**. These may contain stale content.
+- Docs with disposition `modified_by_phase_5` were preserved but Phase 5 edited them. These have been re-validated by Phase 6 with increased scrutiny.
+- Docs with disposition `generated` were written fresh. These have been fully validated.
+
+If any docs still have disposition `preserved` (not `modified_by_phase_5`), add a note to `_review.md`: 'N preserved docs were never re-validated in Phases 4-5. These may contain stale content from a previous run.' If N > 0, **Phase 8 cannot be skipped** — the user should be informed which preserved docs were untouched and asked whether they want a spot-check or accept them as-is.
 
 **If ALL issues have status `resolved`** (including any new issues you found and were able to fix in Step 7.5):
 - Report to the orchestrator that **Phase 8 can be skipped** — no human input is needed
