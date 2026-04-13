@@ -576,9 +576,11 @@ Domain context: `.ai/skills/domain-context.md`
 ## Skill & Routing Maintenance
 These skills are LIVING — they evolve with the codebase. When a skill is wrong, fix it.
 When routing doesn't direct you right, add or fix the entry. When you hit a gotcha a skill
-should have warned about, add it to the module skill. When you learn about a new area that
-has no skill, create one. When refactoring changes folder structures or file locations,
-update the skills that describe those conventions. Skills improve through use.
+should have warned about, add it to the module skill. When the user teaches you a practice
+or principle about this project, add it to the relevant skill — it's repo-wide knowledge,
+not a personal correction. When you learn about a new area that has no skill, create one.
+When refactoring changes folder structures or file locations, update the skills that
+describe those conventions. Skills improve through use.
 
 ## Coding Standards
 - Keep code DRY — search for existing implementations before writing new code
@@ -688,6 +690,11 @@ These skills are LIVING — they evolve with the codebase.
 directory layouts, test conventions, and module boundaries. Skills
 describe structural conventions, not individual file paths, but those
 conventions must still match the actual codebase.
+
+**When the user teaches you a practice, principle, or convention about this project:**
+→ Add it to the relevant module or task skill so the next agent inherits it.
+This is repo-wide knowledge, not a personal correction — it belongs in the
+skill files, not just in your conversation memory.
 
 **When you learn something new about an area with no skill:**
 → Create a new skill file in `.ai/skills/modules/` or `.ai/skills/tasks/`.
