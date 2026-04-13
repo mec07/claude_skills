@@ -98,13 +98,16 @@ Update `state.md`: mark step 3.1a complete.
 
 ### 1b. Duplication assessment
 
-Look for:
+Look for duplication **within the skill layer** (`.ai/skills/` files):
 - The same information repeated across multiple skill files
 - Module skills that substantially overlap with the orientation skill
-- Platform glue files (`AGENTS.md`, `CLAUDE.md`) that duplicate skill content instead of pointing to it
-- Per-module routing files that duplicate their canonical module skill instead of containing it
 
-**The rule: every fact should live in exactly one place.** Other files should link to it, not restate it.
+**The rule: within the skill layer, every fact should live in exactly one place.** Other skill files should link to it, not restate it.
+
+**Root platform files are NOT subject to this rule.** CLAUDE.md, AGENTS.md, .cursorrules, and copilot-instructions.md intentionally contain the same required sections (routing tables, key rules, etc.) because each must be self-sufficient — any one of them might be the only context an agent has after compaction. This overlap is by design. However, root files should NOT duplicate detailed module skill content — they contain routing tables and summary context, not full module write-ups.
+
+Also check:
+- Per-module routing files that duplicate their canonical module skill instead of containing it (these SHOULD contain the full module skill — that's the per-module routing design)
 
 Update `state.md`: mark step 3.1b complete.
 
@@ -152,7 +155,24 @@ Check ALL of the following:
 - Is orientation.md focused on system understanding (tech stack, shape, boundaries) WITHOUT routing tables?
 - Is orientation.md under the ~2k token budget?
 
-**Common failure mode:** The refine phase or later phases strip routing tables from CLAUDE.md or copilot-instructions.md in the name of "deduplication." Routing tables are NOT duplication — they are the primary routing mechanism and MUST appear in every root file.
+**Common failure mode:** The refine phase or later phases strip sections from CLAUDE.md or copilot-instructions.md in the name of "deduplication" or "condensing." The required sections below are NOT duplication — they are the behavioural framework that makes agents effective and MUST appear in every root file.
+
+**Required sections in ALL root platform files** (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md). Every root file must be self-sufficient — no redirects to other root files:
+- [ ] Tech Stack
+- [ ] Architecture
+- [ ] Key Commands
+- [ ] Key Rules
+- [ ] Module Routing (table with USE WHEN keywords)
+- [ ] Task Routing (table mapping intents to skill combinations)
+- [ ] Context Window Discipline
+- [ ] Before Modifying Code
+- [ ] Skill & Routing Maintenance
+- [ ] Documentation (pointers to skill layer)
+- [ ] Coding Standards
+- [ ] New to This Repo?
+- [ ] No root file redirects to another root file
+
+If ANY root file is missing ANY of these sections, add them. The prose within each section may vary across files, but every section must be present in every file.
 
 Update `state.md`: mark step 3.1e complete.
 
@@ -223,8 +243,9 @@ If a module skill doesn't answer all fourteen after your edits, it's not done. (
 - A fact lives in one place. Decide where and link everywhere else.
 - Module-specific details live in the module skill.
 - Cross-cutting information lives in the orientation skill or a task skill.
-- **All root platform files (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md) MUST contain the Module Routing and Task Routing tables.** These are the routing mechanism — they tell the agent which skill to load for which task. They are NOT duplication; they are the entry point that makes the entire skill layer work. Without them, agents have no way to discover the right skill.
-- Beyond routing tables, root platform files should NOT duplicate skill content. `CLAUDE.md` is a routing hub: routing tables + key rules + skill pointers. `AGENTS.md` is self-contained but condensed — it adds architecture context and conventions on top of routing, without duplicating module skill content.
+- **All root platform files (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md) MUST contain ALL 12 required sections** (Tech Stack, Architecture, Key Commands, Key Rules, Module Routing, Task Routing, Context Window Discipline, Before Modifying Code, Skill & Routing Maintenance, Documentation, Coding Standards, New to This Repo?). These are the behavioural framework, NOT duplication.
+- **Every root file is self-sufficient.** CLAUDE.md, AGENTS.md, .cursorrules, and copilot-instructions.md each contain ALL required sections independently. They overlap by design — each platform may only load one of these files, and any of them could be the only context surviving compaction. No root file redirects to another.
+- Beyond the required sections, root platform files should NOT duplicate module skill content. Module-specific details live in module skills, not in root files.
 - If a module or task skill changes, update the routing tables in ALL root platform files to stay in sync.
 
 ### Parallelisation for large repos (Tier C/D)
@@ -262,12 +283,13 @@ Update `state.md`: mark step 3.3 complete.
 After making changes, verify:
 
 1. **All module skills exist** for every Tier 1 boundary from `_boundaries.md`
-2. **All cross-links resolve** — the few file paths that remain in skills (entry points, config files) point to files that exist on disk. Skills should describe conventions rather than listing specific file paths.
-3. **No orphan skills** — every skill file is reachable from the routing tables in CLAUDE.md / AGENTS.md
-4. **`CLAUDE.md` is minimal** — pointer only
-5. **No duplication** — no fact stated in more than one place
-6. **Module boundaries match code** — each skill covers one coherent area
-7. **Relationship symmetry** — if module A depends on B, module B lists A as a dependent
+2. **All cross-links resolve** — the few file paths that remain in skills (entry points, config files) point to files that exist on disk. Skills should describe conventions rather than listing individual file paths.
+3. **No orphan skills** — every skill file is reachable from the routing tables in all root platform files
+4. **All root files are self-sufficient** — each contains ALL required sections, no redirects to other root files
+5. **No duplication within the skill layer** — no fact stated in more than one skill file. (Root platform files intentionally overlap with each other — this is by design for self-sufficiency, not duplication.)
+6. **Existing content preserved** — any project-specific content that existed in root files before the skill pipeline was not discarded
+7. **Module boundaries match code** — each skill covers one coherent area
+8. **Relationship symmetry** — if module A depends on B, module B lists A as a dependent
 
 Update `state.md`: mark step 3.4 complete.
 

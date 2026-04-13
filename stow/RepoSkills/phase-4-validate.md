@@ -187,7 +187,11 @@ Update `state.md`: mark step 4.7 complete.
 
 ### Check 6: Duplication check (Step 4.8)
 
-Scan for the same information appearing in multiple skill files. If found, keep it in the most appropriate location and replace the duplicates with links or remove them.
+Scan for the same information appearing in multiple **skill files** (`.ai/skills/`). If found, keep it in the most appropriate location and replace the duplicates with links or remove them.
+
+**Root platform files are exempt from this check.** CLAUDE.md, AGENTS.md, .cursorrules, and copilot-instructions.md intentionally contain the same required sections because each must be self-sufficient. This overlap is by design — do not remove it.
+
+Also verify that root platform files have preserved any project-specific content that existed before the skill pipeline ran. If a root file was rewritten and user-added content was lost, flag this as a finding.
 
 **Note:** If parallelised, this check must be performed by the orchestrating agent after merging.
 
@@ -228,13 +232,29 @@ Update `state.md`: mark step 4.11 complete.
 
 ### Check 10: Cross-skill consistency and routing verification (Step 4.12)
 
-**Routing table verification (CRITICAL):**
-- Does EACH root platform file (CLAUDE.md, AGENTS.md, .cursorrules, .github/copilot-instructions.md) contain BOTH a Module Routing table AND a Task Routing table?
-- Does every module skill have a corresponding row in the Module Routing table?
-- Does every task skill have a corresponding entry in the Task Routing table?
-- Are the routing table rows IDENTICAL across all root platform files?
+**Required sections verification (CRITICAL):**
 
-**If any root file is missing routing tables, this is a blocking finding.** Routing tables are the primary mechanism for agents to discover skills — without them, agents must guess which skill to load from filenames alone. Add the tables immediately.
+Every root platform file (CLAUDE.md, AGENTS.md, .cursorrules, .github/copilot-instructions.md) must be self-sufficient and MUST contain ALL of these sections. Check each file against this list:
+- [ ] Tech Stack
+- [ ] Architecture
+- [ ] Key Commands
+- [ ] Key Rules
+- [ ] Module Routing (table with USE WHEN keywords)
+- [ ] Task Routing (table mapping intents to skill combinations)
+- [ ] Context Window Discipline
+- [ ] Before Modifying Code
+- [ ] Skill & Routing Maintenance
+- [ ] Documentation (pointers to skill layer)
+- [ ] Coding Standards
+- [ ] New to This Repo?
+- [ ] No root file redirects to another root file — each stands alone
+
+**If any root file is missing any of these sections, this is a blocking finding.** Each root file may be the only context an agent has after compaction — they must all be independently complete.
+
+**Routing table content verification:**
+- Does every module skill have a corresponding row in the Module Routing tables?
+- Does every task skill have a corresponding entry in the Task Routing tables?
+- Are the routing table rows IDENTICAL across all four root platform files?
 
 **Cross-skill contradiction scan:**
 - Does module A's skill claim it communicates with module B via REST, while module B's skill says it receives from A via gRPC?
@@ -256,7 +276,7 @@ Check each skill file against its token budget:
 - Module skills: ~1.5k tokens each
 - Task skills: ~1.5k tokens each
 - `AGENTS.md`: ~4k tokens (32KB hard limit)
-- `CLAUDE.md`: ~2-3k tokens (must include routing tables)
+- `CLAUDE.md`: ~3-4k tokens (self-sufficient — must NOT redirect to other root files)
 
 For any file over budget:
 - Look for 5-second grep test failures to remove (most common cause of bloat)
