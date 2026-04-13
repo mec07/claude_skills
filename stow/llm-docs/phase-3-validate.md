@@ -28,6 +28,9 @@ Use this to track progress. Mark each item `[x]` in `state.md` as you complete i
 - [ ] 3p. Update `_audit.md` summary with final tallies
 - [ ] 3q. Update `state.md` — mark Phase 3 complete
 - [ ] 3r: Check 10b — internal consistency across generated docs
+- [ ] 3s: Check 11 — local development setup verification
+- [ ] 3t: Check 12 — domain context verification
+- [ ] 3u: Check 13 — task router and recipe verification
 
 ---
 
@@ -256,6 +259,41 @@ Scan the generated documentation set for contradictions BETWEEN generated docs (
 For each internal contradiction: trace the source code, determine which doc is correct, fix the incorrect one. Log each finding to `_audit.md`.
 
 **Update state:** Mark step 3r complete in `state.md`.
+
+### Check 11: Local development setup verification
+
+If `workflows.md` includes a Prerequisites section or `local-dev.md` exists:
+- Verify runtime version claims match version files (`.nvmrc`, `.python-version`, `.tool-versions`, etc.)
+- Verify package manager identification matches the lockfile that actually exists in the repo
+- Verify environment variables listed match what `.env.example` (or equivalent) contains
+- Verify database setup commands match actual migration tool configuration
+- Verify Docker service descriptions match `docker-compose.yml` contents
+- For monorepos: verify per-project setup sections match actual project configs
+
+**Updating state:** After completing Check 11, mark step 3s complete in `state.md`.
+
+### Check 12: Domain context verification
+
+If `docs/llm/domain-context.md` exists:
+- Do NOT fact-check business claims (product description, industry, users, regulatory requirements) — these are human-provided and authoritative
+- DO verify any file paths, commands, or technical claims within the domain context against the codebase
+- DO check that glossary terms defined in the Domain Glossary actually appear in the codebase (if a term is defined but never appears in code, flag it as potentially stale)
+- DO verify that "Architecture Rationale" entries reference real code/files that exist
+
+**Updating state:** After completing Check 12, mark step 3t complete in `state.md`.
+
+### Check 13: Task router and recipe verification
+
+If `task-router.md` exists:
+- Verify every doc path and section anchor in the "Read (in order)" column resolves to a real file and section
+- Verify the task list covers the most common operations for this repo
+
+If `docs/llm/recipes/` exists:
+- Verify every file path in each recipe exists
+- Verify code patterns cited match the actual source files
+- Verify the verify commands are correct
+
+**Updating state:** After completing Check 13, mark step 3u complete in `state.md`.
 
 ---
 

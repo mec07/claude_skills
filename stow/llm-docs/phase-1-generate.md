@@ -21,7 +21,8 @@ Track your progress against this checklist. Update `state.md` after completing e
 - [ ] 1g: Inventory all scripts
 - [ ] 1h: Hunt for gotchas
 - [ ] 1i: Assign module coverage tiers (if 20+ modules)
-- [ ] GATE: Confirm all exploration complete (answer 7 questions)
+- [ ] 1j: Conditional exploration (auth, migrations, feature flags, observability, codegen, secrets, API contracts, error handling)
+- [ ] GATE: Confirm all exploration complete (answer 9 questions)
 - [ ] 2: Write documentation
 - [ ] review: Self-review checklist
 ```
@@ -74,13 +75,19 @@ For every doc rated **high confidence**, read the original doc now and treat its
 
 If `_original_docs.md` reports that no documentation exists at all, proceed to Step 1 with no starting assumptions — rely entirely on source code exploration.
 
+**Read domain context:** If `docs/llm/domain-context.md` exists (written by Phase D or from a previous run), read it now. This file provides business domain knowledge, glossary terms, regulatory constraints, and architecture rationale that cannot be derived from source code. Use it to:
+- Understand domain-specific terminology when reading code
+- Know which areas have regulatory constraints (affects how you document them)
+- Avoid contradicting intentional architecture decisions
+- Use correct domain terms in your documentation (not generic guesses)
+
 **Structure independence:** Build the `docs/llm/` structure from the codebase's actual architecture, not from the existing documentation's structure. Existing docs may use a taxonomy (e.g., grouped by team, by deployment environment, by historical project phase) that doesn't serve LLM agents well. The `docs/llm/` structure should reflect code boundaries, not doc boundaries.
 
 ### Build the expected file manifest
 
 Before proceeding to exploration, build a manifest of every file the skill spec says should exist. Check each against disk:
 
-1. List the expected top-level docs: `overview.md`, `architecture.md`, `conventions.md`, `workflows.md`, `scripts.md`, `gotchas.md`, `dependency-map.md` (plus `glossary.md` if warranted).
+1. List the expected top-level docs: `overview.md`, `architecture.md`, `conventions.md`, `workflows.md`, `scripts.md`, `gotchas.md`, `dependency-map.md`, `task-router.md` (plus `glossary.md` if warranted, `local-dev.md` if complex setup, `domain-context.md` if Phase D ran). Also check for `domain-context.md` — if it exists, include it in the manifest as `preserved`.
 2. List the expected entry points: `CLAUDE.md`, `.github/copilot-instructions.md`, `docs/README.md`.
 3. Module docs (`docs/llm/modules/<name>.md`) cannot be listed yet — they depend on exploration results. They will be added to the manifest after Step 1. **After exploration, compare discovered modules against existing module docs. For each discovered module with no existing doc: mark as `generate` (coverage gap). For each existing module doc whose module no longer exists in the codebase: mark as `orphaned`. Record both gaps and orphans in the manifest for Phase 2.**
 4. For each file, check if it exists in the target repo and count its lines.
@@ -133,8 +140,11 @@ Read these files where they exist — do not guess from folder names:
 - Language config: `tsconfig.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, `build.gradle`, `pom.xml`, etc.
 - Build config: `next.config.*`, `vite.config.*`, `webpack.config.*`, `CMakeLists.txt`, etc.
 - Infrastructure: `Dockerfile`, `docker-compose*`
+- Infrastructure-as-Code: `*.tf` (Terraform), `helm/` or `charts/` directories, `k8s/` or `kubernetes/` directories, `cloudformation/`, `cdk.json`, `pulumi.*`, `ansible/`
 - CI: `.github/workflows/*.yml`, `.gitlab-ci.yml`, `Jenkinsfile`, etc.
 - Environment: `.env.example`, `.env.local.example`
+- Version management: `.nvmrc`, `.node-version`, `.python-version`, `.ruby-version`, `.tool-versions`, `.java-version`, `rust-toolchain.toml`, `rust-toolchain`
+- Package manager indicators: `pnpm-lock.yaml` (pnpm), `yarn.lock` (yarn), `package-lock.json` (npm), `bun.lockb` (bun), `Pipfile.lock` (pipenv), `poetry.lock` (poetry), `uv.lock` (uv), `Gemfile.lock` (bundler), `go.sum` (Go modules), `Cargo.lock` (Rust), `mix.lock` (Elixir)
 - Database/ORM config files
 - Any other config files at the repo root
 
@@ -214,6 +224,36 @@ For repos with <20 modules, skip tiering — all modules get full docs.
 
 **Update state:** Mark step 1i complete in `state.md`.
 
+**1j. Conditional exploration — document if found, skip if absent**
+
+The following areas are explored ONLY if the codebase shows evidence of them. Check for their presence; if found, document them. If not found, skip and move on. These areas are where agents most frequently waste time or make mistakes because the patterns are non-obvious and repo-specific.
+
+**For large repos (30+ modules):** Split this step across subagents — one per conditional area. Each subagent writes findings to `~/.claude/MEMORY/llm-docs/<repo-slug>/_explore_conditional_<area>.md`. Merge after all complete.
+
+**Authentication model** — Search for auth middleware, guards, or request interceptors that check credentials before handling requests. Evidence threshold: actual middleware/guard files that handle request authentication (not just a `bcrypt` dependency). If found, note: auth mechanism (JWT, session, OAuth, external provider like Auth0/Clerk), where middleware lives, token/session storage, how to add a new authenticated endpoint.
+
+**Database migrations** — Search for migration directories or migration tool config (Alembic, Knex, Prisma Migrate, TypeORM migrations, Django migrations, Flyway, Liquibase, goose, dbmate, or framework-specific equivalents). Evidence threshold: a migration directory with actual migration files. If found, note: migration tool, migration directory, how to create a new migration, how to run migrations locally.
+
+**Feature flags** — Search for feature flag SDK imports (LaunchDarkly, Unleash, Flagsmith) or a custom flag configuration file. Evidence threshold: actual SDK usage or a dedicated flags config file (not just `if (process.env.FEATURE_X)` — that's environment configuration, not a feature flag system). If found, note: flag system, where flags are defined, how to add a new flag, how to check flag state in code.
+
+**Observability** — Search for logging framework imports (Winston, Pino, structlog, Zap, slog, Log4j), metrics client setup (Prometheus, StatsD, Datadog), or tracing configuration (OpenTelemetry, Jaeger, Zipkin). If found, note: logging framework, structured logging patterns, how to add logging to new code, where metrics are defined.
+
+**Code generation** — Search for codegen config files (protobuf `.proto` files with build config, GraphQL codegen config, OpenAPI generator config, Prisma schema, sqlc config). Evidence threshold: a config file that drives code generation. If found, note: what's generated, what tool generates it, which files must NOT be hand-edited, how to re-run codegen.
+
+**Secrets management** — Search for secret store client code or config (AWS Secrets Manager, HashiCorp Vault, Google Secret Manager, Azure Key Vault, Doppler). If found, note: secret store, how secrets are accessed in code, how to add a new secret for local dev vs production.
+
+**API contracts** — Search for OpenAPI/Swagger specs (`openapi.yaml`, `swagger.json`), GraphQL schemas (`.graphql` files with schema definitions), protobuf definitions (`.proto` files), AsyncAPI specs. If found, note: where contracts are defined, versioning strategy, how breaking changes are handled.
+
+**Error handling patterns** — Search for custom error classes, error middleware, or error boundary components. Note: error taxonomy, how errors propagate, error handling conventions across the codebase.
+
+For each area found, log your findings to your exploration notes. These will feed into the appropriate output docs (architecture.md, conventions.md, module docs, gotchas.md).
+
+**Update state:** Mark step 1j complete in `state.md`.
+
+For repos with <20 modules, skip tiering — all modules get full docs.
+
+**Update state:** Mark step 1i complete in `state.md`.
+
 ---
 
 ### Exploration completion gate
@@ -226,8 +266,10 @@ For repos with <20 modules, skip tiering — all modules get full docs.
 - What commands exist? (cite config files where you found them)
 - What scripts exist and where do they live? (cite every location you found them)
 - What conventions are used? (cite repeated patterns across files you read)
+- What runtime versions, package manager, and infrastructure-as-code are used? (cite version files and lockfiles)
+- What conditional areas are present (auth, migrations, feature flags, observability, codegen, secrets, API contracts, error handling), and for each one found: what tool/framework is used and where does the config/entry point live? (cite evidence)
 
-**If you cannot answer all seven questions with cited evidence, go back and explore more before proceeding.**
+**If you cannot answer all nine questions with cited evidence, go back and explore more before proceeding.**
 
 **Update state:** Mark the GATE step complete in `state.md`.
 
@@ -387,6 +429,9 @@ Required content:
 - Data structure index: for every kind of data structure the project uses (DB schemas, API types, search indices, message formats, config schemas, etc.), document where definitions live, where the access/query layer lives, naming conventions, and relationships between structures
 - External dependencies: databases, APIs, queues, caches — with the config file where each is configured
 - Operational scripts: brief summary of what scripts exist for operations, maintenance, data repair, backfills, etc. — link to `docs/llm/scripts.md` for the full inventory. Do not duplicate the scripts inventory here; just note that scripts are part of the system's operational surface and where to find them.
+- CI/CD pipeline: for each CI workflow file found in Step 1c, document what it does, what triggers it (push, PR, schedule, manual), what stages/jobs it contains, and how to reproduce its checks locally. Link to the actual workflow file.
+- Authentication model (if found in Step 1j): auth mechanism, middleware location, token/session management, how to add a new authenticated endpoint. Only document if auth infrastructure exists in the codebase.
+- Infrastructure (if IaC found in Step 1c): cloud provider, IaC tool (Terraform/Helm/CDK/etc.), what resources are defined, environment differences (dev/staging/prod), link to IaC directory. Do not document infrastructure that isn't defined in this repo.
 - Infrastructure shape (only if deployment config exists in repo)
 
 Format flows like:
@@ -412,11 +457,12 @@ Categories (include only those with evidence):
 - Import patterns
 - Testing (file location, naming, framework, patterns)
 - Type/schema management
-- Error handling
+- Error handling (custom error classes, error propagation pattern, error middleware/boundaries)
 - Logging
 - Environment variables
 - State management
 - API design patterns
+- Testing patterns (test file placement relative to source: co-located `foo.test.ts` next to `foo.ts` or separate directory `__tests__/`; naming convention; test helpers/fixtures available; mocking patterns used; test categories: unit/integration/e2e and whether they run differently)
 
 #### `docs/llm/workflows.md`
 Every command must come from `package.json` scripts, `Makefile`, CI config, or existing README.
@@ -424,28 +470,59 @@ Every command must come from `package.json` scripts, `Makefile`, CI config, or e
 Format:
 ```bash
 # Prerequisites
-<what must be installed/configured first>
+## Required tools
+<exact tool name and version — cite .nvmrc, .python-version, or equivalent>
+<package manager — cite the lockfile that identifies it>
+<any system tools — Make, protobuf compiler, etc.>
+
+## Required services (for local development)
+<databases, message queues, caches — how to install and start each>
+<Docker services — if docker-compose exists, document `docker-compose up` and what it starts>
+
+## Environment setup
+<virtual environment setup if applicable — e.g., `python -m venv .venv && source .venv/bin/activate`>
+<environment variables — list each with purpose and example local value>
+<cite .env.example or equivalent>
+
+## Network requirements
+<VPN requirements if known from domain-context.md — mark as human-provided>
+<internal registry access if applicable>
 
 # Install
-<exact command>
+<exact command — cite source>
 
 # Dev
-<exact command>
+<exact command — cite source>
+<hot reload behavior if known>
 
 # Build
-<exact command>
+<exact command — cite source>
 
 # Test
-<exact command>
+<exact command — cite source>
+<test categories if applicable: unit, integration, e2e — and how to run each separately>
 
 # Lint
-<exact command>
+<exact command — cite source>
 
 # Type check
-<exact command>
+<exact command — cite source>
+
+# Deploy (if deploy commands exist in the repo)
+<exact command — cite source>
+<deployment target environments if known>
+<any required permissions or approval steps>
+
+# Database (if migrations exist)
+<migration command — cite source>
+<seed command if available — cite source>
 ```
 
-Only include sections for commands that actually exist. If a workflow requires environment variables, list exactly which ones (from `.env.example` or equivalent). If steps must happen in order, number them and explain why.
+Only include sections for commands and tools that actually exist. Mark sections sourced from `domain-context.md` (like VPN requirements) with their source. If a workflow requires environment variables, list exactly which ones (from `.env.example` or equivalent) with example local values. If steps must happen in order, number them and explain why.
+
+**For monorepos with 5+ projects:** If different packages/services have different setup procedures, create separate per-project workflow files at `docs/llm/workflows/<project-name>.md` instead of one massive file. The main `workflows.md` should contain shared prerequisites and a routing table pointing to per-project files. For monorepos with fewer than 5 projects, per-project subsections within a single `workflows.md` are fine.
+
+**Graceful degradation:** Simple repos (no database, no Docker, no special tools) should have a simple `workflows.md`. Do not add empty sections or apologetic placeholders for things that don't exist. A library with just `npm install && npm test` should have a 10-line workflows.md, not a 100-line template with empty sections.
 
 #### `docs/llm/scripts.md`
 Comprehensive inventory of every script in the repository. This is the go-to file when an agent needs to create, extend, or find a script.
@@ -550,6 +627,112 @@ For each major module/package:
 
 Verify dependencies by checking actual import statements, not by guessing from folder proximity.
 
+Additionally, for each module include a **change impact checklist** — a concrete list of things to check when modifying that module:
+
+```markdown
+## Change Impact: [module name]
+
+If you modified this module, check:
+- [ ] Tests: [exact test directory/files]
+- [ ] Downstream consumers: [specific files that import from this module]
+- [ ] Shared contracts: [type/schema files that cross this boundary]
+- [ ] If you changed [specific type/schema]: also update [specific dependent files]
+- [ ] CI check that will catch issues: [specific workflow/job]
+```
+
+Build these checklists from the actual import graph — grep for imports of this module to find consumers.
+
+#### `docs/llm/task-router.md`
+A structured lookup table that maps common agent tasks to the exact documentation files to read, in order. This eliminates navigation cost — an agent given a task can go straight to the right files.
+
+**Purpose:** Convert O(n) document search into O(1) lookup. This is the highest-ROI navigation aid because it's used at the start of every agent task.
+
+Format:
+```markdown
+| I need to... | Read (in order) |
+|--------------|-----------------|
+| Add a new API endpoint | conventions.md#api-patterns → modules/<api>.md → workflows.md#test |
+| Fix a failing CI check | architecture.md#ci-cd → workflows.md#lint → workflows.md#test |
+| Add a database migration | workflows.md#database → modules/<db>.md → gotchas.md#migrations |
+| Understand why X is broken | dependency-map.md → modules/<relevant>.md → gotchas.md |
+| Add a new feature flag | conventions.md#feature-flags → modules/<flags>.md |
+| Write a new test | conventions.md#testing → modules/<relevant>.md#testing |
+| Set up local development | local-dev.md (or workflows.md#prerequisites) |
+| Add a new script | scripts.md#decision-table → scripts.md#<ecosystem> |
+| Understand the domain | domain-context.md |
+```
+
+**Build this from the actual repo structure.** Do not use the example above verbatim — adapt the task list to match what agents would actually do in this specific repo. Include 8-15 tasks. The "Read (in order)" column must reference files and sections that actually exist in the generated docs.
+
+#### `docs/llm/local-dev.md` (only for repos with complex local setup)
+
+Create this file if the repo has 3 or more of these concrete indicators:
+- A `docker-compose.yml` with 2+ services
+- 2+ different runtime version files (`.nvmrc` + `.python-version`, etc.)
+- VPN/network requirements documented in `domain-context.md`
+- A virtual environment setup (venv, conda, poetry shell)
+- Per-project setup differences in a monorepo (different `package.json` files with different scripts)
+
+For simpler repos, the Prerequisites section of `workflows.md` is sufficient — do not create this file unnecessarily.
+
+**Purpose:** A complete guide to getting the development environment running from zero. This is the file an agent reads when it needs to set up or troubleshoot the local dev environment.
+
+Required content:
+- **System requirements:** OS-specific notes if any, required runtimes with versions (cite version files), required system tools
+- **Package manager:** Which one and why (cite lockfile), common commands
+- **Environment setup:** Virtual environments, shell configuration, PATH requirements
+- **Database setup:** Engine, installation, local connection config, seeding, migration commands
+- **Docker services:** What `docker-compose up` starts, port mapping, volume mounts, which services are required vs optional
+- **Environment variables:** Complete table with: variable name, purpose, example local value, where it's used. Cite `.env.example` or equivalent
+- **Network/VPN:** Requirements sourced from `domain-context.md` — mark these clearly as human-provided, not code-verified
+- **Per-project setup (monorepos):** If different projects need different setup, document each
+- **Troubleshooting:** Common setup issues and fixes (sourced from gotchas, domain-context, or code comments)
+
+**Rules:**
+- Every command must come from an actual config file or script
+- Environment variable values must come from `.env.example` or equivalent — do not invent values
+- VPN/network requirements must come from `domain-context.md` — do not guess
+- If something cannot be determined from code or domain context, mark it `<!-- TODO: verify with team -->`
+
+#### `docs/llm/recipes/` (directory — create 3-5 recipes for common tasks)
+
+Step-by-step guides for the most common multi-file changes in this specific codebase, populated with real code patterns from the repo itself.
+
+**Purpose:** Turn understanding into action. An agent following a recipe produces code that matches existing patterns on the first try.
+
+**How to identify recipes:** Look at the patterns you discovered during exploration. What are the 3-5 most common types of changes someone would make? For a web app: adding an API endpoint, adding a database model, adding a test. For a CLI tool: adding a new command, adding a new flag. For a library: adding a new public function, adding a new module.
+
+Each recipe file (`recipes/<task-name>.md`) follows this format:
+```markdown
+# Recipe: [Task Name]
+
+## When to use this recipe
+[1-2 sentences describing when this recipe applies]
+
+## Steps
+
+### Step 1: [action]
+**File:** `exact/path/to/file.ext` (follow naming: `<pattern>`)
+**Pattern** (from `exact/path/to/example.ext`):
+[show the actual pattern from the codebase — 5-15 lines of real code]
+
+### Step 2: [action]
+**File:** `exact/path/to/another-file.ext`
+**Pattern** (from `exact/path/to/example.ext`):
+[real code pattern]
+
+...
+
+### Verify
+**Commands:** `exact test/lint/build command`
+```
+
+**Rules:**
+- Every file path must be real. Every code pattern must come from an actual file in the repo.
+- Cite the source file for each pattern so the agent can read the full context.
+- Do not abstract or simplify the patterns — show them as they actually appear.
+- Include the verify step — what commands confirm the change is correct.
+
 #### `docs/llm/modules/<name>.md`
 One file per major module/package/domain.
 
@@ -567,8 +750,11 @@ Each module doc must include:
 | **Dependencies** | What it imports (internal + key external) — verified from import statements |
 | **Dependents** | What imports it — verified by grepping |
 | **Communication** | How this module talks to and receives from other parts of the system: mechanism, sender/receiver files, contract location |
-| **How to test** | Exact command, test file locations |
-| **How to modify safely** | What to check, what might break, what to regenerate |
+| **How to run locally** | If this module can run independently: exact command, required env vars, required services, port it listens on. If it requires other modules: list them and how to start them. If it cannot run independently (e.g., it's a library): say so and explain why. |
+| **Testing** | Test framework, test file location relative to source files (co-located or separate directory), naming convention for test files, how to run tests for this module only, test helpers/fixtures available in this area, mocking patterns used |
+| **Local dependencies** | Any module-specific setup beyond the repo-wide prerequisites (additional env vars, additional services, additional tools) |
+| **How to modify safely** | What to check, what might break, what to regenerate. Include a change impact checklist: "If you modified this module, also check: [list of specific files, tests, downstream consumers, and CI checks]" |
+| **Extension seams** | Where new code plugs in: registries, plugin points, event handlers, middleware chains. For each seam: what to add, where to register it, what interface to implement, and a real example from the codebase |
 | **Related docs** | Links to relevant `docs/llm/` files |
 
 ---

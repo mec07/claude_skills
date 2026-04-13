@@ -64,6 +64,7 @@ Search the repository for every file that serves as documentation. Cast a wide n
 - **API documentation:** OpenAPI/Swagger specs, GraphQL schema docs, `api-docs/`, or similar
 - **Environment documentation:** `.env.example`, `.env.template`, `.env.local.example`
 - **Inline config documentation:** Significant comment blocks in CI/CD configs, Docker configs, or build configs that serve as documentation
+- **Domain context:** `docs/llm/domain-context.md` — if this exists from a previous llm-docs run, assess its reliability alongside other docs. This file is consumed by Phase D to determine whether the domain interview can be skipped. Pay special attention to the `Last interview` timestamp — domain context older than 6 months may be stale even if file paths within it are still correct.
 
 Exclude generated documentation output (e.g., TypeDoc output in a `docs/api/` that's gitignored, Javadoc output, auto-generated API reference from build tools). If you're unsure whether docs are generated, check `.gitignore` and look for a generation script — generated docs are typically gitignored and have a build step.
 
@@ -161,6 +162,9 @@ Write the assessment to `~/.claude/MEMORY/llm-docs/<repo-slug>/_original_docs.md
 - Unscored: N
 - Well-documented areas: [list topics/areas that have reliable existing docs]
 - Undocumented areas: [list major areas of the codebase with no documentation at all]
+- Domain context file: exists | missing
+- Domain context confidence: high | medium | low | n/a (if missing)
+- Domain context last interview: [ISO date from file, or n/a]
 
 ## Baseline Recommendations
 
@@ -169,6 +173,7 @@ Subsequent phases should:
 - **Use with caution:** [list medium-confidence files — note what's reliable vs. suspect in each]
 - **Do not build on:** [list low-confidence files — verify all claims independently against source code]
 - **Explore from scratch:** [list areas with no existing documentation]
+- **Domain interview:** [needed — no domain-context.md exists | skip — domain-context.md exists, is high-confidence, and interview is within 6 months | recommended — domain-context.md exists but is stale or low-confidence]
 
 ## File Assessments
 

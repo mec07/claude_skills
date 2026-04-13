@@ -1,9 +1,26 @@
 ---
 name: llm-docs
-description: Generate LLM-optimised documentation for any codebase. USE WHEN llm-docs, generate docs, LLM documentation, document codebase.
+description: "SUPERSEDED by RepoSkills. Use /RepoSkills instead. This skill generates verbose LLM documentation; RepoSkills generates concise agent skills with cross-platform routing."
 ---
 
-# llm-docs
+# llm-docs (SUPERSEDED)
+
+> **This skill has been superseded by [RepoSkills](../RepoSkills/SKILL.md).**
+>
+> RepoSkills generates concise, routing-oriented agent skills instead of verbose documentation.
+> Key improvements: 10-phase pipeline, domain interview, adversarial simulation, cross-platform
+> routing (Claude Code, Copilot, Cursor, Windsurf, JetBrains, Cline, Codex), living skills that
+> self-improve through usage, and the 5-second grep test (if an agent can find it via grep, it
+> doesn't belong in a skill).
+>
+> **Use `/RepoSkills` instead of `/llm-docs` for new projects.**
+>
+> This skill is preserved for reference — its orchestration patterns (state management,
+> subagent dispatch, failure handling, context recovery) were carried forward into RepoSkills.
+
+---
+
+## Original Description (preserved for reference)
 
 Generate a comprehensive, accurate, LLM-optimised documentation layer for any codebase. The output enables Claude Code, Copilot, Cursor, and other LLM agents to navigate, understand, and modify the codebase effectively.
 
@@ -52,6 +69,7 @@ updated: ISO-timestamp
 
 ## Phases
 - [x] 0: Discover (completed ISO-timestamp)
+- [ ] D: Domain Interview
 - [ ] 1: Generate (in progress)
   - [x] 0: Read baseline assessment (_original_docs.md)
   - [x] 1a: Map repo structure
@@ -84,7 +102,9 @@ updated: ISO-timestamp
 | File | Created by | Used by | Deleted | Purpose |
 |---|---|---|---|---|
 | `state.md` | Orchestrator | All phases | Never (permanent record) | Phase progress and repo path |
-| `_original_docs.md` | Phase 0 | Phases 1, 2, 3, 4 | Phase 8 cleanup | Existing doc assessment |
+| `_original_docs.md` | Phase 0 | Phases D, 1, 2, 3, 4 | Phase 8 cleanup | Existing doc assessment |
+
+**Repo output file:** `docs/llm/domain-context.md` — written by Phase D, consumed by all subsequent phases. Lives in the target repo, not MEMORY. Treated as a trusted baseline by Phase 0 on re-runs.
 | `_manifest.md` | Phase 1 | Phases 2, 6, 7, 8 | Phase 8 cleanup | File disposition: preserved vs generated vs orphaned, tier assignments |
 | `_audit.md` | Phase 3 | Phases 6, 8 | Phase 8 cleanup | Validation findings ledger |
 | `_review.md` | Phase 4 | Phases 5, 7, 8 | Phase 8 cleanup | Clarity review findings |
@@ -160,10 +180,11 @@ When resuming after a context clear:
 
 ## Pipeline
 
-The full pipeline has 9 phases (Phase 0 through Phase 8). **Each phase MUST run in its own context window.** Spawn a new agent for each phase. State passes between phases exclusively via files on disk — the working files in `~/.claude/MEMORY/llm-docs/<repo-slug>/` and the documentation files in the target repo's `docs/llm/` directory.
+The full pipeline has 10 phases (Phase 0, Phase D, then Phases 1 through 8). **Each phase MUST run in its own context window.** Spawn a new agent for each phase. State passes between phases exclusively via files on disk — the working files in `~/.claude/MEMORY/llm-docs/<repo-slug>/` and the documentation files in the target repo's `docs/llm/` directory.
 
 ```
 Phase 0: Discover            → find and assess all existing documentation
+Phase D: Domain Interview    → capture business/domain context from human (skip on re-run if fresh)
 Phase 1: Generate            → explore codebase, create docs from scratch
 Phase 2: Refine              → assess structure, restructure, expand coverage
 Phase 3: Validate            → adversarial fact-check, create _audit.md
@@ -181,7 +202,8 @@ Each phase reads its instructions from a dedicated file in this skill directory:
 | Phase | Instruction file | Input (on disk) | Output (on disk) |
 |---|---|---|---|
 | 0 | `phase-0-discover.md` | Codebase, existing docs | `MEMORY: _original_docs.md` |
-| 1 | `phase-1-generate.md` | `_original_docs.md` + codebase | `docs/llm/**`, `CLAUDE.md`, `.github/copilot-instructions.md`, `docs/README.md`, local context files |
+| D | `phase-D-domain-interview.md` | `_original_docs.md` + human input | `docs/llm/domain-context.md` |
+| 1 | `phase-1-generate.md` | `_original_docs.md` + `domain-context.md` + codebase | `docs/llm/**`, `CLAUDE.md`, `.github/copilot-instructions.md`, `docs/README.md`, local context files |
 | 2 | `phase-2-refine.md` | All Phase 1 output + `_original_docs.md` + codebase | All docs restructured and expanded |
 | 3 | `phase-3-validate.md` | All docs + codebase | Docs with errors fixed, `MEMORY: _audit.md` |
 | 4 | `phase-4-clarity-review.md` | All docs + codebase | `MEMORY: _review.md` |
@@ -211,6 +233,8 @@ When running the full pipeline:
 5. **Proceed to the next phase**
 
 **Every phase MUST run at maximum effort.** This is non-negotiable. These are complex, accuracy-critical tasks that require careful reading of source code, thorough verification, and precise documentation. Reduced effort produces hallucinations.
+
+**Between Phases 0 and 1 — Phase D decision:** The orchestrator checks whether Phase D should run. If `docs/llm/domain-context.md` exists AND Phase 0 scored it high-confidence AND its `Last interview` timestamp is within 6 months, skip Phase D and proceed to Phase 1. If the user invoked with `--interview` or `--redo-interview`, always run Phase D regardless. Otherwise, run Phase D.
 
 **Between Phases 7 and 8:** The Phase 7 agent must check `_review.md` at the end of its run. If all issues are resolved, it should report that Phase 8 can be skipped. The orchestrator then informs the user that no human input is needed and proceeds to cleanup.
 
@@ -346,6 +370,11 @@ docs/llm/
 ├── gotchas.md               # Traps, surprises, hidden coupling
 ├── glossary.md              # Repo-specific terms (only if warranted)
 ├── dependency-map.md        # System-wide module graph and change impact
+├── domain-context.md        # Business domain, glossary, regulatory context (human-provided)
+├── task-router.md           # Maps common agent tasks to exact doc reading order
+├── local-dev.md             # Complete local dev setup guide (only for complex repos)
+├── recipes/
+│   └── <common-task>.md     # Step-by-step guides with real code patterns
 └── modules/
     └── <one per major module>.md
 
@@ -373,6 +402,9 @@ The canonical LLM documentation lives in `docs/llm/`. Start with `docs/llm/overv
 3. Check for traps: `docs/llm/gotchas.md`
 4. Follow project patterns: `docs/llm/conventions.md`
 5. Before creating/modifying scripts: `docs/llm/scripts.md`
+6. Understand the domain: `docs/llm/domain-context.md`
+7. Check for a recipe: `docs/llm/task-router.md`
+8. Local setup: `docs/llm/local-dev.md` (if it exists)
 ```
 
 Do not use `@` file includes in CLAUDE.md. This file is loaded into every Claude Code conversation — keeping it minimal avoids wasting context on documentation irrelevant to the current task. The agent should read specific docs as needed.
@@ -397,6 +429,7 @@ This skill is repo-agnostic. Do not assume any specific tech stack, framework, l
 
 For repos with fewer than ~20 top-level directories and straightforward architecture:
 
+- **Phase D (Domain Interview)** runs only on first invocation or when the user requests it with `--interview`. On subsequent runs, the existing `domain-context.md` is treated as a trusted baseline. For simple repos, the interview may take only 2-3 minutes.
 - **Phases 0-2 are the core pipeline.** Discover existing docs, generate new docs, refine structure. For many repos, this produces documentation that is accurate and complete.
 - **Phases 3-8 are optional validation passes.** Run them when accuracy is critical (production codebases, shared repos, complex architectures) or when the repo is large enough that Phase 1 exploration may have gaps.
 - **Not all output files are required.** Skip `dependency-map.md`, `glossary.md`, and individual module docs if the repo is small enough that `overview.md` and `architecture.md` cover everything.
@@ -407,7 +440,7 @@ For repos with fewer than ~20 top-level directories and straightforward architec
 
 For repos with more than ~20 top-level directories, 50+ source files in a single module, or monorepo structures with multiple packages:
 
-- **Run all 9 phases.** Large repos benefit from the full discover → generate → refine → validate → review → self-resolve → re-validate → re-review → ask-human pipeline.
+- **Run all phases including Phase D.** Large repos benefit from the full discover → domain interview → generate → refine → validate → review → self-resolve → re-validate → re-review → ask-human pipeline. Phase D is especially valuable for large or domain-heavy repos — encourage the user to provide product documentation, wiki links, or company website URLs during the interview.
 - **Coverage tiering for large monorepos.** Map the full structure first. Then assign every package/module to a tier:
   - **Tier 1** (full module docs): the 10 most important or most-connected packages — determined by dependency count, entry point status, or cross-package import frequency. These get deep exploration, full flow tracing, and comprehensive module docs.
   - **Tier 2** (summary module docs): the next 15-20 packages — entry point, purpose, key files, dependencies, but no deep flow tracing.

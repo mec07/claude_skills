@@ -81,7 +81,11 @@ Read all of the following files **that exist**, in this order:
 8. `docs/llm/scripts.md`
 9. `docs/llm/gotchas.md`
 10. `docs/llm/glossary.md`
-11. `.github/copilot-instructions.md`
+11. `docs/llm/domain-context.md`
+12. `docs/llm/task-router.md`
+13. `docs/llm/local-dev.md` (if it exists)
+14. Every file in `docs/llm/recipes/` (if the directory exists)
+15. `.github/copilot-instructions.md`
 12. `docs/README.md`
 13. Any local context files (`README.md` or `CLAUDE.md` in subdirectories, including script directory READMEs)
 
@@ -127,11 +131,30 @@ Something is broken at the boundary between two components — data is written c
 ### Scenario C: Modifying a single module
 Pick the module doc that seems most complex. After reading it, do you know: what files to edit, what other modules might be affected, what data structures are involved, how to test your change, and what gotchas to watch for? What's missing?
 
-### Scenario D: Onboarding
-You need to get the project running locally, understand the overall architecture, and orient yourself. Do the docs give you a clear path from zero to productive? Where do you get lost?
+### Scenario D: Onboarding — from zero to running locally
+You've just cloned this repo. You need to:
+1. Install all prerequisites (runtimes, tools, package manager) — does the doc tell you the EXACT version and where to find the version file?
+2. Set up your local environment (env vars, database, Docker services) — does the doc give you EXACT commands and EXACT env var values for local dev?
+3. Get the project running locally — is there a single command or a sequence?
+4. Run the tests — do they pass on a fresh setup?
+5. Understand the architecture well enough to find where to make your first change
 
-### Scenario E: Adding a test
-You need to write a test for an existing feature. Can you find where tests live, what framework is used, what patterns to follow, and how to run tests? Do the conventions docs help?
+Trace this entire path through `workflows.md`, `local-dev.md` (if it exists), and `task-router.md`. At each step: does the doc tell you the EXACT command? Does it tell you what version of what tool? Where do you get stuck? Does the task router point you to the right place?
+
+### Scenario E: Adding a test for an existing feature
+Pick a module. You need to write a new test for an existing function.
+1. Where do test files live relative to the source file? (same directory? `__tests__/`? `tests/`?)
+2. What naming convention do test files follow?
+3. What test framework is used? What assertion library?
+4. Are there test helpers, fixtures, or factories you should use?
+5. What mocking patterns does the project use?
+6. How do you run just your new test vs the full suite?
+7. Are there different test categories (unit/integration/e2e) with different patterns?
+
+Can you answer all 7 from the docs alone? Check `conventions.md#testing`, the relevant module doc's Testing section, and any recipes that cover testing.
+
+### Scenario H: Following the task router
+Pick a task from `task-router.md`. Follow the recommended reading path. Does each document link lead to the next naturally? Does the path give you everything you need without having to search for additional context? Where do you get stuck?
 
 ### Scenario F: Understanding a failure
 A CI build or deployment failed. Can you find the CI/CD configuration, understand the pipeline, and trace the failure to a specific step? Do the workflows and architecture docs cover this path?

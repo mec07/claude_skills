@@ -103,6 +103,20 @@ Check whether the docs adequately cover:
 
 **Script discoverability:** Does `scripts.md` exist and comprehensively inventory all scripts? Are script directories covered with READMEs? Can an agent quickly answer: "Does a script for X already exist?", "Where should a new script go?", and "What patterns should it follow?" Check the actual repo for scripts and script directories, and compare against what `scripts.md` covers.
 
+**Local development setup:** Does `workflows.md` (and `local-dev.md` if it exists) cover everything needed to get the project running locally? Check: runtime versions documented (cite version files), package manager identified (cite lockfile), environment variables listed with example values, database setup if applicable, Docker setup if applicable. For monorepos: does each project have its own setup section or file?
+
+**Testing coverage:** Does `conventions.md` document test file placement relative to source files? Can an agent determine where to put a new test? Are test helpers, fixtures, and mocking patterns documented?
+
+**CI/CD pipeline:** Does `architecture.md` document the CI pipeline stages? Can an agent reproduce CI checks locally?
+
+**Infrastructure:** If IaC exists in the repo, is it documented in `architecture.md`?
+
+**Conditional areas:** For each conditional area found by Phase 1 (auth, migrations, feature flags, observability, codegen, secrets, API contracts, error handling), is there adequate documentation? Check module docs and `architecture.md`.
+
+**Task routing:** Does `task-router.md` exist and map common tasks to the right docs? Are the referenced docs and sections real?
+
+**Recipes:** If `docs/llm/recipes/` exists, do the recipes reference real files and real code patterns? Are the verify steps correct?
+
 > **Update state:** Mark step 1c complete in `state.md`.
 
 ### 1d. Verbosity assessment
@@ -185,8 +199,13 @@ Every module doc must pass this test:
 > 7. What will break if changes are made here
 > 8. How to test changes
 > 9. Any traps or non-obvious behaviour
+> 10. How to run this module locally (or why it can't run independently)
+> 11. Where tests are, what framework they use, and how to run them for this module
+> 12. What local dependencies are needed beyond the repo-wide prerequisites
+> 13. Where new code plugs in (extension seams — registries, plugin points, event handlers)
+> 14. What specific files/tests/consumers to check after making a change (change impact checklist)
 
-If a module doc doesn't answer all nine after your edits, it's not done.
+If a module doc doesn't answer all fourteen after your edits, it's not done. (Questions 10-14 may have "not applicable" as a valid answer for simple modules — but the answer must be explicit, not absent.)
 
 ### Duplication rules
 

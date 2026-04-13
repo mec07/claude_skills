@@ -10,6 +10,7 @@ Copy this checklist into `state.md` under the Phase 8 entry. Mark each item `[x]
 
 ```
 - [ ] 8.0: Pre-check — read _review.md, determine if questions exist
+- [ ] 8.0b: Reverse Glossary — extract and present undefined domain terms
 - [ ] 8.1: Present grouped questions to user (skip if no open/partial issues)
 - [ ] 8.2: Incorporate user answers into documentation
 - [ ] 8.3: Update _review.md with resolutions
@@ -48,11 +49,57 @@ Do not batch state updates. If context is lost between steps, the recovery proto
 
 Open `~/.claude/MEMORY/llm-docs/<repo-slug>/_review.md`. Check for issues with status `open` or `partial — needs human input`.
 
-If there are **no open or partial issues**: skip to the Completion section below (step 8.4). Inform the user that the documentation pipeline is complete with no outstanding questions.
+If there are **no open or partial issues** AND the Reverse Glossary (step 8.0b) finds no undefined terms: skip to the Completion section below (step 8.4). Inform the user that the documentation pipeline is complete with no outstanding questions.
 
-If there **are open or partial issues**: proceed to step 8.1.
+If there **are open or partial issues** OR the Reverse Glossary finds terms to define: proceed to step 8.0b, then step 8.1.
 
 Update `state.md`: mark step 8.0 complete.
+
+---
+
+## Reverse Glossary (Step 8.0b)
+
+Before presenting open issues, perform a Reverse Glossary extraction. This surfaces domain terms the pipeline couldn't confidently define.
+
+### Process
+
+1. **Extract candidate terms:** Scan all generated documentation, source code string constants, enum values, database column names, UI labels, and API endpoint names for terms that:
+   - Appear frequently (5+ occurrences across the codebase) but have no definition in `docs/llm/domain-context.md` or `docs/llm/glossary.md`
+   - Are used in variable/function names but aren't standard programming terms
+   - Appear in comments or error messages with domain-specific meaning
+
+2. **Filter out known terms:** Remove any term already defined in `docs/llm/domain-context.md` (if it exists) or `docs/llm/glossary.md` (if it exists). Also remove standard technical vocabulary (e.g., "middleware", "schema", "endpoint", "controller", "service").
+
+3. **Present to the user** as part of the combined question set (see Step 8.1). Interleave domain terms with open issues, all sorted by impact. For each term, show the CODE CONTEXT where it appears so the human can see how it's used:
+
+   ```
+   I found these domain-specific terms in the codebase that I'm not confident
+   I understand correctly. Can you define any of them?
+
+   - `settlement_window` — appears in src/services/settlement.ts (line 42),
+     src/types/transaction.ts (line 15), and 12 other files.
+     Based on usage in settlement.ts, this appears to relate to a time period
+     for processing transactions — is that correct? What specifically does it mean?
+
+   - `provider_tier` — used in src/models/provider.ts and src/routes/matching.ts.
+     I can see it's an enum with values GOLD/SILVER/BRONZE but I don't understand
+     the business significance. What determines a provider's tier?
+
+   You can skip any you don't want to define right now.
+   ```
+
+4. **For each term the user defines:** Add it to `docs/llm/domain-context.md` in the Domain Glossary table (create the file with just the Glossary section if it doesn't exist). If `glossary.md` also exists, add it there too.
+
+5. **For skipped terms:** Leave them out. Do not guess.
+
+### Rules
+- Show the code context where each term appears, not just the term. The human needs to see HOW it's used to give a precise definition.
+- If the usage pattern strongly suggests a specific meaning, state it as a hypothesis clearly marked: "Based on usage in [file], this appears to mean [X] — is that correct?" The human's response is authoritative — if they correct your hypothesis, replace it entirely.
+- Do NOT present terms that are standard technical vocabulary
+- Maximum 10 terms. If more candidates exist, prioritise by frequency and cross-module usage.
+- If `domain-context.md` doesn't exist (Phase D was skipped on a previous run), create it now with just the Glossary section.
+
+Update `state.md`: mark step 8.0b complete.
 
 ---
 
@@ -130,6 +177,8 @@ Delete all `_` prefixed files from `~/.claude/MEMORY/llm-docs/<repo-slug>/`. The
 - Any `_explore_*.md`, `_validate_*.md`, `_scenario_*.md` files from subagent output
 
 **Do NOT delete `state.md`.** It serves as a permanent record that the documentation pipeline was run, when it completed, and what repo it targeted.
+
+**Do NOT delete `docs/llm/domain-context.md`** — this lives in the target repo, not MEMORY. It is a permanent output file that persists across runs.
 
 Report to the user: "Working files cleaned from MEMORY. Documentation pipeline complete. State preserved in state.md."
 
