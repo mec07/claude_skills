@@ -479,6 +479,19 @@ Only generate a task skill if Phase 0 flagged it. The standard set and their tri
 | Feature Flags | `tasks/feature-flags.md` | Flag SDK or flag config found |
 | Error Handling | `tasks/error-handling.md` | Custom error classes or error middleware |
 
+### Testing task skill: test style and conventions
+
+The `tasks/testing.md` skill must include a **Test Style & Conventions** section that describes how tests are written in this repo. Derive this from reading the actual test files — look at patterns across multiple test files to identify the conventions.
+
+Cover:
+- **Test philosophy:** What level do tests operate at? (unit, integration, end-to-end, or a mix?) What do they verify — behaviour/outputs or internal implementation?
+- **Patterns in use:** Table-driven tests, golden file comparison, mocking style, fixture patterns, assertion library
+- **What makes a good test here:** Based on the existing tests, what conventions should new tests follow?
+
+**If the repo has very few or no tests:** Fall back to general best-practice guidance as a starting point for the team. Recommend testing observable behaviour over implementation details — verify outputs, side effects, and contracts rather than internal function returns or const values. The litmus test: if you can refactor the internals without breaking the test, the test is at the right level. Mark this section as `<!-- derived from best practices, not existing tests -->` so future runs can replace it with observed conventions once more tests exist.
+
+**If the repo has substantial tests:** Derive conventions entirely from what's there. Do not impose external style preferences — describe what the repo actually does.
+
 **Dynamic naming:** Request/Message Handling is named based on what the repo actually does:
 - REST/GraphQL handlers → `tasks/request-handling.md`
 - Queue consumers → `tasks/message-processing.md`
@@ -580,9 +593,10 @@ should have warned about, add it to the module skill. When the user teaches you 
 or principle about this project, add it to the relevant skill — it's repo-wide knowledge,
 not a personal correction. When you learn about a new area that has no skill, create one.
 When refactoring changes folder structures or file locations, update the skills that
-describe those conventions. **When updating any skill, verify claims against the actual
-codebase** — record the principle, but check any factual assertions about the code before
-writing them. Skills improve through use.
+describe those conventions. **Every skill change must be verified against source code** —
+read the relevant code before writing. Skill quality must trend upwards, never downwards.
+An update that introduces inaccurate claims is worse than no update. Skills improve
+through use.
 
 ## Coding Standards
 - Keep code DRY — search for existing implementations before writing new code
@@ -703,13 +717,12 @@ skill files, not just in your conversation memory.
 → Add a routing entry in this file. You don't need to be asked — if you
 learned it the hard way, save the next agent the trouble.
 
-**Verification rule for ALL skill updates:** The same accuracy standards
-apply to updating skills as to generating them. Before writing a claim
-into a skill, verify it against the actual codebase. Do not over-generalise
-user feedback into false factual claims — record the principle the user
-taught you, but verify any specific assertions about the code (e.g., "we
-prefer behaviour tests" is a principle; "this repo only tests at the REST
-level" is a factual claim that must be checked). Read the code first.
+**Accuracy rule for ALL skill changes:** Every change to a skill file —
+whether adding a gotcha, recording a user-taught principle, fixing a
+stale claim, or expanding a section — must be verified against the actual
+source code. Read the relevant code before writing. The quality of these
+skills must trend upwards over time, never downwards. A skill update
+that introduces inaccurate claims is worse than no update at all.
 
 Skills and routing improve through use. Every agent interaction is an
 opportunity to make the next agent's job easier.
@@ -911,6 +924,7 @@ All four root files (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md
 - [ ] Module skills cover ALL Tier 1 boundaries from the confirmed boundary map
 - [ ] Tier 2 boundaries (if any) have abbreviated skills
 - [ ] All task skills flagged by Phase 0 have been generated
+- [ ] If `tasks/testing.md` exists, it includes a Test Style & Conventions section derived from actual test files (or marked as best-practice fallback if repo has minimal tests)
 - [ ] Every `<!-- TODO: verify -->` and `<!-- TODO: ask human -->` is logged in `_questions.md`
 
 ### Structural Integrity
