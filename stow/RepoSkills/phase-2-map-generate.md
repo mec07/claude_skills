@@ -580,7 +580,9 @@ should have warned about, add it to the module skill. When the user teaches you 
 or principle about this project, add it to the relevant skill — it's repo-wide knowledge,
 not a personal correction. When you learn about a new area that has no skill, create one.
 When refactoring changes folder structures or file locations, update the skills that
-describe those conventions. Skills improve through use.
+describe those conventions. **When updating any skill, verify claims against the actual
+codebase** — record the principle, but check any factual assertions about the code before
+writing them. Skills improve through use.
 
 ## Coding Standards
 - Keep code DRY — search for existing implementations before writing new code
@@ -700,6 +702,14 @@ skill files, not just in your conversation memory.
 → Create a new skill file in `.ai/skills/modules/` or `.ai/skills/tasks/`.
 → Add a routing entry in this file. You don't need to be asked — if you
 learned it the hard way, save the next agent the trouble.
+
+**Verification rule for ALL skill updates:** The same accuracy standards
+apply to updating skills as to generating them. Before writing a claim
+into a skill, verify it against the actual codebase. Do not over-generalise
+user feedback into false factual claims — record the principle the user
+taught you, but verify any specific assertions about the code (e.g., "we
+prefer behaviour tests" is a principle; "this repo only tests at the REST
+level" is a factual claim that must be checked). Read the code first.
 
 Skills and routing improve through use. Every agent interaction is an
 opportunity to make the next agent's job easier.
