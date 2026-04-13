@@ -56,6 +56,8 @@ Copy this checklist into `state.md` under the Phase 2 entry. Mark each item `[x]
 - If something is unclear after reading the code, mark it `<!-- TODO: verify -->` — do not fill the gap with a plausible guess.
 - Every file path you reference must exist. Verify before writing it into a skill.
 - Every command you document must come from an actual config file (`package.json` scripts, `Makefile`, `Taskfile.yml`, CI config, etc.) or be a standard tool command (`go test`, `cargo test`, `pytest`, etc.). Do not invent commands.
+- Do not write exact counts or numbers (e.g., "247 Go files", "12 targets") — these are greppable, go stale, and you may be guessing. If you find yourself writing a number, you are probably including greppable information.
+- Do not make absolute claims when the truth is conditional. If code uses a normalisation library, that does not mean all files are in the normalised format — it means the comparison handles both. Read the code carefully; do not over-simplify what you see.
 
 **Accuracy is the single most important requirement. If you are unsure about something, say so explicitly or leave it out. Wrong skills are actively harmful — worse than no skills.**
 
@@ -71,7 +73,7 @@ This pipeline may be re-run on a repo that already has skill files from a previo
 
 Before writing ANY piece of information into a skill, ask: "Can the agent find this in <5 seconds with grep/glob?"
 
-- **YES** (file lists, route lists, env vars, schema fields, function signatures, import paths, individual file paths to tests/configs/examples) → **DO NOT INCLUDE IT.** Individual file paths are brittle (they break on rename/move/delete) and greppable. Describe the convention or folder structure instead.
+- **YES** (file lists, route lists, env vars, schema fields, function signatures, import paths, individual file paths to tests/configs/examples, **exact counts and numbers**) → **DO NOT INCLUDE IT.** Individual file paths are brittle (they break on rename/move/delete) and greppable. Exact counts (e.g., "247 Go files", "12 Makefile targets", "32 test files") are greppable AND high-fabrication-risk — they go stale instantly and are easy to get wrong. Describe the convention or folder structure instead.
 - **PARTIALLY** (entry point paths, folder structures) → **OK TO INCLUDE.** Entry points are essential for routing — especially in languages like Python where the entry file could be anything. Folder structures change less frequently than individual files and provide useful navigational context.
 - **NO** (why a module exists, how modules relate, what breaks when you change something, non-obvious ordering, hidden coupling, business context, test conventions and patterns) → **INCLUDE IT.** This is what skills are for.
 
@@ -227,6 +229,8 @@ Boundaries:
 | Test | `[exact command]` | `[source file]` |
 | Build | `[exact command]` | `[source file]` |
 | Lint | `[exact command]` | `[source file]` |
+[... the commands a developer runs daily. For the full command reference,
+see the scripts/commands task skill.]
 
 (Use the actual commands for the repo's language — e.g., `go test ./...`, `cargo build`, `pytest`, `make dev`, `npm run dev`, and equivalent.)
 
@@ -245,7 +249,7 @@ Boundaries:
 - **Tech stack:** Point to VERSION PINNING SOURCES, not versions. Versions change; the files that pin them do not. An agent that needs the current version reads `.nvmrc`, `go.mod`, `rust-toolchain.toml`, `pyproject.toml`, or equivalent — it does not need us to write "Node 20.11" or "Go 1.22" which will go stale.
 - **Boundaries list:** One line per confirmed module boundary with a 4-word purpose. This is the structural map, NOT the routing table. Routing lives in top-level platform files.
 - **No routing tables in orientation.md.** The USE WHEN routing tables live in CLAUDE.md, AGENTS.md, copilot-instructions.md, and .cursorrules — files that survive context compaction. orientation.md provides the structural understanding; root files provide the routing.
-- **Quick reference:** Commands from actual config files ONLY. Cite the source.
+- **Quick reference:** The most common daily commands from actual config files. Cite the source. The full command reference lives in the scripts/commands task skill — orientation just needs the quick-access commands.
 
 **Update state:** Mark step 2.2 complete in `state.md`.
 
@@ -342,6 +346,7 @@ These fail the 5-second grep test and MUST NOT be included:
 - List of environment variables (grep `.env.example` or the code)
 - List of database tables (read the schema file)
 - Import statements (read the code)
+- **Exact counts or numbers** (e.g., "247 Go files", "12 Makefile targets", "32 test files") — these are greppable, go stale instantly, and are high-fabrication-risk. If you catch yourself writing a specific number, ask: did I actually count, or am I guessing? Either way, the number doesn't belong in a skill.
 - **Individual file paths for tests, configs, or examples** — describe the CONVENTION or folder structure instead (e.g., "co-located `_test.go` files" not `pkg/billing/billing_test.go`). Individual file paths are brittle — they break when files are renamed, moved, or deleted, and an agent can find them instantly via glob/grep. Entry point paths and folder structures ARE acceptable — they change less frequently and provide essential navigational context.
 
 ### Module Skill Overrides for Task Skills
@@ -427,11 +432,16 @@ reset between suites via migrations, not truncation — so migration order matte
 |---------|--------|-------------|
 | `[exact command]` | `[source file]` | [description] |
 
+This is the COMPLETE command reference for this task area. Root platform files
+(CLAUDE.md, AGENTS.md, etc.) contain a quick reference of the most common daily
+commands and point here for the full list.
+
 (Use the repo's actual commands. Examples by ecosystem:
 JS/TS: `npm test` from `package.json` · Go: `go test ./...` · Python: `pytest` from `pyproject.toml`
 Rust: `cargo test` · Java: `./gradlew test` from `build.gradle` · Ruby: `bundle exec rspec`)
 
-[Every command from actual config files — cite the source file and key]
+List every command from the relevant config files — cite the source file and key.
+Module-specific commands go in the module skill's Overrides section, not here.
 
 ## Gotchas
 [Task-specific traps that waste time. Each entry:]
@@ -481,6 +491,7 @@ Only generate a task skill if Phase 0 flagged it. The standard set and their tri
 - Environment variable lists (greppable from `.env.example`)
 - Complete configuration file contents (point to the file)
 - Step-by-step recipes for specific changes (the agent composes its own plan from the skill)
+- Exact counts or numbers — greppable and high-fabrication-risk
 - Individual file paths to tests, configs, or source files — describe the convention or folder structure instead. Individual file paths are brittle and greppable. Entry point paths and folder structures are OK.
 
 ### Asking the Human When Info Is Missing
@@ -542,7 +553,9 @@ NOT generic advice. Repo-specific guardrails.]
 | Command | Purpose | Source |
 |---------|---------|--------|
 | `[exact command]` | [purpose] | `[source file]` |
-[... quick reference commands from the repo's actual build/test/run config]
+[... quick reference — the commands a developer runs daily.
+Full command reference: `.ai/skills/tasks/scripts.md`
+Module-specific commands: check the relevant module skill's Overrides section.]
 
 ## Context Window Discipline
 - `node_modules/`, `vendor/`, `.venv/`, `__pycache__/`, `target/`, `dist/`, `build/` — NEVER browse
@@ -611,7 +624,9 @@ Boundaries:
 | Command | Purpose | Source |
 |---------|---------|--------|
 | `[exact command]` | [purpose] | `[source file]` |
-[... quick reference from the repo's actual build/test/run config]
+[... quick reference — the commands a developer runs daily.
+Full command reference: `.ai/skills/tasks/scripts.md`
+Module-specific commands: check the relevant module skill's Overrides section.]
 
 ## Key Rules
 [Top 5-7 critical rules — things that will cause real problems if violated.
@@ -736,7 +751,7 @@ Every root file (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md) MU
 |---------|---------|
 | **Tech Stack** | Language, framework, version pinning sources |
 | **Architecture** | System shape + boundary list |
-| **Key Commands** | Build, test, lint, dev commands with sources |
+| **Key Commands** | Quick reference of daily commands + pointer to scripts task skill for full reference |
 | **Key Rules** | Repo-specific critical rules (things that cause real problems if violated) |
 | **Module Routing** | Table mapping work areas to module skills — the primary discovery mechanism |
 | **Task Routing** | Table mapping agent intents to skill combinations |
@@ -824,6 +839,9 @@ Run through this checklist before marking Phase 2 complete. Do not skip this ste
 - [ ] Every command in orientation.md Quick Reference traces to a `package.json` script, `Makefile` target, `Cargo.toml`, CI config, or equivalent for the repo's language
 - [ ] Every command in task skills traces to an actual config file
 - [ ] Every test command in module skills traces to an actual config file or test runner
+- [ ] The scripts/commands task skill has the COMPLETE command reference — every command in the actual config files is listed
+- [ ] Key Commands quick reference is IDENTICAL across all four root platform files
+- [ ] Root file Key Commands sections point to the scripts task skill for the full reference
 
 ### Token Budget Compliance
 - [ ] Orientation skill is under ~2k tokens
@@ -839,11 +857,13 @@ Run through this checklist before marking Phase 2 complete. Do not skip this ste
 - [ ] No skill contains a list of environment variables
 - [ ] No skill contains function signatures or method lists
 - [ ] No skill contains individual file paths to tests, configs, or examples (describe conventions/folder structures instead)
+- [ ] No skill contains exact counts or numbers (e.g., "247 Go files", "12 targets") — these are greppable and high-fabrication-risk
 - [ ] Information in skills provides UNDERSTANDING, not LOOKUP DATA
 
 ### Content Quality
 - [ ] No skill claims "X probably does Y" or "X likely does Y" — either verified or marked `<!-- TODO: verify -->`
 - [ ] No content invented that is not traceable to a source file
+- [ ] No exact numbers or counts appear unless they were actually verified by running a command
 - [ ] Every module skill's purpose explains WHY (business context), not just WHAT (technical function)
 - [ ] Gotchas are specific and actionable — "what happens, why, how to avoid"
 

@@ -152,9 +152,13 @@ Update `state.md`: mark step 4.3 complete.
 
 ### Check 2: Command verification (Step 4.4)
 
-Every command documented (in task skills, orientation Quick Reference, module skills) must be defined in an actual config file.
+Every command documented (in task skills, orientation Quick Reference, module skills, root platform files) must be defined in an actual config file.
 
-For each command: check `package.json` scripts, `Makefile`, `Taskfile.yml`, `Cargo.toml`, `build.gradle`, CI configs, `docker-compose` files, or equivalent for the repo's language. Standard tool commands (`go test`, `pytest`, `cargo build`, `rspec`) are valid if the tool is a project dependency. If the command isn't defined anywhere, remove it.
+**Accuracy check:** For each command: check `package.json` scripts, `Makefile`, `Taskfile.yml`, `Cargo.toml`, `build.gradle`, CI configs, `docker-compose` files, or equivalent for the repo's language. Standard tool commands (`go test`, `pytest`, `cargo build`, `rspec`) are valid if the tool is a project dependency. If the command isn't defined anywhere, remove it.
+
+**Completeness check (task skills only):** The scripts/commands task skill must have the COMPLETE command reference — every command in the actual config files should be listed. Open the config files and compare. Root platform files and orientation.md are quick references (daily commands only) and point to the task skill for the full list.
+
+**Consistency check:** The Key Commands quick reference must be **identical** across all four root platform files. If any root file has commands that the others don't, flag and fix. Module-specific commands belong in module skill Overrides sections, not in root files.
 
 Update `state.md`: mark step 4.4 complete.
 
@@ -166,6 +170,8 @@ For each claim:
 - Open the file(s) it refers to
 - Confirm the described behaviour matches the actual code
 - Pay special attention to: communication mechanisms, data flow direction, schema/contract references, and stated dependencies
+- **Flag any exact numbers or counts** (e.g., "247 Go files", "12 Makefile targets", "32 test files"). These are high-fabrication-risk — the generating agent may have guessed rather than counted. Verify each number by actually running the count, then **remove the number from the skill** (it fails the 5-second grep test and goes stale). If you find numbers that were not verified, this is a finding.
+- **Flag absolute claims that may be conditional.** Watch for statements like "files ARE X" or "always does Y" when the code shows the truth is more nuanced (e.g., "a normalisation package is used during comparison" ≠ "files are always in that format"). Read the actual code — don't trust the generating agent's interpretation of what a library or function does.
 
 Update `state.md`: mark step 4.5 complete.
 
@@ -223,6 +229,7 @@ Scan every skill file for content that fails the 5-second grep test:
 - Copies of type definitions or schemas
 - Lists of environment variables
 - Function signatures or method lists
+- **Exact counts or numbers** (e.g., "247 Go files", "12 Makefile targets", "32 test files") — these are greppable, go stale instantly, and are high-fabrication-risk. The generating agent may have guessed rather than counted. Remove them.
 - **Individual file paths to tests, configs, or examples** (e.g., `pkg/billing/billing_test.go`, `src/utils/helpers.ts`) — these are greppable and brittle. Replace with a description of the convention or folder structure (e.g., "co-located `_test.go` files", "shared helpers in `testutils/`"). Entry point paths and folder structures are acceptable.
 - Any content an agent could find faster by running `grep` or `glob` than by reading the skill
 
