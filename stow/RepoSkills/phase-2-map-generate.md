@@ -17,7 +17,7 @@ Copy this checklist into `state.md` under the Phase 2 entry. Mark each item `[x]
 - [ ] 2.2: Generate orientation skill (.ai/skills/orientation.md)
 - [ ] 2.3: Generate module skills (.ai/skills/modules/<name>.md, parallel for large repos)
 - [ ] 2.4: Generate task skills (.ai/skills/tasks/<name>.md, conditional)
-- [ ] 2.5: Generate platform glue (AGENTS.md, CLAUDE.md, .cursorrules, copilot-instructions.md, per-module routing)
+- [ ] 2.5: Generate platform glue and maintenance tools (AGENTS.md, CLAUDE.md, .cursorrules, copilot-instructions.md, per-module routing, skill-drift.sh)
 - [ ] 2.6: Self-review checklist
 ```
 
@@ -40,6 +40,8 @@ Copy this checklist into `state.md` under the Phase 2 entry. Mark each item `[x]
 - `.github/copilot-instructions.md` in the target repo — self-sufficient entry point (Layer 3)
 - `.cursorrules` in the target repo root — self-sufficient entry point (Layer 3)
 - Per-module routing files for detected platforms (Layer 3, conditional)
+- `.ai/skills/Tools/skill-drift.sh` in the target repo — drift detection script (maintenance tool)
+- `.ai/skills/Tools/skill-drift-hook.sh` in the target repo — hook management script (maintenance tool)
 - `~/.claude/MEMORY/RepoSkills/<repo-slug>/_explore_<area>.md` — per-area exploration notes (working files, consumed during writing)
 - `~/.claude/MEMORY/RepoSkills/<repo-slug>/state.md` — updated with progress
 
@@ -598,6 +600,25 @@ read the relevant code before writing. Skill quality must trend upwards, never d
 An update that introduces inaccurate claims is worse than no update. Skills improve
 through use.
 
+### Drift Detection
+
+Check if skills have drifted from code changes:
+- `.ai/skills/Tools/skill-drift.sh` — full drift report
+- `.ai/skills/Tools/skill-drift.sh --quiet` — exit code only (CI/hooks)
+- `.ai/skills/Tools/skill-drift.sh --json` — JSON output (for CI/PR comments)
+
+Hook management (local — only benefits the installing developer):
+- `.ai/skills/Tools/skill-drift-hook.sh install` — install as post-commit hook
+- `.ai/skills/Tools/skill-drift-hook.sh uninstall` — remove hook
+- `.ai/skills/Tools/skill-drift-hook.sh status` — check installation
+
+For team-wide coverage, CI integration is recommended over local hooks.
+
+**Maintaining the drift tools:**
+- Routing table changes (new/renamed/deleted modules) are picked up automatically — the script reads CLAUDE.md at runtime
+- If you add new top-level directories where modules live, update `SCAN_DIRS` in `skill-drift.sh`
+- If you add/remove shared utility directories, update `CROSS_CUTTING` in `skill-drift.sh` (if populated)
+
 ## Coding Standards
 - Keep code DRY — search for existing implementations before writing new code
 - Follow existing patterns — read 2-3 examples of similar code first
@@ -727,6 +748,25 @@ that introduces inaccurate claims is worse than no update at all.
 Skills and routing improve through use. Every agent interaction is an
 opportunity to make the next agent's job easier.
 
+### Drift Detection
+
+Check if skills have drifted from code changes:
+- `.ai/skills/Tools/skill-drift.sh` — full drift report
+- `.ai/skills/Tools/skill-drift.sh --quiet` — exit code only (CI/hooks)
+- `.ai/skills/Tools/skill-drift.sh --json` — JSON output (for CI/PR comments)
+
+Hook management (local — only benefits the installing developer):
+- `.ai/skills/Tools/skill-drift-hook.sh install` — install as post-commit hook
+- `.ai/skills/Tools/skill-drift-hook.sh uninstall` — remove hook
+- `.ai/skills/Tools/skill-drift-hook.sh status` — check installation
+
+For team-wide coverage, CI integration is recommended over local hooks.
+
+**Maintaining the drift tools:**
+- Routing table changes (new/renamed/deleted modules) are picked up automatically — the script reads CLAUDE.md at runtime
+- If you add new top-level directories where modules live, update `SCAN_DIRS` in `skill-drift.sh`
+- If you add/remove shared utility directories, update `CROSS_CUTTING` in `skill-drift.sh` (if populated)
+
 ## Coding Standards
 
 - Keep code DRY — before writing new code, search for existing
@@ -836,6 +876,41 @@ If generating per-module routing for **3+ platforms** with **5+ modules**, paral
 
 **Model selection:** Use `sonnet` — mechanical file generation with clear templates.
 
+### Generate Skill Drift Detection Tools
+
+Write three files to `.ai/skills/Tools/` in the target repo:
+
+#### 1. `skill-drift.sh` — the drift detection script
+
+Read the template from the RepoSkills skill directory (`templates/skill-drift.sh`) and customise it:
+
+1. Populate the `CROSS_CUTTING` array from `_boundaries.md` (optional) — use the directories listed under "Cross-Cutting (not boundaries)". This array ONLY affects the unmapped directory report, not the core drift detection. If the repo has few cross-cutting directories (under ~5), leave the array empty — the unmapped report will be manageable without it. Populate it for repos with many shared packages (like a Go repo with 20+ utility packages in `pkg/`) where the unmapped report would otherwise be too noisy to act on.
+2. Populate the `SCAN_DIRS` array based on the repo's module structure — use the top-level directory patterns where modules live (e.g., `'src/*/'`, `'pkg/*/'`, `'cmd/*/'`). Derive these from the confirmed boundaries: look at the common parent directories of the boundary entry points.
+3. Write to `.ai/skills/Tools/skill-drift.sh` and make executable (`chmod +x`)
+4. Verify it runs in the target repo
+
+**The script requires bash 4+.** On macOS, the default bash is 3.2. The script includes a version check and suggests `brew install bash`. Do not change the script to accommodate bash 3.2 — associative arrays are fundamental to the design.
+
+**How it works:**
+- Parses CLAUDE.md's Module Routing table to build a directory-to-skill map
+- For each mapped directory, compares the skill's last-modified git commit against code changes (excluding test files and markdown)
+- Reports skills that have drifted and directories with no skill coverage
+- Three output modes: human-readable (default), `--quiet` (exit code only), `--json` (structured output for CI/PR comments)
+
+**Routing completeness is critical.** The drift script maps directories to skills using the Module Routing table's USE WHEN column. If a module owns directories that aren't listed in its USE WHEN entry, drift in those directories won't be detected. Ensure every directory a module covers is listed with a backtick-wrapped trailing-slash path (e.g., `` `pkg/sync/` ``) in the USE WHEN column.
+
+#### 2. `skill-drift-hook.sh` — hook management script
+
+Copy the template from `templates/skill-drift-hook.sh` to `.ai/skills/Tools/skill-drift-hook.sh` and make executable. This script requires no repo-specific customisation.
+
+Provides `install`, `uninstall`, and `status` commands for managing the drift check as a local git hook. Supports both pre-commit and post-commit hooks. Appends to existing hooks rather than overwriting them.
+
+**Important limitation:** Git hooks are local to each developer's clone. Installing this hook only benefits the developer who runs `install` — other team members won't see drift warnings unless they also install it. For team-wide coverage, CI integration is recommended (see Phase 9).
+
+#### 3. CI workflow template (Phase 9 decision)
+
+The CI workflow (`templates/skill-drift-ci.yml`) is NOT written during Phase 2. It is offered to the human during Phase 9 as an opt-in. If accepted, the workflow is written to the repo's CI directory (e.g., `.github/workflows/skill-drift.yml` for GitHub Actions) and adapted for the repo's CI platform if needed.
+
 **Update state:** Mark step 2.5 complete in `state.md`.
 
 ---
@@ -857,6 +932,7 @@ Run through this checklist before marking Phase 2 complete. Do not skip this ste
 - [ ] Every routing entry points to a skill file that exists on disk
 - [ ] Routing tables are IDENTICAL across all four root platform files
 - [ ] USE WHEN keywords in the routing table are task-oriented, not technical jargon
+- [ ] Module Routing USE WHEN column lists ALL directory paths each module covers (backtick-wrapped with trailing slash) — drift detection parses these to map code changes to skills
 
 ### Path Verification
 - [ ] Every entry point file path in every module skill exists in the repo
@@ -903,6 +979,14 @@ Run through this checklist before marking Phase 2 complete. Do not skip this ste
 - [ ] Per-module routing files contain the same content as their canonical module skill
 - [ ] .cursorrules content matches AGENTS.md
 - [ ] Per-module routing files exist only for platforms detected in `_triage.md`
+
+### Maintenance Tools
+- [ ] `.ai/skills/Tools/skill-drift.sh` exists and is executable
+- [ ] `.ai/skills/Tools/skill-drift-hook.sh` exists and is executable
+- [ ] CROSS_CUTTING array is either empty or matches the cross-cutting directories from `_boundaries.md`
+- [ ] SCAN_DIRS array covers the directory patterns where modules live
+- [ ] Both scripts run without errors in the target repo (`skill-drift.sh` and `skill-drift-hook.sh status`)
+- [ ] All four root platform files reference the drift detection tools in the Skill & Routing Maintenance section
 
 ### Required Sections in Root Platform Files
 All four root files (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md) must be self-sufficient and MUST each contain ALL of these sections:

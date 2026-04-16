@@ -33,9 +33,10 @@ Copy this checklist into `state.md` under the Phase 9 entry. Mark each item `[x]
 - [ ] 9.3: Present missing info questions from Phase 2
 - [ ] 9.4: Incorporate human answers into skill files and domain-context.md
 - [ ] 9.5: Post-answer validation — verify all changes, re-check routing, spot-check 5 claims
-- [ ] 9.6: Cleanup — delete working _ prefixed files from MEMORY (preserve _boundaries.md, _manifest.md)
-- [ ] 9.7: Store git commit hash in state.md
-- [ ] 9.8: Update state.md — mark Phase 9 and pipeline complete
+- [ ] 9.6: Offer drift detection integration (CI + local hook)
+- [ ] 9.7: Cleanup — delete working _ prefixed files from MEMORY (preserve _boundaries.md, _manifest.md)
+- [ ] 9.8: Store git commit hash in state.md
+- [ ] 9.9: Update state.md — mark Phase 9 and pipeline complete
 ```
 
 ---
@@ -235,7 +236,53 @@ Update `state.md`: mark step 9.5 complete.
 
 ---
 
-## Step 6: Cleanup (Step 9.6)
+## Step 6: Offer Drift Detection Integration (Step 9.6)
+
+The skill drift detection tools were generated in Phase 2. This step offers the human two integration options: CI (recommended, team-wide) and local git hooks (individual convenience).
+
+Present both options to the human:
+
+```
+Skill drift detection is ready. There are two ways to integrate it:
+
+**1. CI integration (recommended — benefits the entire team)**
+A CI workflow runs on every pull request and posts drift reports as PR review
+comments with inline annotations on affected files. This catches drift for every
+contributor automatically.
+
+I can generate a GitHub Actions workflow for this. If you use a different CI
+platform (GitLab CI, Azure DevOps, CircleCI, etc.), I can adapt it.
+
+Would you like me to add a CI workflow? (yes / no / different platform: ___)
+
+**2. Local git hook (optional — benefits only the installing developer)**
+A hook management script is available at .ai/skills/Tools/skill-drift-hook.sh.
+Any developer can install it locally:
+
+  .ai/skills/Tools/skill-drift-hook.sh install          # post-commit (default)
+  .ai/skills/Tools/skill-drift-hook.sh install pre-commit
+  .ai/skills/Tools/skill-drift-hook.sh uninstall
+  .ai/skills/Tools/skill-drift-hook.sh status
+
+Note: Git hooks are local to each clone. Other team members won't see drift
+warnings unless they also install the hook. CI integration covers everyone.
+```
+
+### Handling CI responses
+
+- **Yes (GitHub Actions):** Read the CI workflow template from the RepoSkills skill directory (`templates/skill-drift-ci.yml`). Write it to `.github/workflows/skill-drift.yml` in the target repo. Verify the file is valid YAML. If the `.github/workflows/` directory does not exist, create it.
+- **Different platform:** Adapt the CI workflow template for the specified platform. The core logic is: run `skill-drift.sh --json`, parse the JSON output, post a PR/MR comment with the drift details. Adapt the trigger, API calls, and workflow syntax for the target CI platform.
+- **No:** Skip CI. Note that CI can be added later by running `skill-drift.sh --json` in any CI pipeline.
+
+### Handling hook responses
+
+The hook management script is always generated during Phase 2 — no action needed here. Just inform the human it exists and how to use it. They can install it anytime.
+
+Update `state.md`: mark step 9.6 complete.
+
+---
+
+## Step 7: Cleanup (Step 9.7)
 
 Delete working `_` prefixed files from `~/.claude/MEMORY/RepoSkills/<repo-slug>/`:
 
@@ -254,11 +301,11 @@ Delete working `_` prefixed files from `~/.claude/MEMORY/RepoSkills/<repo-slug>/
 
 **Do NOT delete any files in the target repo** — `.ai/skills/domain-context.md` and all skill files are permanent outputs.
 
-Update `state.md`: mark step 9.6 complete.
+Update `state.md`: mark step 9.7 complete.
 
 ---
 
-## Step 6: Store Git Commit Hash (Step 9.6)
+## Step 8: Store Git Commit Hash (Step 9.8)
 
 Record the current HEAD commit hash in `state.md` for future diff-based updates:
 
@@ -277,18 +324,18 @@ Add to `state.md`:
 
 This hash enables future runs of the pipeline to diff against the documented state and only update what changed, rather than re-documenting the entire repo.
 
-Update `state.md`: mark step 9.6 complete.
+Update `state.md`: mark step 9.8 complete.
 
 ---
 
-## Step 7: Mark Pipeline Complete (Step 9.7)
+## Step 9: Mark Pipeline Complete (Step 9.9)
 
 Update `state.md`:
-- Mark step 9.7 complete
+- Mark step 9.9 complete
 - Mark Phase 9 complete with timestamp
 - Mark ALL phases as `[x]` complete
 - Update the `updated:` timestamp to the final completion time
-- Ensure the Pipeline Record section (from Step 9.6) is present
+- Ensure the Pipeline Record section (from Step 9.8) is present
 
 Report to the orchestrator:
 
@@ -313,4 +360,4 @@ The `state.md` file at `~/.claude/MEMORY/RepoSkills/<repo-slug>/state.md` now se
 - **Show your work when asking questions.** Every question includes what you already checked and why the code doesn't answer it. The human should never have to wonder "did you look at X?"
 - **Keep questions focused and specific.** "How does payment work?" is a bad question. "What triggers a payment retry — is it time-based, event-based, or manual?" is a good question.
 - **Clean up after yourself.** Working files are for state passing between phases. They are not documentation and must not persist after the pipeline completes.
-- **The commit hash is essential.** Without it, future runs cannot do incremental updates. Do not skip Step 9.6.
+- **The commit hash is essential.** Without it, future runs cannot do incremental updates. Do not skip Step 9.8.

@@ -25,8 +25,9 @@ Copy this checklist into `state.md` under the Phase 7 entry. Mark each item `[x]
 - [ ] 7.11: Token budget enforcement
 - [ ] 7.12: Regression check — Phase 5-6 specific (see Difference 3 below)
 - [ ] 7.13: Verify Phase 6 resolutions from _simulation_report.md (see Difference 4 below)
-- [ ] 7.14: Update _audit.md summary with final tallies
-- [ ] 7.15: Update state.md — mark Phase 7 complete with timestamp
+- [ ] 7.14: Verify drift detection tools still match current routing and boundaries
+- [ ] 7.15: Update _audit.md summary with final tallies
+- [ ] 7.16: Update state.md — mark Phase 7 complete with timestamp
 ```
 
 ---
@@ -122,6 +123,18 @@ This is the only point in the pipeline where Phase 6's work is independently val
 
 Update `state.md`: mark step 7.13 complete.
 
+### 5. Verify drift detection tools (Step 7.14)
+
+The drift detection script (`skill-drift.sh`) was generated in Phase 2 and may reference boundaries or routing that changed during Phases 3-6. Verify it is still accurate:
+
+1. **Run the script:** Execute `.ai/skills/Tools/skill-drift.sh` in the target repo. Confirm it runs without errors and correctly parses the current routing table.
+2. **Verify SCAN_DIRS:** If module boundaries were restructured in Phase 3, check that the `SCAN_DIRS` array still covers the right top-level directory patterns.
+3. **Verify CROSS_CUTTING:** If populated, confirm the listed directories still exist and are still cross-cutting (not promoted to module boundaries during restructuring).
+4. **Verify hook script:** Run `.ai/skills/Tools/skill-drift-hook.sh status` — confirm it executes without errors.
+5. **Fix any issues** found — update the scripts directly. Log the fix in `_audit.md`.
+
+Update `state.md`: mark step 7.14 complete.
+
 ---
 
 ## Execution
@@ -130,6 +143,6 @@ Now read `phase-4-validate.md` and execute the full validation procedure with th
 
 When you have audited every skill file:
 
-1. Update the Summary section of `_audit.md` with final tallies (step 7.14)
-2. Update `state.md`: mark Phase 7 complete with timestamp (step 7.15)
+1. Update the Summary section of `_audit.md` with final tallies (step 7.15)
+2. Update `state.md`: mark Phase 7 complete with timestamp (step 7.16)
 3. Report a brief summary to the orchestrator: how many errors found/fixed, claims removed, regressions found, remaining concerns, and overall confidence level

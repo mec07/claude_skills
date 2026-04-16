@@ -155,6 +155,12 @@ All phases that read the manifest expect this exact format:
 | .cursorrules | generated | Self-sufficient entry point for Cursor |
 | .cursor/rules/auth.mdc | generated | Per-module routing |
 | .claude/rules/auth.md | generated | Per-module routing |
+
+## Tools
+| File | Disposition | Notes |
+|------|-------------|-------|
+| .ai/skills/Tools/skill-drift.sh | generated | Drift detection — compares skill freshness against code changes |
+| .ai/skills/Tools/skill-drift-hook.sh | generated | Hook manager — install/uninstall drift check as local git hook |
 ```
 
 **Disposition values:** `generated` (written from scratch), `preserved` (kept from previous run), `orphaned` (module deleted -- flagged for deletion), `skipped` (not warranted for this repo), `updated` (regenerated during targeted/diff update).

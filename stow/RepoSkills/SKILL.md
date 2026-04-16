@@ -73,6 +73,8 @@ Phase 9: Human Checkpoint      → Reverse Glossary + unresolvable questions
 | `domain-context.md` | Business domain, terminology, regulatory, architecture rationale |
 | `modules/<name>.md` | One per module — purpose, relationships, change impact, seams, gotchas, testing |
 | `tasks/<name>.md` | One per detected capability — how to do X in this specific repo |
+| `Tools/skill-drift.sh` | Drift detection — compares skill freshness against code changes, usable as CI check or git hook |
+| `Tools/skill-drift-hook.sh` | Hook manager — install/uninstall drift check as local git hook |
 
 ### Platform glue (repo root)
 
@@ -105,6 +107,14 @@ Each phase reads its instructions from a dedicated file in this skill directory:
 | 7 | `phase-7-validate-2.md` |
 | 8 | `phase-8-clarity-review-2.md` |
 | 9 | `phase-9-human-checkpoint.md` |
+
+### Templates
+
+| File | Purpose |
+|------|---------|
+| `templates/skill-drift.sh` | Template for the drift detection script — customised per-repo during Phase 2 |
+| `templates/skill-drift-hook.sh` | Template for the hook management script |
+| `templates/skill-drift-ci.yml` | Template for GitHub Actions CI workflow — adapted for other CI platforms during generation |
 
 ---
 
