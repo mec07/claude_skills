@@ -113,6 +113,8 @@ Phase 9: Human Checkpoint
 | `_simulation_report.md` | Phase 5 | Phases 6, 8, 9 | Phase 9 cleanup | Simulation results: gaps, failures, missing routing |
 | `_unresolved.md` | Phase 6 | Phase 9 | Phase 9 cleanup | Issues that require human judgment |
 | `_questions.md` | Phase 2 | Phase 9 | Phase 9 cleanup | Questions flagged during generation for human review |
+| `_drift_report.md` | DR.1-DR.10 | Drift resolution only | Overwritten on next drift run (audit trail) | Triage decisions, patches, accuracy results |
+| `_drift_patch_<name>.md` | DR subagents | DR merge | End of DR | Per-skill drift patch output |
 | `_explore_<area>.md` | Phase 2 subagents | Phase 2 merge | End of Phase 2 | Per-area exploration output |
 | `_skill_<name>.md` | Phase 2 subagents | Phase 2 merge | End of Phase 2 | Per-skill draft output |
 | `_sim_<scenario>.md` | Phase 5 subagents | Phase 5 merge | End of Phase 5 | Per-scenario simulation output |
@@ -235,6 +237,7 @@ Each phase reads its instructions from a dedicated file in this skill directory:
 | 7 | `phase-7-validate-2.md` | All skills + `_simulation_report.md` + codebase | `MEMORY: _audit.md` rebuilt |
 | 8 | `phase-8-clarity-review-2.md` | All skills + `_simulation_report.md` + codebase | `_simulation_report.md` updated |
 | 9 | `phase-9-human-checkpoint.md` | `_unresolved.md` + `_questions.md` + all skills | Final skill updates, MEMORY cleanup |
+| DR | `phase-drift-resolve.md` | `state.md`, `_boundaries.md`, `_manifest.md`, drift JSON, codebase | Updated/new skills, `MEMORY: _drift_report.md` |
 
 `MEMORY:` prefix means the file lives in `~/.claude/MEMORY/RepoSkills/<repo-slug>/`.
 
@@ -577,14 +580,36 @@ When a module is detected as deleted (its boundary directory no longer exists on
 6. **Update `_manifest.md`:** Change the module's disposition to `deleted`
 7. **Update orientation.md:** Remove the deleted module from the Boundaries list and any other references
 
+### Drift resolution (`--drift` or `--resolve-drift`)
+
+Targeted repair of skills flagged by drift detection. Runs in a **single context window** (not a multi-phase pipeline).
+
+1. Read `state.md` to verify a prior pipeline run exists. If no `state.md`, abort: "Run the full pipeline first."
+2. Run `skill-drift.sh --json` to get current drift signals
+3. Triage each signal (confirmed vs false-positive via git diff analysis of actual code changes)
+4. For confirmed drifts: analyze code changes, surgically patch stale sections
+5. For unmapped directories: create new skill files if they qualify as module boundaries
+6. Cross-reference check: propagate relationship changes to related skills
+7. Update routing tables in all platform glue files
+8. Three-stage accuracy verification: claim-by-claim source verification, structural integrity checks (Phase 4 checks 1, 3, 9, 10, 11), relationship symmetry audit
+9. Commit updated/new skill files (advances anchors automatically)
+10. Update `state.md` commit hash and drift resolution history
+
+**Expected time: 3-10 minutes** depending on number of drifted skills and unmapped directories.
+**Prerequisite:** At least one completed pipeline run (`state.md` must exist).
+
+For the full instruction set, see `phase-drift-resolve.md`.
+
 ### Detecting update mode
 
 The orchestrator determines the update mode at startup:
 
 1. Check if `--fresh` flag is present -> Full run
 2. Check if `--update <name>` flag is present -> Targeted update
-3. Check if `state.md` exists with a `commit:` hash -> Diff-based update
-4. Otherwise -> Full run (first time)
+3. Check if `--drift` or `--resolve-drift` flag is present -> Drift resolution
+4. Check if `--drift-check` flag is present -> Drift check (report only, no resolution)
+5. Check if `state.md` exists with a `commit:` hash -> Diff-based update
+6. Otherwise -> Full run (first time)
 
 ---
 

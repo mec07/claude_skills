@@ -247,7 +247,7 @@ Every root platform file (CLAUDE.md, AGENTS.md, .cursorrules, .github/copilot-in
 - [ ] Key Commands
 - [ ] Key Rules
 - [ ] Module Routing (table with USE WHEN keywords)
-- [ ] Task Routing (table mapping intents to skill combinations)
+- [ ] Task Routing (table mapping intents to skill combinations, with USE WHEN keywords)
 - [ ] Context Window Discipline
 - [ ] Before Modifying Code
 - [ ] Skill & Routing Maintenance

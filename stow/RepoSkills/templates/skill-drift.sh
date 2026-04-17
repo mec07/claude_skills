@@ -2,7 +2,7 @@
 #
 # skill-drift.sh — Detect when .ai/skills docs drift from code reality.
 #
-# Parses the Module Routing table from CLAUDE.md (single source of truth),
+# Parses the Module/Task Routing tables from CLAUDE.md (single source of truth),
 # compares each skill file's last-modified commit against code changes
 # in its domain, and reports drift.
 #
@@ -114,7 +114,7 @@ SCAN_DIRS=(
 )
 
 # ─── Parse routing from CLAUDE.md ──────────────────────────────────
-# CLAUDE.md Module Routing table is the single source of truth.
+# CLAUDE.md Module/Task Routing tables are the single source of truth.
 # Format: | description | `skill_file` | working in `dir/`, `dir/`, ... |
 
 declare -A DIR_TO_SKILLS   # dir -> space-separated skill files
@@ -128,8 +128,8 @@ parse_routing() {
 
     # Match table rows containing skill file paths
     while IFS= read -r line; do
-        # Extract skill file from backticks (column 2)
-        skill=$(echo "$line" | grep -oE '\.ai/skills/modules/[a-z0-9_-]+\.md' | head -1)
+        # Extract skill file from backticks (column 2) — modules or tasks
+        skill=$(echo "$line" | grep -oE '\.ai/skills/(modules|tasks)/[a-z0-9_-]+\.md' | head -1)
         [[ -z "$skill" ]] && continue
 
         # Extract directory paths from USE WHEN column
@@ -148,7 +148,7 @@ parse_routing() {
                 DIR_TO_SKILLS[$dir]="$skill"
             fi
         done
-    done < <(grep '^|.*\.ai/skills/modules/' "$claude_md")
+    done < <(grep -E '^|.*\.ai/skills/(modules|tasks)/' "$claude_md")
 }
 
 parse_routing
@@ -236,7 +236,7 @@ for skill in $(echo "${!skill_changed_dirs[@]}" | tr ' ' '\n' | sort -u); do
 
     if [[ "$drift_found" == false ]]; then
         $QUIET || echo ""
-        $QUIET || echo "Skill drift detected:"
+        $QUIET || echo "Potential skill drift detected:"
         $QUIET || echo ""
         drift_found=true
     fi
@@ -338,7 +338,7 @@ if [[ "$drift_found" == false && "$unmapped_found" == false ]]; then
 else
     if ! $QUIET; then
         echo "---"
-        echo "To resolve: update the skill file(s) and/or CLAUDE.md routing table."
+        echo "To resolve: run 'Run RepoSkills --drift' to triage and repair drifted skills."
     fi
     exit 1
 fi

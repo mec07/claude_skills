@@ -80,7 +80,7 @@ jobs:
               body += '\n';
             }
 
-            body += `---\n*Resolve individual comments below, or update the skill files to clear this report.*`;
+            body += `---\n*To resolve: run \`Run RepoSkills --drift\` to triage and repair drifted skills.*`;
 
             // Find existing review from this bot
             const reviews = await github.rest.pulls.listReviews({
@@ -101,7 +101,7 @@ jobs:
             for (const d of drifts) {
               if (!d.first_file) continue;
 
-              let commentBody = `**Skill drift:** \`${d.skill}\` hasn't been updated since ${d.anchor_date} (${d.commit_count} commits ago).\n\n`;
+              let commentBody = `**Potential skill drift:** \`${d.skill}\` hasn't been updated since ${d.anchor_date} (${d.commit_count} commits ago).\n\n`;
               commentBody += `This file is in a directory covered by that skill. Directories with changes: ${d.dirs}`;
               if (d.not_mentioned) {
                 commentBody += `\n\n\`${d.not_mentioned}\` is not mentioned in the skill file at all.`;

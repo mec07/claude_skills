@@ -38,6 +38,13 @@ Generate a complete set of agent-native skills for any codebase. Skills are conc
 > Run RepoSkills --update billing
 > Run RepoSkills --update running-tests
 
+**Drift resolution (repair skills flagged by drift detection):**
+> Run RepoSkills --drift
+> Run RepoSkills --resolve-drift
+
+**Drift check only (report, no resolution):**
+> Run RepoSkills --drift-check
+
 **Diff-based re-run (default for repos with existing skills):**
 > Run RepoSkills
 (Automatically detects existing skills, computes git diff against stored commit hash, updates only changed modules.)
@@ -107,6 +114,7 @@ Each phase reads its instructions from a dedicated file in this skill directory:
 | 7 | `phase-7-validate-2.md` |
 | 8 | `phase-8-clarity-review-2.md` |
 | 9 | `phase-9-human-checkpoint.md` |
+| DR | `phase-drift-resolve.md` |
 
 ### Templates
 

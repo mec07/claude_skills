@@ -545,6 +545,8 @@ Self-sufficient entry point for Codex, Zed, JetBrains, Aider, Factory, and other
 
 Read the relevant module skill BEFORE making changes:
 
+USE WHEN format: backtick-wrapped directory paths with trailing slash (e.g., `` `src/billing/` ``) are parsed by drift detection. Plain-text keywords (e.g., "payment logic") are for agent routing only and ignored by the drift script.
+
 | I need to work on... | Load this skill | USE WHEN |
 |----------------------|-----------------|----------|
 | [billing, payments, invoicing] | `.ai/skills/modules/billing.md` | working in `src/billing/`, payment logic |
@@ -553,11 +555,13 @@ Read the relevant module skill BEFORE making changes:
 
 ## Task Routing
 
-| I need to... | Load these skills |
-|--------------|-------------------|
-| Fix a bug in [module] | Module skill + dependency module skills |
-| Set up locally | `.ai/skills/tasks/local-dev.md` |
-| Run or add tests | `.ai/skills/tasks/testing.md` + relevant module skill |
+USE WHEN format: backtick-wrapped directory paths with trailing slash (e.g., `` `tests/` ``) are parsed by drift detection. Plain-text keywords (e.g., "debugging") are for agent routing only and ignored by the drift script.
+
+| I need to... | Load these skills | USE WHEN |
+|--------------|-------------------|----------|
+| Fix a bug in [module] | Module skill + dependency module skills | debugging, troubleshooting |
+| Set up locally | `.ai/skills/tasks/local-dev.md` | working in `docker/`, `scripts/setup/`, local environment |
+| Run or add tests | `.ai/skills/tasks/testing.md` + relevant module skill | working in `tests/`, `*_test.go`, test configuration |
 [... same 8-10 sampler entries as CLAUDE.md]
 
 ## Key Rules
@@ -675,6 +679,8 @@ NOT generic advice. Repo-specific guardrails.]
 
 Read the relevant module skill BEFORE making changes in that area:
 
+USE WHEN format: backtick-wrapped directory paths with trailing slash (e.g., `` `src/billing/` ``) are parsed by drift detection. Plain-text keywords (e.g., "payment logic") are for agent routing only and ignored by the drift script.
+
 | I need to work on... | Load these skills | USE WHEN |
 |----------------------|-------------------|----------|
 | [billing, payments, invoicing] | `.ai/skills/modules/billing.md` | working in `src/billing/`, payment logic |
@@ -684,15 +690,17 @@ Read the relevant module skill BEFORE making changes in that area:
 
 ## Task Routing
 
-| I need to... | Load these skills |
-|--------------|-------------------|
-| Fix a bug in [module] | Module skill + dependency module skills |
-| Add a new handler/endpoint | Relevant task skill + module skill + test with conventions |
-| Set up locally | `.ai/skills/tasks/local-dev.md` |
-| Run or add tests | `.ai/skills/tasks/testing.md` + relevant module skill |
-| Deploy or understand CI | `.ai/skills/tasks/deployment.md` |
-| Change the data model | `.ai/skills/tasks/database.md` + data layer module skill |
-| Understand the domain | `.ai/skills/domain-context.md` |
+USE WHEN format: backtick-wrapped directory paths with trailing slash (e.g., `` `tests/` ``) are parsed by drift detection. Plain-text keywords (e.g., "debugging") are for agent routing only and ignored by the drift script.
+
+| I need to... | Load these skills | USE WHEN |
+|--------------|-------------------|----------|
+| Fix a bug in [module] | Module skill + dependency module skills | debugging, troubleshooting |
+| Add a new handler/endpoint | Relevant task skill + module skill + test with conventions | new feature, endpoint, handler |
+| Set up locally | `.ai/skills/tasks/local-dev.md` | working in `docker/`, `scripts/setup/`, local environment |
+| Run or add tests | `.ai/skills/tasks/testing.md` + relevant module skill | working in `tests/`, `*_test.go`, test configuration |
+| Deploy or understand CI | `.ai/skills/tasks/deployment.md` | working in `.github/workflows/`, `ci/`, deployment config |
+| Change the data model | `.ai/skills/tasks/database.md` + data layer module skill | working in `migrations/`, `db/`, schema changes |
+| Understand the domain | `.ai/skills/domain-context.md` | domain terminology, business logic rationale |
 [... 8-10 sampler entries]
 
 ## Context Window Discipline
@@ -892,12 +900,12 @@ Read the template from the RepoSkills skill directory (`templates/skill-drift.sh
 **The script requires bash 4+.** On macOS, the default bash is 3.2. The script includes a version check and suggests `brew install bash`. Do not change the script to accommodate bash 3.2 — associative arrays are fundamental to the design.
 
 **How it works:**
-- Parses CLAUDE.md's Module Routing table to build a directory-to-skill map
+- Parses CLAUDE.md's Module Routing and Task Routing tables to build a directory-to-skill map
 - For each mapped directory, compares the skill's last-modified git commit against code changes (excluding test files and markdown)
 - Reports skills that have drifted and directories with no skill coverage
 - Three output modes: human-readable (default), `--quiet` (exit code only), `--json` (structured output for CI/PR comments)
 
-**Routing completeness is critical.** The drift script maps directories to skills using the Module Routing table's USE WHEN column. If a module owns directories that aren't listed in its USE WHEN entry, drift in those directories won't be detected. Ensure every directory a module covers is listed with a backtick-wrapped trailing-slash path (e.g., `` `pkg/sync/` ``) in the USE WHEN column.
+**Routing completeness is critical.** The drift script maps directories to skills using the USE WHEN column from both the Module Routing and Task Routing tables. If a skill owns directories that aren't listed in its USE WHEN entry, drift in those directories won't be detected. Ensure every directory a module or task covers is listed with a backtick-wrapped trailing-slash path (e.g., `` `pkg/sync/` ``) in the USE WHEN column.
 
 #### 2. `skill-drift-hook.sh` — hook management script
 
@@ -933,6 +941,7 @@ Run through this checklist before marking Phase 2 complete. Do not skip this ste
 - [ ] Routing tables are IDENTICAL across all four root platform files
 - [ ] USE WHEN keywords in the routing table are task-oriented, not technical jargon
 - [ ] Module Routing USE WHEN column lists ALL directory paths each module covers (backtick-wrapped with trailing slash) — drift detection parses these to map code changes to skills
+- [ ] Task Routing USE WHEN column lists relevant directory paths each task covers (backtick-wrapped with trailing slash) — drift detection also tracks task skill freshness
 
 ### Path Verification
 - [ ] Every entry point file path in every module skill exists in the repo
@@ -995,7 +1004,7 @@ All four root files (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md
 - [ ] Key Commands (build, test, lint, dev commands with sources)
 - [ ] Key Rules (repo-specific critical rules — things that break if violated)
 - [ ] Module Routing (table with USE WHEN keywords)
-- [ ] Task Routing (table mapping intents to skill combinations)
+- [ ] Task Routing (table mapping intents to skill combinations, with USE WHEN keywords)
 - [ ] Context Window Discipline (directories to never browse, generated file guidance)
 - [ ] Before Modifying Code (read module skill, check Change Impact, read orientation)
 - [ ] Skill & Routing Maintenance (living docs guidance, refactoring updates)
