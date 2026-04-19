@@ -541,9 +541,17 @@ Fast path for updating a single skill:
 3. Re-explore the relevant codebase area (the module's directory, or the task's relevant files)
 4. Regenerate the skill file
 5. Update the manifest
-6. Run 1 targeted simulation (an agent task that exercises the updated skill)
-7. Fix any gaps found
-8. Update `state.md` commit hash
+
+#### ⛔ VALIDATION GATE — must pass before finalising
+
+**Do NOT proceed to step 8 until this gate passes.** The full pipeline enforces validation via separate agent phases (4, 5, 7, 8) that cannot be skipped. This gate is the update-path equivalent — it is mandatory, not advisory.
+
+6. **Run 1 targeted simulation:** Dispatch a separate agent (model: sonnet) with the updated skill loaded as context. Give it a realistic task that exercises the skill's routing, key rules, and at least one module-specific workflow. The simulation agent must NOT be the same agent that wrote the skill — self-review is what this gate exists to prevent.
+7. **Evaluate and fix:** Read the simulation result. If the agent made errors that correct skill content would have prevented, fix the skill and re-run the simulation. Repeat until the simulation passes cleanly or you have identified issues that require human input (in which case, flag them and do not update the commit hash).
+
+**Gate failure:** If after 2 fix-and-retry cycles the simulation still fails, STOP. Report the failures to the user and ask for guidance. Do not update `state.md` — the update is incomplete.
+
+8. Update `state.md` commit hash — **only after the validation gate passes**
 
 **Expected time: 3-5 minutes.** No domain interview, no full simulation, no human checkpoint.
 
@@ -562,9 +570,18 @@ When skills already exist and `--fresh` is not specified:
    - Task skills: if relevant config/scripts changed (e.g., CI config change triggers deployment-ci.md update)
    - Core skills: if project-wide config changed (e.g., `package.json`, `go.mod`, `Cargo.toml`, `pyproject.toml` change triggers orientation.md update)
    - orientation.md: if any module was added or removed
-8. For each skill that needs updating, run the targeted update path
-9. Run abbreviated simulation (2-3 scenarios covering the changed areas)
-10. Fix gaps, update manifest, update commit hash
+8. For each skill that needs updating, run the targeted update path (steps 1-5 of the targeted update above — do NOT run individual validation gates yet)
+
+#### ⛔ VALIDATION GATE — must pass before finalising
+
+**Do NOT proceed to step 11 until this gate passes.** This is the diff-update equivalent of the full pipeline's validation phases (4, 5, 7, 8). It is mandatory, not advisory.
+
+9. **Run abbreviated simulation:** Dispatch a separate agent (model: sonnet) with ALL updated skills loaded as context. Give it 2-3 realistic tasks that exercise the changed areas — at minimum one task per updated module. The simulation agent must NOT be the same agent that regenerated the skills.
+10. **Evaluate and fix:** Read the simulation results. If the agent made errors that correct skill content would have prevented, fix the affected skills and re-run the failing scenarios. Repeat until simulations pass cleanly or you have identified issues that require human input (in which case, flag them and do not update the commit hash).
+
+**Gate failure:** If after 2 fix-and-retry cycles simulations still fail, STOP. Report the failures to the user and ask for guidance. Do not update `state.md` — the update is incomplete.
+
+11. Update manifest and `state.md` commit hash — **only after the validation gate passes**
 
 **Expected time: 5-15 minutes** depending on scope of changes.
 
