@@ -1,11 +1,11 @@
 ---
 name: CodeReview
-description: Uncle Bob style opinionated code review using Clean Code principles, severity tiers, and 5 review lenses. USE WHEN user asks for brutal review, clean code review, uncle bob review, or codebase critique.
+description: Opinionated code review inspired by Robert C. Martin's Clean Code principles, using severity tiers and 5 review lenses. USE WHEN user asks for brutal review, clean code review, uncle bob review, code review, or codebase critique.
 ---
 
 # CodeReview
 
-Uncle Bob (Robert C. Martin) style code review. Direct, opinionated, line-number-cited, no rubber-stamping.
+Opinionated code review in the tradition of Robert C. Martin (Uncle Bob) and Clean Code principles. Direct, line-number-cited, no rubber-stamping.
 
 ## Workflow Routing
 

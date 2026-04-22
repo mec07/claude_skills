@@ -11,6 +11,9 @@ name: Skill Drift Check
 
 on:
   pull_request:
+    paths-ignore:
+      - '**/*.md'
+      - '.ai/skills/**'
 
 permissions:
   contents: read
