@@ -516,6 +516,49 @@ If you find a module or capability but cannot determine how it works from the co
 - Log the question in `~/.claude/MEMORY/RepoSkills/<repo-slug>/_questions.md` for Phase 9 (Human Checkpoint)
 - Do NOT guess. Do NOT leave it undocumented. Flag it.
 
+### Schema State Section (conditional)
+
+If `_triage.md` reports `migration_state_eligible: yes`:
+
+**Validate first.** Before writing the skill content, run `bunx migration-state {migration_dir}` against each eligible migration directory. This serves two purposes:
+1. **Confirms the tool works** with this repo's migrations — if it errors, note the issue in the skill instead of blindly documenting a broken command
+2. **Informs the skill content** — the output reveals the actual tables, columns, and indices, which helps you write more specific guidance (e.g., which tables are central to the domain, what naming conventions the schema follows)
+
+If multiple migration directories exist, run the tool against each one separately. Note whether each directory represents a different database, a different schema, or a subset of the same database — this context belongs in the generated skill.
+
+Add this section to the Database Operations task skill, replacing `{migration_dir}` and `{migration_tool}` with the actual values from `_triage.md`:
+
+```markdown
+## Schema State
+
+To compute the current database schema from migration files:
+
+    bunx migration-state {migration_dir}
+
+Use this BEFORE:
+- Writing new migrations (check current column types, constraints, indices)
+- Modifying queries (verify what indices exist, which columns are nullable)
+- Code review of migrations (verify the migration produces the expected state)
+
+Tool: {migration_tool} | Database: PostgreSQL
+
+To filter to specific tables:
+
+    bunx migration-state {migration_dir} --tables {table1},{table2}
+```
+
+If `_triage.md` reports `migration_state_eligible: no`:
+
+Add a note explaining WHY it's not eligible and suggest the tool's own schema inspection command:
+
+- **Code-based migrations** — use the tool's native status command:
+  - Prisma: `npx prisma migrate status` (or `npx prisma db pull` to introspect)
+  - Drizzle: `npx drizzle-kit introspect`
+  - goose (Go code migrations): `goose status`
+  - dbmate: `dbmate status`
+  - Other: check the project's scripts in `package.json` / `Makefile` for a schema or migrate command
+- **Non-PostgreSQL** — note the database type: "Database is {db}. migration-state currently supports PostgreSQL only."
+
 **Update state:** Mark step 2.4 complete in `state.md`.
 
 ---
@@ -841,6 +884,20 @@ Every root file (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md) MU
 | **New to This Repo?** | Numbered onboarding steps for agents encountering the repo for the first time |
 
 **Every root file must be self-sufficient.** Each platform has its own compaction behaviour — CLAUDE.md survives in Claude Code, but copilot-instructions.md may be the only thing Copilot retains, and .cursorrules may be the only thing Cursor keeps. An agent reading ANY single root file must be able to navigate the codebase without needing the others. No root file should redirect to another root file — each one stands alone.
+
+#### Migration State in Key Commands (conditional)
+
+If migration-state is eligible for this repo, add to the Key Commands section
+of ALL root platform files:
+
+| Command | Purpose |
+|---------|---------|
+| `bunx migration-state {migration_dir}` | Show current DB schema state from migrations |
+
+This goes alongside existing commands like `bun test`, `bun run dev`, etc.
+If multiple migration directories exist, add one row per directory with a descriptive
+purpose (e.g., "Show users DB schema", "Show analytics DB schema").
+Do NOT add this command if migration-state is not eligible.
 
 ### Conditionally Generate (per-module routing files)
 

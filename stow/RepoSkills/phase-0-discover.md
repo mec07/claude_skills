@@ -248,6 +248,33 @@ For each skill that was checked but NOT warranted, record:
 - **Skill name:** the name
 - **Reason skipped:** why detection did not trigger (e.g., "No test files or test config found")
 
+#### Migration State Tool Eligibility
+
+When Database Operations is warranted AND migration directories are detected:
+
+1. Record the migration directory path(s) found. Multiple directories may represent:
+   - Different databases (e.g., `db/users/migrations/` and `db/analytics/migrations/`)
+   - Different schemas within one database (e.g., `migrations/public/` and `migrations/reporting/`)
+   - A combination of both
+   Record which case applies based on connection config and directory naming.
+2. Classify the migration tool from file patterns:
+   - `V{N}__*.sql` -> Flyway
+   - `*.up.sql` / `*.down.sql` -> golang-migrate
+   - Files containing `-- +goose Up` -> goose
+   - Files containing `-- migrate:up` -> dbmate
+   - Files containing `-- +migrate Up` -> sql-migrate
+   - `{timestamp}/migration.sql` pattern -> Prisma or Drizzle
+   - `.sql` files alongside `atlas.hcl` -> Atlas
+   - Other `.sql` in migration dir -> generic
+3. Classify as SQL-file (parseable by migration-state) or code-based (not parseable)
+4. Check if the database is PostgreSQL (look for `pg` or `postgres` in dependencies)
+5. Record in _triage.md:
+   - `migration_dir`: path(s)
+   - `migration_tool`: detected tool name
+   - `migration_parseable`: yes/no
+   - `migration_db`: PostgreSQL/MySQL/SQLite/other
+   - `migration_state_eligible`: yes (if SQL-file AND PostgreSQL) / no
+
 Update `state.md`: mark step 0.5 complete.
 
 ---
@@ -328,6 +355,14 @@ Write the triage assessment to `~/.claude/MEMORY/RepoSkills/<repo-slug>/_triage.
 | Skill Name | Reason Skipped |
 |------------|----------------|
 | [name] | [reason] |
+
+### Migration State Tool Eligibility
+- **migration_dir:** [path(s) to migration directories]
+- **migration_tool:** [Flyway | golang-migrate | goose | dbmate | sql-migrate | Prisma | Drizzle | Atlas | generic]
+- **migration_parseable:** [yes | no]
+- **migration_db:** [PostgreSQL | MySQL | SQLite | other]
+- **migration_state_eligible:** [yes (SQL-file AND PostgreSQL) | no]
+<!-- Omit this section if Database Operations is not warranted or no migration directories detected -->
 
 ## Existing Documentation Assessment
 

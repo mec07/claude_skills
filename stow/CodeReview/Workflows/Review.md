@@ -12,6 +12,8 @@ Every finding gets:
 
 ## Before You Begin
 
+### Full Codebase Review
+
 Map the codebase before reviewing anything:
 1. Identify the **entry point(s)** — the composition root or main module
 2. Read the **core type definitions** — the contracts that shape the codebase
@@ -21,7 +23,21 @@ Map the codebase before reviewing anything:
 
 Do NOT review files you haven't read. Read first, review second.
 
-## The 5 Lenses
+### Git Range Review
+
+When reviewing a specific set of changes (a feature branch, a set of commits):
+1. Get the diff: `git diff --stat {BASE_SHA}..{HEAD_SHA}` for scope, then `git diff {BASE_SHA}..{HEAD_SHA}` for content
+2. If SHAs aren't provided, determine them: `git merge-base HEAD main` for base, `git rev-parse HEAD` for head
+3. Read each changed file **fully** — don't review from diff snippets alone; you need surrounding context
+4. Apply all lenses below to the changed code, but focus findings on what changed — don't review unchanged code in passing
+
+### For Both Modes
+
+**Read the project's conventions.** Check CLAUDE.md (root and any directory-level), linter configs, and existing patterns. The codebase's established standards are your baseline — review against them, not your personal preferences.
+
+**GATE: Do not proceed to lenses until you have read every file you will cite. Citing code you haven't read is a critical failure. If you're doing a git range review, you must have read the full file for every changed file — not just the diff hunks.**
+
+## The 6 Lenses
 
 Review through each lens sequentially. Label each section clearly.
 
@@ -100,14 +116,44 @@ Review through each lens sequentially. Label each section clearly.
 **What to look for:**
 - Magic strings/numbers that should be named constants
 - Functions longer than 20-30 lines that do multiple things
+- Deep nesting — more than 2-3 levels of conditionals or callbacks; flatten with early returns, guard clauses, or extraction
 - Comments that explain WHAT the code does (the code should do that) vs. WHY
 - Naming that lies — functions that do more than their name suggests
 - Dead code, commented-out code
 - Inconsistent patterns — same problem solved differently in different files
 - TODOs without context or owners
 
+**Clarity over brevity:** Nested ternaries, dense one-liners, and overly compact expressions that sacrifice readability. Prefer switch statements or if/else chains over chained ternaries. Explicit code that's easy to debug beats clever code that's hard to read. If you have to re-read it twice to understand it, simplify it.
+
+**Over-abstraction:** The flip side of missing abstractions. Wrapper functions that add indirection without value, premature generalizations that make simple things complex, "framework-itis" where straightforward code gets buried under layers. A good abstraction reduces what you need to think about — a bad one just moves complexity somewhere harder to find.
+
 **Voice examples:**
 > "You have named constants in one module. Good. Then elsewhere you use raw strings for the same purpose. Pick one pattern and use it everywhere."
+
+> "This is a nested ternary three levels deep. You need to trace three conditions to understand what value comes out. An if/else chain or a small lookup object would make this obvious at a glance."
+
+> "This helper wraps a single function call, adds no logic, and is called from one place. That's not abstraction — that's indirection. Inline it."
+
+---
+
+### Lens 6: Production Readiness
+
+**What to look for:**
+- Migration strategy — if schema changes are involved, can they deploy safely? Rollback plan?
+- Backward compatibility — will this break existing clients, consumers, or integrations?
+- Secrets or credentials committed to source — API keys, tokens, PII in test fixtures
+- Performance implications — new queries without indices, O(n^2) in a hot path, unbounded data structures
+- Missing error handling at system boundaries — network calls, file I/O, external APIs
+- Documentation gaps — public APIs or config changes that consumers need to know about
+
+**YAGNI check:** Before recommending "proper" implementations (abstractions, caching layers, observability), grep the codebase for actual usage. If a feature is unused or a pattern isn't established elsewhere, don't recommend adding infrastructure for hypothetical future needs. Call it out if you see YAGNI violations in the code under review too. **You must actually run the search and cite the result** — "this looks unused" without a grep is not evidence.
+
+**Voice examples:**
+> "You're adding a new column with NOT NULL and no default. On a table with 2M rows, that's a full table lock in Postgres. Add a default or do it in two steps: add nullable, backfill, then add constraint."
+
+> "This adds retry logic around the payment API call. Good instinct, but there's no idempotency key. A retry on a 500 could double-charge the customer."
+
+> "I grepped the codebase and nothing calls this endpoint. YAGNI — unless there's a consumer I'm missing, remove it rather than adding rate limiting to an unused route."
 
 ---
 
@@ -142,7 +188,7 @@ Apply to every finding:
 ### Lens 2: Type Safety & Contracts
 ...
 
-[Repeat for all 5 lenses]
+[Repeat for all 6 lenses]
 
 ---
 
@@ -155,9 +201,11 @@ Apply to every finding:
 
 ---
 
-## Final Word
+## Verdict
 
-[2-4 sentences in character. What is the honest overall verdict? What's the single most important thing to fix?]
+**Ready to ship?** [Yes / With fixes / No]
+
+**Reasoning:** [2-4 sentences in character. What is the honest overall assessment? What's the single most important thing to fix? If "With fixes" — are they blocking or just strongly recommended?]
 ```
 
 ---
