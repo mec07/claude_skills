@@ -15,41 +15,69 @@ Running the **Review** workflow in the **ReviewPR** skill...
 
 ---
 
-## Step 1: Determine PR Number and Repo
+## Step 1: Fetch PR Context via FetchPR
 
-**If PR number is provided as argument:** Use it directly.
-
-**If no PR number provided:** Detect from current branch:
-```bash
-BRANCH=$(git branch --show-current)
-gh pr list --head "$BRANCH" --json number,title --jq '.[0]'
-```
-If no PR exists for the current branch, ask the user.
-
-**Determine the repo:**
-```bash
-git remote get-url origin
-```
-Extract `owner/repo` from the remote URL. Handle both SSH (`git@github.com:owner/repo.git`) and HTTPS formats.
-
-## Step 2: Fetch PR Metadata and CLAUDE.md
+Use the `FetchPR` skill's `fetch.sh` tool — it handles PR-number detection from the current branch, repo detection from `git remote.origin.url`, and pulls metadata + CI checks + reviewer states + mergeability + commits in a single call. Importantly, **it exits with code 3 on closed/merged PRs** so we don't waste effort building a review on a dead PR.
 
 ```bash
-gh pr view {PR_NUMBER} --repo {OWNER/REPO} \
-  --json title,body,additions,deletions,changedFiles,baseRefName,headRefName,state,commits
+# Default: PR from current branch, repo from origin
+~/.claude/skills/FetchPR/Tools/fetch.sh
+
+# Explicit PR / repo
+~/.claude/skills/FetchPR/Tools/fetch.sh --pr {PR_NUMBER} --repo {OWNER/REPO}
 ```
 
-Note the scale (additions, deletions, file count) to determine review strategy.
+If `fetch.sh` exits 3, the PR is closed or merged — stop and ask the user for the new PR number. Do not attempt to chase successor PRs.
 
-**Also read the project's CLAUDE.md files** — both the root CLAUDE.md and any CLAUDE.md files in directories touched by the PR. These contain project-specific conventions and rules that the review must check against.
+From the output, note:
+- **Scale** (additions, deletions, changed file count) — drives the review strategy in Step 4
+- **`mergeStateStatus`, `reviewDecision`, CI checks** — contextual; if CI is failing for unrelated reasons, mention briefly in the review body
+- **Head commit SHA** — needed for Step 10 (the pending-review payload). Either grab it from the commits section of the human-readable output, or rerun with `--json` and `jq '.pr.commits[-1].oid'`
+
+If you need the data structured for downstream parsing, pass `--json`. See `~/.claude/skills/FetchPR/Workflows/Full.md` for the full output schema.
+
+## Step 2: Read CLAUDE.md, JIRA Tickets, and Existing Review Comments
+
+**Read the project's CLAUDE.md files** — both the root CLAUDE.md and any CLAUDE.md files in directories touched by the PR. These contain project-specific conventions and rules that the review must check against.
 
 **Fetch linked JIRA tickets for context.** Scan the PR title, body, branch name, and commit messages for JIRA ticket references. These can have various project prefixes — e.g. `DEV-1234`, `DEVT-567`, `DATA-890` — so look for any pattern matching `[A-Z]+-\d+`. For each reference found, use the JIRA skill to fetch the ticket details — summary, description, acceptance criteria, and comments. If the ticket is assigned to an epic, also fetch the epic — sometimes the epic contains all the context and the ticket itself has very little. This gives you the author's intent and the business context behind the changes. Remember: the author has more context than you do about what they are trying to achieve. The JIRA ticket and its epic help close that gap.
 
-## Step 3: Fetch Changed Files and Categorise
+**Read existing review comments on the PR before drafting new ones.** This is critical — duplicating points that CodeRabbit or a human reviewer has already raised wastes the author's time and signals you didn't read the discussion. Use FetchPR's Comments workflow to pull both unresolved inline threads AND review-level summaries (CodeRabbit nitpick sections live in the review summary, not as inline threads):
 
 ```bash
-gh pr diff {PR_NUMBER} --repo {OWNER/REPO} --name-only
+# Unresolved threads + all review summaries
+~/.claude/skills/FetchPR/Tools/fetch.sh
+
+# Include resolved threads too — useful for "has this concern been seen before?"
+~/.claude/skills/FetchPR/Tools/fetch.sh --all
 ```
+
+For each existing comment, decide:
+- **Already raised, still open** — do not re-raise. If you have new evidence, add a follow-up reply rather than a fresh comment (note this in the review body).
+- **Already raised and resolved** — only re-raise if you genuinely believe the resolution is wrong, and explicitly acknowledge the prior thread.
+- **Outdated (`[OUTDATED]` flag)** — the diff has shifted beneath the comment; treat as historical context, not a live concern.
+
+See `~/.claude/skills/FetchPR/Workflows/Comments.md` for the full schema and bot-author quirks (e.g. `coderabbitai[bot]` vs `coderabbitai`).
+
+## Step 3: Fetch Changed Files and the Diff
+
+Use FetchPR's `diff.sh` for both the file list and the diff content:
+
+```bash
+# File list only — for categorisation
+~/.claude/skills/FetchPR/Tools/diff.sh --names-only
+
+# Full unified diff — small/medium PRs
+~/.claude/skills/FetchPR/Tools/diff.sh
+
+# Save to disk — REQUIRED for large PRs to avoid blowing the context window
+~/.claude/skills/FetchPR/Tools/diff.sh --save /tmp/pr-{PR_NUMBER}.patch
+
+# Limit to specific files
+~/.claude/skills/FetchPR/Tools/diff.sh --files 'path/to/dir/*'
+```
+
+**Default to `--save` when the PR has > ~30 changed files or > 1500 changed lines.** Read sections from the saved file as needed rather than dumping the entire diff into context. See `~/.claude/skills/FetchPR/Workflows/Diff.md` for all flags.
 
 Categorise files by type/area. This determines:
 - Which specialised review aspects apply

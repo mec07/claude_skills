@@ -53,6 +53,20 @@ Comprehensive pull request review that creates a **pending GitHub review with in
 - **Positive framing** — acknowledges what's well done generously. If something looks wrong, asks questions to understand the author's reasoning first.
 - **GitHub permalinks** — links use full SHA for permanent references
 
+## Companion Skills
+
+ReviewPR is the **write** side of PR work — it produces a pending review. For **read-only** PR context, use the `FetchPR` skill, which is the dedicated counterpart:
+
+| Need | Skill | Why |
+|------|-------|-----|
+| Brief me on a PR / pull metadata, CI, reviewer states | `FetchPR` (Full workflow) | Read-only, fast |
+| Pull existing review comments / "what did X say" | `FetchPR` (Comments workflow) | Surfaces resolved/outdated state, splits inline threads vs review summaries |
+| Fetch the diff (especially large ones) | `FetchPR` (Diff workflow) | `--save` flag avoids dumping huge diffs into context |
+| Critique code without posting to GitHub | `CodeReview` | Writes findings into the conversation, not the PR |
+| Post a pending review with inline comments | `ReviewPR` (this skill) | Creates GitHub-side review |
+
+The Review workflow below uses `FetchPR`'s tools internally for fetching PR data — see Steps 1-3 in `Workflows/Review.md`.
+
 ## Workflow Routing
 
 | Workflow | Trigger | File |
