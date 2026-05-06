@@ -197,13 +197,15 @@ These are not guidelines — they are the foundation every comment is built on. 
 
 Write comments like you're talking to a teammate. Spoken English, not a report. No headings, no bold severity labels, no em dashes. Keep it human and collaborative.
 
+**Use grammatically complete sentences with an explicit subject.** After the emoji, the first sentence must have a subject — typically the reviewer ("I think...", "I noticed...", "I'm curious about...", "I wasn't sure..."), the author as a question ("What do you think about...", "Have you considered...", "Would it make sense to..."), or a noun phrase from the code ("The old path...", "This loop...", "`paginatedMetrics` is exported but..."). Do not start a comment with a bare adjective or participle phrase like "Curious about...", "Wondering if...", "Worth considering..." — these read as terse and AI-flavoured. If a sentence ends with something like "worth considering?" or "what do you think?", make sure it has its own subject and verb (e.g. "Would it be worth considering?" or "What do you think about X?").
+
 The goal is to never make an enemy. You are on the same team. If something looks wrong, ask a question to understand their reasoning first. If there's a concern, raise it — but trust them to work out the right path forward. Never tell the author what to do.
 
 Bad: "**CRITICAL**: Missing null check on `user` before accessing `user.id`. Will throw at runtime."
-Good: "❓ Curious about what happens here if `user` is null, like from a guest session?"
+Good: "❓ I'm curious about what happens here if `user` is null, like from a guest session. Would it be worth adding a guard before accessing `user.id`?"
 
 Bad: "**IMPORTANT**: This should use a prepared statement to prevent SQL injection."
-Good: "💭 This caught my eye because the query is built with string interpolation. A prepared statement would close off the injection surface, worth considering?"
+Good: "💭 This caught my eye because the query is built with string interpolation. I think a prepared statement would close off the injection surface here. What do you think?"
 
 Bad: "You need to add error handling here for the case where the API returns 404."
 Good: "🤔 I wasn't sure what the intended behaviour is when the API returns 404 here."
@@ -309,33 +311,36 @@ Get the head commit SHA:
 gh pr view {PR_NUMBER} --repo {OWNER/REPO} --json commits --jq '.commits[-1].oid'
 ```
 
-Write the comments JSON to `/tmp/pr-review-comments-{PR_NUMBER}.json`:
+**Two important quirks of the GitHub Create-Review API to get right or it 422s:**
+
+1. **Do NOT pass `event`.** Omit it. Pending is the default state. Passing `event: "PENDING"` is rejected — the API only accepts `APPROVE`, `REQUEST_CHANGES`, or `COMMENT` here, and any of those would *submit* the review immediately, which is the opposite of what we want.
+2. **Do NOT mix `-f` flags with `--input` for nested arrays.** `comments` is an array of objects; that can't be expressed via `-f`. Build a single JSON object containing `commit_id`, `body`, and `comments` and pass the whole thing via `--input`. Mixing `-f body=...` with `--input file.json` causes `gh` to silently drop the `-f` fields (or send malformed payload) and the API rejects it.
+
+Write the **full review payload** to `/tmp/pr-review-{PR_NUMBER}.json` as a single object:
 ```json
-[
-  {
-    "path": "src/handlers/auth.ts",
-    "line": 42,
-    "side": "RIGHT",
-    "body": "❓ Curious about what happens here if `user` is null, like from a guest session. Would it be worth adding a guard before accessing `user.id`?"
-  }
-]
+{
+  "commit_id": "{HEAD_COMMIT_SHA}",
+  "body": "Nice work on this. {1-2 sentence overall impression, conversational tone.}\n\nA few things I liked: {specific callouts of what's well done, with file refs.}\n\nLeft {N} comments across {files reviewed}/{total files} files, mostly questions and suggestions.\n\n_This is a pending review, only visible to you. Edit or remove comments, then submit when you're happy with it._",
+  "comments": [
+    {
+      "path": "src/handlers/auth.ts",
+      "line": 42,
+      "side": "RIGHT",
+      "body": "❓ I'm curious about what happens here if `user` is null, like from a guest session. Would it be worth adding a guard before accessing `user.id`?"
+    }
+  ]
+}
 ```
 
-Create the pending review:
+Create the pending review by passing the whole payload via `--input`:
 ```bash
 gh api repos/{OWNER}/{REPO}/pulls/{PR_NUMBER}/reviews \
   --method POST \
-  -f body="Nice work on this. {1-2 sentence overall impression, conversational tone.}
-
-A few things I liked: {specific callouts of what's well done, with file refs.}
-
-Left {N} comments across {files reviewed}/{total files} files, mostly questions and suggestions.
-
-_This is a pending review, only visible to you. Edit or remove comments, then submit when you're happy with it._" \
-  -f event="PENDING" \
-  -f commit_id="{HEAD_COMMIT_SHA}" \
-  --input /tmp/pr-review-comments-{PR_NUMBER}.json
+  --input /tmp/pr-review-{PR_NUMBER}.json \
+  --jq '{id: .id, state: .state, html_url: .html_url}'
 ```
+
+Expected response: `{"state":"PENDING", "html_url":"...#pullrequestreview-..."}`. If you get HTTP 422, re-check that `event` is absent and that no `-f` flags are mixed with `--input`.
 
 ### Handling Large Numbers of Comments
 
