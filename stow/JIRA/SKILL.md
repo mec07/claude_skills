@@ -100,6 +100,65 @@ bun ~/.claude/skills/JIRA/Tools/Jira.ts link DEV-6345 blocks DEV-5230
 | **Search** | "find tickets", "search jira", "my tickets" | Use MCP `searchJiraIssuesUsingJql` |
 | **Sprint** | "current sprint", "sprint board" | Use MCP search with `sprint in openSprints()` JQL |
 | **Link** | "link tickets", "DEV-X blocks DEV-Y" | Use CLI fallback `Jira.ts link` |
+| **Comment** | "comment on DEV-XXXX", "reply to the reporter", "update the ticket" | Draft in chat, get approval, then MCP `addCommentToJiraIssue`. See Comment Workflow |
+
+## Comment Workflow
+
+Anything written into Jira (comments, descriptions, ticket bodies) must read as though a
+person typed it. Tickets in projects like Software Escalations are frequently visible to
+the customer, so a comment that reads as machine-generated costs credibility with someone
+outside the company.
+
+### Hard rules
+
+- **No em dashes or en dashes.** Never put `—` or `–` in a Jira comment. Use a comma, a
+  full stop, a colon, or rewrite the sentence. This is the single biggest tell that text
+  was AI-written. Check for it before calling the tool, not after.
+- **No emoji prefixes.** The `💭 ❓ 🔧` convention belongs to `ReviewPR` inline diff
+  comments, not to tickets. Do not carry it across.
+- **No severity labels.** No bold `CRITICAL` or `IMPORTANT` shouting.
+- **Minimal structure.** Prefer flowing paragraphs. A short bulleted list is fine for a
+  genuine enumeration such as open questions or options, but do not assemble a comment
+  out of headings and horizontal rules the way a report is assembled. `contentFormat:
+  "markdown"` on `addCommentToJiraIssue` accepts headings, which does not mean a comment
+  should have them.
+
+### Voice
+
+Assume the reader knows their own domain better than you do and had good reasons for what
+they asked. Write to them as a colleague, not as a system reporting its output.
+
+- **Lead with the answer.** If the finding is "it is not cumulative on this site", say so
+  in the first sentence rather than building up to it.
+- **Complete sentences with an explicit subject.** "I checked the model and ..." rather
+  than "Checked the model and ...". Bare participle openers ("Looking into this ...",
+  "Worth noting ...") read as terse and machine-generated.
+- **Quote the reporter's own evidence back** where it supports the finding. It shows you
+  read what they sent, and it lets them verify the reasoning for themselves.
+- **Numbers, not adjectives.** "24 points per day for the whole week" beats "the data
+  confirms the pattern".
+- **Ask, do not prescribe.** Where a fix carries a tradeoff the reporter should weigh,
+  put the choice to them and state the tradeoff plainly.
+- **Match their register.** Escalation tickets are usually plainer and more direct than
+  internal engineering chat.
+
+### Before posting
+
+- **Draft in the conversation and get approval first.** A comment is outward-facing and
+  cannot be quietly withdrawn once watchers have been notified. This holds even when the
+  user has asked for a comment: show them the text, then post.
+- **Name the judgement calls the draft makes**, such as quoting estate-wide numbers to a
+  customer or raising a problem the reporter did not ask about, so that keeping them is
+  the user's decision rather than a default.
+- **Check who can see it.** Do not quote internal file paths, line numbers, or service
+  code names to a non-engineer. Translate to the behaviour they can observe.
+
+### Related guidance
+
+The same voice rules, in more depth and for their own contexts: `Email` skill (Drafting
+Style) for prose that must not look AI-written, and `ReviewPR` skill (Tone and Voice in
+`Workflows/Review.md`) for the collaborative-teammate framing and worked before/after
+examples.
 
 ## Plan Workflow
 
