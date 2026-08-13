@@ -124,6 +124,7 @@ query($owner: String!, $name: String!, $number: Int!) {
     pullRequest(number: $number) {
       reviewThreads(first: 100) {
         nodes {
+          id
           isResolved
           isOutdated
           comments(first: 20) {
@@ -153,6 +154,7 @@ THREADS=$(echo "$THREADS_RAW" | jq --arg author "$AUTHOR" --argjson include_reso
           author: .author.login,
           path: .path,
           line: (.line // .originalLine),
+          thread_id: $thread.id,
           resolved: $thread.isResolved,
           outdated: $thread.isOutdated,
           created_at: .createdAt,
@@ -276,5 +278,5 @@ if [[ "$THR_COUNT" -gt 0 ]]; then
         "── @\(.author) — \(.path):\(.line)" +
         (if .resolved then " [RESOLVED]" else "" end) +
         (if .outdated then " [OUTDATED]" else "" end) +
-        "\n   \(.url)\n\n\(.body)\n"'
+        "\n   thread: \(.thread_id)\n   \(.url)\n\n\(.body)\n"'
 fi
