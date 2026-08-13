@@ -137,3 +137,12 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Claude Code local state. settings.local.json is per-machine, and worktrees/ is
+# transient agent scratch space that is normally cleaned up on session exit.
+# Shared .claude config is deliberately not ignored.
+.claude/settings.local.json
+.claude/worktrees/
+
+# PAI working state (per-session PRDs), not shareable content
+MEMORY/
