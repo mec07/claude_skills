@@ -30,6 +30,7 @@ Apply all 6 lenses (see Review.md for full lens definitions) but focus on what's
 - **Type contracts** — are they honest about what they accept and return?
 - **Responsibility boundaries** — what should NOT be in this file?
 - **Testability** — could you test this without any framework dependencies?
+- **Shipped failing tests** — if this is a test file, are any `[Fact]` / `it()` / `def test_…` known to fail on `main`? That's 🔴 Critical. Use `Skip` / `xfail` / a filtered trait, or fix the bug. (See Lens 4 in Review.md.)
 - **Production readiness** — error handling at boundaries, backward compat, YAGNI violations?
 
 ## Severity Tiers

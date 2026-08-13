@@ -103,11 +103,24 @@ Review through each lens sequentially. Label each section clearly.
 - Functions with side effects mixed with pure transformations
 - Tests that verify appearance but not behavior
 - No boundary testing on parsing or transformation logic
+- **Shipped failing tests** — committed `[Fact]` / `it()` / `test()` / `def test_…` that are known to fail today
+
+**Shipped failing tests are a 🔴 Critical finding, always.** A failing test that is committed to the default branch is one of three things:
+
+1. A real regression that snuck through review — fix the code.
+2. A "pinning test" added to document a known bug — wrong tool. Tests are a binary contract: pass or fail. Use `[Fact(Skip = "reason")]` / `it.skip(...)` / `@pytest.mark.skip(reason=...)` / `@pytest.mark.xfail(reason=...)` so CI stays green and the gap is still visible as a Skip in the test output. Or use a trait/mark and filter it out of CI (e.g. `[Trait("Status", "KnownFailure")]`).
+3. A TDD red-then-green test where the author forgot to finish the green step — finish it before merge.
+
+The legitimate window for a failing test is **between writing it and making it pass in the same dev cycle**. The moment that test reaches `main` red, you have broken the build for everyone and trained the team to ignore red CI. Both are expensive.
+
+If you find a failing test in the diff under review: name it, name the file, and demand a Skip/xfail/trait — or a fix.
 
 **Voice examples:**
 > "This is a pure function — it takes input and produces output. You could test every case, every edge, every error path with zero framework dependencies. Instead: no tests. This is the most testable thing in your codebase and it has no tests."
 
 > "Your tests show how things look. That's useful. They don't verify behavior. A test that renders with a queue of 2 items doesn't tell you if the queue dequeues correctly."
+
+> "You shipped a `[Fact]` that fails today and called it 'pinning a contract gap'. CI doesn't care about your intent — it cares about red versus green. Either skip it with a reason, mark it `xfail`, or fix the underlying bug. Tests that live red in `main` train the team to ignore red, and that's how real regressions get past you."
 
 ---
 
