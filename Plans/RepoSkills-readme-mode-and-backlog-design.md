@@ -27,6 +27,9 @@ as genuine gaps to fix in place.
   as a worked example of correct output, never as a source of mechanisms. See section 4.
 - No changes to `templates/skill-drift-ci.yml` beyond what items 7 and 9 require.
 - Not a rewrite of `IMPROVEMENTS.md`. It stays as the provenance record.
+- **Not a replacement for the existing re-run machinery.** Diff-based re-run, `--fresh`, `--update`
+  and `phase-drift-resolve` all survive unchanged in purpose. READMEs become another artifact they
+  maintain, not an exception to them. See section 3.2.
 
 ---
 
@@ -137,34 +140,81 @@ the wrong one is told where the content belongs.
 
 ### 3.2 Ownership, and where caution belongs
 
-The single most useful distinction in this design, because it tells an implementer exactly where to
-be careful and where not to be.
+Two separate questions, which an earlier draft of this section wrongly collapsed into one:
 
-| Territory | Owner | Regeneration policy |
-|---|---|---|
-| `.ai/skills/**` | RepoSkills | Regenerated freely on every run. No preservation logic, no merge, no drift detection needed within it. If it is wrong, the next run fixes it |
-| `<unit-root>/README.md` | The humans who own that unit | Edited, never regenerated. Every preservation rule applies |
-| Root platform-glue files | Generated from a canonical source (6.3) | Regenerated below the split marker; tool-specific preamble preserved verbatim |
+- **Preservation:** whose content is it, and what happens to something the pipeline cannot verify?
+- **Update strategy:** how does a re-run bring a file up to date?
 
-`.ai/skills/` is RepoSkills' own output directory, so `conventions.md`, `readme-template.md`,
-`orientation.md`, `domain-context.md` and `tasks/` carry **no** risk from regeneration and need none
-of the machinery below. The pipeline should not spend effort protecting files it owns.
+Ownership answers the first. It does **not** answer the second.
 
-**All of the caution belongs on the per-unit READMEs**, because those live in the humans' territory
-and accumulate human knowledge the pipeline did not write:
+#### Update strategy is verify-and-patch everywhere
+
+Every generated artifact, in both territories, is updated by verifying its claims and patching what
+is wrong. Full regeneration happens only on `--fresh` or on a first run where there is nothing to
+update.
+
+This is not a preservation argument, so it applies just as much to files RepoSkills owns outright:
+
+1. **Cost.** A re-run that regenerates everything pays full pipeline price to reproduce content that
+   was already correct. Re-runs must be cheaper than first runs or they will not happen.
+2. **Non-determinism.** An LLM rewriting a correct file from scratch can make it worse. Every
+   regeneration of a correct file is an uncontrolled opportunity for regression.
+3. **Reviewability.** Wholesale rewrites produce diffs nobody can review, so real changes hide
+   inside churn.
+4. **History.** A file rewritten differently on every run makes its git history noise rather than a
+   record of what actually changed.
+
+This is also what the pipeline already does, and the spec must not undo it:
+
+- `SKILL.md` documents diff-based re-run as **the default** for repos with existing skills: detect
+  what is there, diff against the stored commit hash, update only what changed.
+- `--fresh` already exists as the explicit opt-in to ignore existing skills and regenerate.
+- `--update <name>` already exists for regenerating a single named skill.
+- `phase-drift-resolve.md` is 710 lines of exactly this: triage into confirmed drifts, false
+  positives and unmapped directories; apply patches; then a three-stage accuracy verification.
+
+Self-maintenance is the point of that machinery. Nothing in this spec replaces it.
+
+#### Ownership answers what happens to the unverifiable
+
+The territories differ in how aggressive a fix may be, not in whether the update is a patch.
+
+| Territory | Owner | On a verified-wrong fact | On content that cannot be verified |
+|---|---|---|---|
+| `.ai/skills/**` | RepoSkills | Fix it | **Remove it.** RepoSkills wrote it, so unverifiable means stale |
+| `<unit-root>/README.md` | The humans who own that unit | Fix it, citing `<file:line>` | **Flag it, never remove it.** A human may know something the code does not show |
+| Root platform-glue files | Generated from a canonical source (6.3) | Regenerate below the split marker | Preamble above the marker is preserved verbatim |
+
+That single "cannot be verified" column is the whole practical difference, and it matters: applying
+the README rule to `.ai/skills/` would let stale content accumulate forever, while applying the
+`.ai/skills/` rule to a README would silently delete human knowledge.
+
+**The per-unit README rules**, which apply only in the humans' territory:
 
 - Start from the existing README. Only fix claims that are wrong.
 - Never gut understanding. Stale or wrong information is worse than none, but so is deleting
   something correct that the pipeline merely could not verify.
 - The Overview is human-authored on any README that already exists, and blank is a valid state.
-- Cite `<file:line>` for every correction. Flag the unverifiable for a human rather than guessing
-  or deleting.
-- Make the smallest useful change. Do not churn wording that is already accurate and clear.
-- Corrections are silent. Write the correct fact; never leave a meta-note about what the old README
-  said, which reads as noise to the owner.
+- Cite `<file:line>` for every correction. Flag the unverifiable for a human rather than guessing.
+- Make the smallest useful change, and make corrections silently. Never leave a meta-note about
+  what the old README said, which reads as noise to the owner.
 
 This is also why the unit threshold matters (section 3): below it, RepoSkills writes only into its
 own territory and touches nothing a human owns.
+
+#### Consequence for drift
+
+READMEs replace module skills, so they must inherit the self-maintenance module skills had. That is
+two mechanisms at different price points, not one:
+
+- **Cheap signal, every run:** presence and freshness per unit, as item 10 describes. Case-sensitive
+  presence, and a README older than later non-test code in its unit is stale.
+- **Expensive repair, on demand:** `phase-drift-resolve` claim-verifies README content and patches
+  it, exactly as it does for any other generated artifact.
+
+Item 18's "presence plus freshness, not content-diff" describes the cheap signal only. Reading it as
+the whole story would leave READMEs with weaker self-maintenance than the module skills they
+replace, which would be a regression.
 
 ### 3.3 Precedence
 
@@ -342,7 +392,7 @@ All 18 items. Target file paths verified to exist; section anchors verified by h
 | # | Item | Disposition |
 |---|---|---|
 | 1 | Every microservice Tier-1 regardless of depth | Superseded by section 4. Depth stops mattering once the project system is authoritative. Lands in `phase-0-discover.md`. |
-| 10 | Drift script surfaces collisions, missing skills, stale dirs | Becomes README presence plus freshness. Presence must be checked **case-sensitively** via the version-control file list, because the local filesystem hides a miscased `readme.md` that breaks CI elsewhere. Freshness compares README mtime against later non-test code in its unit. |
+| 10 | Drift script surfaces collisions, missing skills, stale dirs | Becomes README presence plus freshness, which is the **cheap signal only**, not the whole self-maintenance story (see 3.2, Consequence for drift). Presence must be checked **case-sensitively** via the version-control file list, because the local filesystem hides a miscased `readme.md` that breaks CI elsewhere. Freshness compares README mtime against later non-test code in its unit. Content accuracy stays with `phase-drift-resolve`. |
 | 11 | Dependency lists need source-verification | Becomes the *Contracts owned* section, governed by never-invent and `<file:line>` citation. Folds in item 15. |
 | 15 | Dependency omissions follow a consistent pattern | Folded into 11. |
 | 18 | Per-service READMEs | Becomes sections 3 through 5 of this spec, corrected per C1. |
@@ -514,10 +564,10 @@ All four resolved on 2026-08-27. Kept here as a record of what was decided and w
    regression target. See section 9.
 
 3. ~~Should the conventions document be generated or human-authored?~~
-   **Generated, and freely regenerated.** Everything under `.ai/skills/` is RepoSkills' own
-   territory and carries no risk from regeneration. All preservation machinery belongs on the
-   per-unit READMEs instead. This became section 3.2 and is now a load-bearing principle of the
-   design rather than a detail.
+   **Generated, and owned outright by RepoSkills.** Everything under `.ai/skills/` is RepoSkills'
+   own territory, so there is no human knowledge to preserve there. Note the follow-up correction
+   in section 3.2: ownership decides what happens to unverifiable content, it does **not** license
+   wholesale regeneration. Re-runs verify and patch in both territories.
 
 4. ~~What is the migration path for repos already carrying a `modules/` tree?~~
    **Harvest into READMEs, then delete.** See section 3.4.
