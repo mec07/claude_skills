@@ -44,7 +44,7 @@ enter RepoSkills:
 | `nx show project <name> --json`, pnpm scripts, `@powerx/` scoping | Skeleton selection runs a deterministic query against whatever project system the repo actually uses, discovered in Phase 0 |
 | Grafana Explore log links, Kafka topic dashboards, `prod-emea` / `prod-asia` environments | A field deterministically computable from repo config gets computed; one that is not gets verified or placeheld |
 | `<env>.tfvars` as the deployability test, AWS SSO profiles | Deployability is a repo-defined predicate, discovered and confirmed once, never inferred per directory |
-| `docs/` as the conventions home | The conventions document's location is a repo choice recorded in state, not a fixed path |
+| `docs/` as the conventions home | RepoSkills owns `.ai/skills/` and puts its generated documents there. `docs/` is a `data-2` convention and is not adopted |
 
 The following transfer unchanged, because they carry no tool assumptions:
 
@@ -97,7 +97,8 @@ proposes has nothing to detect. Both items are obviated and replaced by section 
 | `.ai/skills/orientation.md` | always |
 | `.ai/skills/domain-context.md` | always |
 | `.ai/skills/tasks/<name>.md` | always |
-| `<conventions-doc>` | always, at a repo-chosen path recorded in `state.md` |
+| `.ai/skills/conventions.md` | always |
+| `.ai/skills/readme-template.md` | only where the repo crosses the unit threshold |
 | `<unit-root>/README.md` | only where Phase 0 finds unit boundaries |
 | `.ai/skills/Tools/` and root platform-glue files | always |
 
@@ -116,25 +117,91 @@ A per-unit README on its own reproduces the maintenance problem it was meant to 
 restates the same structural facts, and they drift apart. The working structure is three documents
 with a strict division of labour.
 
-1. **Conventions document.** Repo-wide structural facts, written once: what counts as a unit, the
-   standard layout, the standard commands, the testing approach, how deployment works. A README
-   must not repeat anything this document covers.
-2. **Per-unit README.** Only what is true for that one unit, plus its deliberate deviations from
-   the conventions.
-3. **`navigate-unit` task skill.** The procedure for using the other two: how to inspect a unit,
-   how to change one, how to verify the change. It gives commands and steps and does not restate
-   structural facts.
+1. **Conventions document**, at `.ai/skills/conventions.md`. Repo-wide structural facts, written
+   once: what counts as a unit, the standard layout, the standard commands, the testing approach,
+   how deployment works. A README must not repeat anything this document covers.
+2. **Per-unit README**, at `<unit-root>/README.md`. Only what is true for that one unit, plus its
+   deliberate deviations from the conventions.
+3. **`navigate-unit` task skill**, at `.ai/skills/tasks/navigate-unit.md`. The procedure for using
+   the other two: how to inspect a unit, how to change one, how to verify the change. It gives
+   commands and steps and does not restate structural facts.
+
+**On placement.** Everything RepoSkills owns lives under `.ai/skills/`, including the generated
+`readme-template.md` and the `update-readme` task skill that applies it. The per-unit READMEs are
+the deliberate exception: they live in the units they describe precisely because that is what makes
+a human willing to maintain them, which is the entire premise of this change. RepoSkills does not
+adopt a `docs/` directory; that is a `data-2` convention and stays there.
 
 Each document's maintenance boundary is stated in the document itself, so a future agent editing
 the wrong one is told where the content belongs.
 
-### 3.2 Precedence
+### 3.2 Ownership, and where caution belongs
+
+The single most useful distinction in this design, because it tells an implementer exactly where to
+be careful and where not to be.
+
+| Territory | Owner | Regeneration policy |
+|---|---|---|
+| `.ai/skills/**` | RepoSkills | Regenerated freely on every run. No preservation logic, no merge, no drift detection needed within it. If it is wrong, the next run fixes it |
+| `<unit-root>/README.md` | The humans who own that unit | Edited, never regenerated. Every preservation rule applies |
+| Root platform-glue files | Generated from a canonical source (6.3) | Regenerated below the split marker; tool-specific preamble preserved verbatim |
+
+`.ai/skills/` is RepoSkills' own output directory, so `conventions.md`, `readme-template.md`,
+`orientation.md`, `domain-context.md` and `tasks/` carry **no** risk from regeneration and need none
+of the machinery below. The pipeline should not spend effort protecting files it owns.
+
+**All of the caution belongs on the per-unit READMEs**, because those live in the humans' territory
+and accumulate human knowledge the pipeline did not write:
+
+- Start from the existing README. Only fix claims that are wrong.
+- Never gut understanding. Stale or wrong information is worse than none, but so is deleting
+  something correct that the pipeline merely could not verify.
+- The Overview is human-authored on any README that already exists, and blank is a valid state.
+- Cite `<file:line>` for every correction. Flag the unverifiable for a human rather than guessing
+  or deleting.
+- Make the smallest useful change. Do not churn wording that is already accurate and clear.
+- Corrections are silent. Write the correct fact; never leave a meta-note about what the old README
+  said, which reads as noise to the owner.
+
+This is also why the unit threshold matters (section 3): below it, RepoSkills writes only into its
+own territory and touches nothing a human owns.
+
+### 3.3 Precedence
 
 Code > README > conventions document. Stated canonically in the conventions document and referenced
 from the other two, never restated. A deviation documented in a README is intentional: do not
 "fix" a unit to match the conventions document without first checking why it deviates.
 
 ---
+
+### 3.4 Migration from an existing `modules/` tree
+
+A repo generated by an earlier RepoSkills run carries `.ai/skills/modules/<name>.md`. By section
+3.2 that directory is RepoSkills' own territory and could simply be deleted, but the module skills
+may hold knowledge accumulated over several runs and human edits, and that knowledge belongs in the
+new READMEs. **Harvest, then delete.**
+
+The migration pass runs once, before normal generation:
+
+1. **Map.** For each module skill, resolve which unit it describes, using the enumeration query of
+   section 4. A module skill that maps to no current unit is reported, not silently dropped: it
+   either describes something deleted, or the mapping is wrong, and both need a human.
+2. **Filter.** Run each claim in the module skill through the "what to include" test of section 5.2.
+   Most module-skill content will fail it, since module skills were written to a different contract
+   and routinely restate structure.
+3. **Fold.** Merge what survives into that unit's README under the section it belongs to, subject to
+   every per-unit rule in section 3.2. This is an edit of a human-owned file, so the caution applies
+   in full: smallest useful change, silent corrections, Overview untouched, `<file:line>` citations.
+4. **Verify before deleting.** A module skill is only removed once its surviving content is present
+   in the target README. Deletion is the last step, never concurrent with the fold.
+5. **Report.** What moved, what was dropped by the filter and why, and what mapped to no unit.
+
+**Do not attempt to reconcile a module skill against the code during migration.** Harvesting and
+fact-checking are separate concerns; the normal validation phases run afterwards and will catch
+claims the module skill got wrong. Conflating them makes the migration unbounded.
+
+The pass is idempotent by construction: once `modules/` is gone there is nothing to harvest, and a
+re-run is a no-op.
 
 ## 4. Unit boundary detection
 
@@ -340,10 +407,30 @@ Obviated 2, rewritten 5, reference implementation 1, fixed in place 10. Total 18
 
 Two problems found during design that the backlog does not record.
 
-**H1.** `phase-drift-resolve.md` (710 lines) exists in `stow/RepoSkills/` but has no symlink in
-`~/.claude/skills/RepoSkills/`. The stow is incomplete, so that phase is currently invisible to the
-running skill even though `SKILL.md` documents its invocation. Needs a verdict: bug or deliberate
-hold.
+**H1. The installed RepoSkills is missing four files, including every template.** `install.sh`
+symlinks per-file into `~/.claude/skills/`, and has not been re-run since 10 April 2026. Files
+added after that date were never linked:
+
+```
+RepoSkills/phase-drift-resolve.md        added 2026-04-17 in a1aa12f
+RepoSkills/templates/skill-drift.sh
+RepoSkills/templates/skill-drift-hook.sh
+RepoSkills/templates/skill-drift-ci.yml
+```
+
+This is not a deliberate hold. The consequence is material: `SKILL.md` documents all three
+templates as inputs to generation and `phase-drift-resolve.md` as phase DR, so **items 7, 9 and 10,
+the entire drift-tooling group, cannot work as documented** when the skill runs from
+`~/.claude/skills/`. Any Phase 2 run that reaches template customisation fails on a missing file.
+
+Two other packages drifted the same way: `CodeReview/Workflows/PlanAlignment.md` and
+`llm-docs/phase-D-domain-interview.md`.
+
+Fix is `./install.sh --force`. The deeper point belongs in the spec rather than the fix: RepoSkills
+ships drift detection for the repos it documents while having no drift detection for its own
+installation. A `--check` mode on `install.sh`, comparing `stow/` against `~/.claude/skills/`, is
+the same generate-and-verify pattern this spec applies to platform-glue files in 6.3. Worth
+adopting for consistency, and it would have caught this in April.
 
 **H2.** `IMPROVEMENTS.md` has never been committed to this repo. It exists only in `~/.claude` and
 is one `rm` away from gone. It should be committed as the provenance record before any of it is
@@ -355,12 +442,17 @@ acted on.
 
 | Stage | Content | Rationale |
 |---|---|---|
-| 1 | H1, H2 | Cheap, and H2 protects the input to everything downstream |
+| 0 | ~~H1, H2~~ | **Done 2026-08-27.** Install repaired and verified; `IMPROVEMENTS.md` now tracked |
+| 1 | Section 7's `install.sh` hardening: `--check` mode, and refuse to delete untracked files | Cheap, and it prevents a recurrence of what destroyed the backlog |
 | 2 | Sections 3, 4, 5: the architecture | Every later item is expressed in its vocabulary |
-| 3 | Items 2, 4, 12 (phase-4 checks), items 3, 5, 16 (phase-1 questions) | Additive, low-risk, independently testable |
-| 4 | 6.3 generation, items 7, 9, 10 | Tooling, depends on stage 2's output shape |
-| 5 | Items 6, 8, 17 | Independent of the rest |
-| 6 | Regression run | Needs everything above |
+| 3 | Section 3.4: the `modules/` harvest and migration pass | Depends on stage 2's README grammar existing to harvest into |
+| 4 | Items 2, 4, 12 (phase-4 checks), items 3, 5, 16 (phase-1 questions) | Additive, low-risk, independently testable |
+| 5 | 6.3 generation, items 7, 9, 10 | Tooling, depends on stage 2's output shape |
+| 6 | Items 6, 8, 17 | Independent of the rest |
+| 7 | Regression run against current `data-2` main | Needs everything above |
+
+Stages 4 and 6 are independent of each other and of stage 5, so they can run in parallel once
+stage 2 lands. Stage 3 is the only one that must follow stage 2 directly.
 
 ---
 
@@ -380,12 +472,23 @@ Per that skill's guidance, match the test to the failure type:
 - **Structural changes** (sections 3, 4, 5.1): application scenarios. Can an agent generate a
   correct README for a unit it has not seen?
 
-**Regression target.** The prior full-pipeline run is `data-2` at commit `858ff1f6`, with
-post-PR-#5743 state on branch `repo-skills` and the README migration on branch
-`repo-skills-to-readmes`. Preserved state is at `~/.claude/MEMORY/RepoSkills/data-2/state.md`.
+**Regression target: current `data-2` main, not the June baseline.** Checked 2026-08-27.
 
-**This baseline must be re-confirmed reachable before it is trusted.** It is dated June 2026, and
-section 2.1 documents three things that have already changed underneath it since.
+`858ff1f6` is still reachable but is dated 2026-06-11 and sits **918 commits behind main**. The
+branches the backlog names are similarly stale: `repo-skills` (2026-06-24, 131 READMEs, 788 behind)
+and `repo-skills-to-readmes` (2026-06-25, 170 READMEs, 795 behind).
+
+More usefully, **the migration is already merged into main by some route other than those branches**
+(`repo-skills-to-readmes` is not an ancestor of HEAD, yet main carries 145 READMEs and has no
+`.ai/skills/modules/`). Main is therefore the live, merged, still-maintained expression of this
+design, and the branches are historical snapshots of how it got there.
+
+Use current main as the reference and the regression target. Preserved pipeline state remains at
+`~/.claude/MEMORY/RepoSkills/data-2/state.md`, but note it describes the June run, not main.
+
+The 145-vs-170 README gap between main and `repo-skills-to-readmes` is worth a look before the
+regression run: it may be the deliberate scope decision item 18 records under "scope reality", or
+it may be READMEs that were dropped on the way to main.
 
 **Token budget.** Six items target `phase-2-map-generate.md`, already 1199 lines and the largest
 file in the skill. Growing it risks causing the context failure these changes exist to prevent.
@@ -398,10 +501,40 @@ not only generated output.
 
 ## 10. Open questions
 
-1. H1: is the missing `phase-drift-resolve.md` symlink a bug or a deliberate hold?
-2. Is `data-2@858ff1f6` still reachable, and is it still a meaningful baseline given section 2.1?
-3. Should the conventions document (section 3.1, leg 1) be generated by RepoSkills, or is it a
-   human-authored input the pipeline reads? `data-2` has a hand-written one. Generating it is more
-   complete; reading it respects that structural conventions are a human decision.
-4. What is the migration path for repos already carrying a `.ai/skills/modules/` tree from an
-   earlier RepoSkills run?
+All four resolved on 2026-08-27. Kept here as a record of what was decided and why.
+
+1. ~~H1: is the missing `phase-drift-resolve.md` symlink a bug or a deliberate hold?~~
+   **Stale install**, not a hold. `install.sh` had not been re-run since 10 April and four files
+   added after that date were never linked, including all three templates. Fixed and verified.
+   See section 7.
+
+2. ~~Is `data-2@858ff1f6` still reachable and still a meaningful baseline?~~
+   **Reachable but 918 commits stale.** The migration is already merged into main by a route other
+   than the named branches, so current main is the live expression of this design and the
+   regression target. See section 9.
+
+3. ~~Should the conventions document be generated or human-authored?~~
+   **Generated, and freely regenerated.** Everything under `.ai/skills/` is RepoSkills' own
+   territory and carries no risk from regeneration. All preservation machinery belongs on the
+   per-unit READMEs instead. This became section 3.2 and is now a load-bearing principle of the
+   design rather than a detail.
+
+4. ~~What is the migration path for repos already carrying a `modules/` tree?~~
+   **Harvest into READMEs, then delete.** See section 3.4.
+
+---
+
+## 11. Provenance note
+
+`IMPROVEMENTS.md`, the source of the 18 items, was destroyed on 2026-08-27 by
+`install.sh --force`, which does `rm -rf` on the skill directory with no backup. It had never been
+committed. A partial reconstruction is now tracked at `stow/RepoSkills/IMPROVEMENTS.md`: the
+introduction, items 1 to 4, all 18 headings, the full implementer notes and item 18 survive; the
+bodies of items 5 to 17 do not.
+
+This spec was written from the complete file and is therefore the most complete surviving statement
+of what the backlog asked for.
+
+The incident is itself an argument for section 7's recommendation: an installer that ships drift
+detection for other repos while having none for its own installation, and that will `rm -rf`
+untracked files without warning, is a tool that has not taken its own advice.
