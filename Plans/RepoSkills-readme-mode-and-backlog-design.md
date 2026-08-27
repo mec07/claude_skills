@@ -528,7 +528,8 @@ All four resolved on 2026-08-27. Kept here as a record of what was decided and w
 
 `IMPROVEMENTS.md`, the source of the 18 items, was destroyed on 2026-08-27 by
 `install.sh --force`, which does `rm -rf` on the skill directory with no backup. It had never been
-committed. A partial reconstruction is now tracked at `stow/RepoSkills/IMPROVEMENTS.md`: the
+committed. A partial reconstruction sits at `stow/RepoSkills/IMPROVEMENTS.md`, deliberately left
+untracked pending Electra's decision on where it belongs: the
 introduction, items 1 to 4, all 18 headings, the full implementer notes and item 18 survive; the
 bodies of items 5 to 17 do not.
 
