@@ -482,9 +482,10 @@ installation. A `--check` mode on `install.sh`, comparing `stow/` against `~/.cl
 the same generate-and-verify pattern this spec applies to platform-glue files in 6.3. Worth
 adopting for consistency, and it would have caught this in April.
 
-**H2.** `IMPROVEMENTS.md` has never been committed to this repo. It exists only in `~/.claude` and
-is one `rm` away from gone. It should be committed as the provenance record before any of it is
-acted on.
+**H2.** `IMPROVEMENTS.md` was never committed to this repo and existed only in `~/.claude`. It was
+destroyed on 2026-08-27 (see section 11). A partial reconstruction now sits at
+`stow/RepoSkills/IMPROVEMENTS.md`, **deliberately untracked** at Electra's instruction pending a
+decision on where it should live. It is therefore still unversioned, and still the single copy.
 
 ---
 
@@ -492,7 +493,7 @@ acted on.
 
 | Stage | Content | Rationale |
 |---|---|---|
-| 0 | ~~H1, H2~~ | **Done 2026-08-27.** Install repaired and verified; `IMPROVEMENTS.md` now tracked |
+| 0 | ~~H1~~, H2 open | **H1 done 2026-08-27:** install repaired and verified. **H2 open:** the reconstruction is untracked by choice and remains unversioned |
 | 1 | Section 7's `install.sh` hardening: `--check` mode, and refuse to delete untracked files | Cheap, and it prevents a recurrence of what destroyed the backlog |
 | 2 | Sections 3, 4, 5: the architecture | Every later item is expressed in its vocabulary |
 | 3 | Section 3.4: the `modules/` harvest and migration pass | Depends on stage 2's README grammar existing to harvest into |
