@@ -326,15 +326,36 @@ since none of it is generated from code.
 One property is required: drift patching must preserve a section's marker when it rewrites the
 section body.
 
-**The per-unit README rules**, which apply only in the humans' territory:
+**What an update may do: conform structure, fix facts, preserve prose.**
 
-- Start from the existing README. Only fix claims that are wrong.
+An earlier draft said only "fix claims that are wrong", which contradicted the reference
+implementation and broke two other sections of this spec. `data-2`'s `update-readme.md:37` conforms
+an existing README to the template: "add what's missing; move what's in the wrong section; correct
+what the code has outgrown. Preserve the structure the template requires." That is what has actually
+run across 197 files, and it is what a human reviewer accepted after rejecting the alternative.
+
+Fix-only was also self-defeating. Since most units already have a README, fix-only made the common
+case the least valuable: a sparse existing README gained nothing, and the module-skill content it
+replaces had nowhere to go. It further contradicted 5.1's per-skeleton sections, which cannot be
+"present in every README" if updates never add a section, and 3.4's harvest, which appends to Agent
+Notes on the assumption that section exists everywhere.
+
+So the three permitted operations, in order of decreasing licence:
+
+| Operation | Permitted | Bounded by |
+|---|---|---|
+| **Conform structure** | Add a missing section from the unit's skeleton; move content sitting in the wrong section | Never reorder correct content. Never delete a section the skeleton does not name |
+| **Fix facts** | Correct a claim the code has outgrown | Cite `<file:line>`. Flag the unverifiable rather than guessing or deleting |
+| **Rewrite prose** | **No.** Prose inside a section that is already correct is left exactly as written | The owner's words are the point |
+
+And unchanged from before:
+
 - Never gut understanding. Stale or wrong information is worse than none, but so is deleting
   something correct that the pipeline merely could not verify.
 - The Overview is human-authored on any README that already exists, and blank is a valid state.
-- Cite `<file:line>` for every correction. Flag the unverifiable for a human rather than guessing.
-- Make the smallest useful change, and make corrections silently. Never leave a meta-note about
-  what the old README said, which reads as noise to the owner.
+  Conforming structure never touches it.
+- Make corrections silently. Never leave a meta-note about what the old README said, which reads as
+  noise to the owner.
 
 #### Consequence for drift
 
@@ -599,31 +620,40 @@ repo, not something to copy. Its companion conventions document is `docs/project
 
 ### 5.1 Sections
 
-**Universal**, present in every README:
+**Two skeletons, chosen by deployability**, which is the model C1 adopts and which an earlier draft
+of this section failed to encode. A unit is deployable when the repo's deployability predicate
+(section 4) says it ships; otherwise it is a library or other non-deployable project, nothing runs,
+and the sections about running and watching it do not apply.
 
-| Section | Contains |
-|---|---|
-| Title | The unit's canonical name as the project system reports it |
-| Conventions info-box | A link to the conventions document and the override rule |
-| Overview | One or two sentences on what the unit does and why (see the Overview boundary, section 2) |
-| Running and testing locally | The quick loop, plus only what is specific to this unit |
-| Agent Notes | Gotchas and the things the code cannot tell you. Always last |
+| Section | Full (deployable) | Slim (non-deployable) | Contains |
+|---|---|---|---|
+| Title | yes | yes | The unit's canonical name as the project system reports it |
+| Conventions info-box | yes | yes | A link to the conventions document and the override rule |
+| Overview | yes | yes | One or two sentences on what the unit does and why (see the Overview boundary, section 2) |
+| Observability | yes | no | Only where 5.3 confirmed a link pattern. Unfillable rows stay `_not yet linked_` |
+| Running and testing locally | yes | no | The quick loop, plus only what is specific to this unit |
+| Agent Notes | yes | yes | Gotchas and what the code cannot tell you. Always last |
 
-**Conditional**, emitted only where Phase 0 finds the substrate:
+An earlier draft made "Running and testing locally" universal. In the reference it is
+deployable-only (`data-2/docs/readme-template.md`), and a slim README on a small library is the
+correct output rather than a failure.
+
+**Conditional sections**, available to either skeleton where the substrate exists, placed after
+Running and testing locally and before Agent Notes:
 
 | Section | Emitted when |
 |---|---|
-| Observability | The repo has an observability stack with a confirmed link pattern (section 5.3) |
 | Endpoints | The unit exposes an API surface |
 | Configuration | The unit has configuration worth pointing at. Pointer only, never values |
 | Runbook | The unit has operational failure modes with known responses |
-| Contracts owned | The unit publishes something others depend on |
-| Deviations | The unit deliberately breaks a documented convention |
-| Lifecycle status | The unit is not active. Omitted entirely when it is |
+| A unit-specific topic | Something genuinely particular to this unit, named for what it is |
+
+All four are present in the reference template's optional-section list, so they are proven and land
+with the grammar in stage 2.
 
 Section order is fixed, and Agent Notes is always last.
 
-**These three sections are not in the reference implementation and must land separately.**
+**Deferred to stage 5: three sections the reference does not have.**
 `data-2/docs/readme-template.md` contains none of them, and `data-2` main carries 197 READMEs written
 without them. If the grammar ships with all three as expected sections, the stage-6 regression will
 either flag every one of those 197 files as incomplete or try to add sections to human-maintained
@@ -925,6 +955,13 @@ The gap between main and `repo-skills-to-readmes` is worth a look before the reg
 the query defined above: it may be the deliberate scope decision item 18 records under "scope
 reality", or it may be READMEs that were dropped on the way to main.
 
+**Pass criterion for an existing README.** Under conform-structure semantics (3.2) the regression
+has a testable criterion, which fix-only never had: after a run, every unit README carries its
+skeleton's sections in the fixed order; no prose inside a previously-correct section has changed; no
+Overview has been touched; and every factual correction carries a `<file:line>` citation in the
+report. A run that adds a missing section is correct behaviour, not a regression, which is why the
+semantics had to be settled before this criterion could exist.
+
 **The regression needs a first-run target, not only an update target.** Regressing against
 already-migrated `data-2` main exercises the update path exclusively. It never tests generating
 READMEs from scratch, never tests a repo with no project system, and never tests the migration
@@ -1025,6 +1062,34 @@ findings, all verified before being acted on:
 
 Remaining first-pass item, now closed: the drift-resolution commit question is answered in 3.6
 rather than left as a note.
+
+**Third pass, 2026-09-02, independent audit.** A second reviewer with no prior involvement audited
+the whole body of work, instructed to read this history last and to form its own view first. Verdict:
+execute with named changes. It sampled roughly 25 of the spec's file-and-line claims and found them
+all accurate, which is worth recording given three of the quantitative claims were not.
+
+| Finding | Resolution |
+|---|---|
+| **The premise is evidenced, and more strongly than this spec knew.** `modules/` briefly existed in `data-2` and was removed by `798f7e9c5` after human review. Authorship: the parallel tree was 24 of 28 commits by one person; READMEs since July are 105+ commits across 13 authors with that person now a minor contributor | Recorded here. Section 2 previously argued the premise from the existence of 197 READMEs, which is much weaker than a controlled comparison in the same repo |
+| **The spec contradicted its reference on what an update may do.** 3.2 said fix-only; `update-readme.md:37` conforms structure. Fix-only also broke 5.1's per-skeleton sections and 3.4's harvest, and made the common case the least valuable | 3.2 now specifies conform structure, fix facts, preserve prose, as a three-row table of decreasing licence. Owner's decision |
+| 5.1 never encoded the deployability skeletons despite C1 adopting them, and made "Running and testing locally" universal when the reference makes it deployable-only | 5.1 rewritten as full and slim skeletons |
+| The gate keyed on Confidence, which records `medium` for both "one Strong" and "two Medium", so it cannot express the gate | Keyed on "Signals detected" instead |
+| Deployment was given an unconditional create row but is a Medium signal, so a deployment-only directory never qualifies as a boundary | Folded into the Medium row |
+| Confirmation outcomes, including declines, had no repo home, so a declined boundary would be re-proposed on every machine | Recorded in `conventions.md` |
+| Item 7's "working reference implementation" is glue-file sync, not README drift, and no README drift implementation exists anywhere | 6.4 corrected; that work is greenfield. Bash 3.2 requirement added |
+| The provenance marker had opposite defaults in different files | Cut to one rule: mark generated, treat unmarked as taught |
+| Reference counts wrong for a third time | Dropped entirely |
+| Ungated creation had no visibility step on a first run | Full create list presented at the checkpoint before writing |
+| Install plan: the documented remedy for `MISSING` drift did nothing, because `is_current_install` tests only `SKILL.md` | Plain install now tops up via idempotent `ln -sf`, with a failing-first test |
+
+**One audit finding rejected after checking.** It reported Endpoints, Configuration and Runbook as
+absent from the reference and recommended deferring all six non-reference sections. They are present,
+named as optional sections at `data-2/docs/readme-template.md:136-137`, so they are proven and land
+with the grammar. Only the three genuinely absent sections are deferred.
+
+Its remaining suggestion, deferring the nested-freshness rule until nesting first occurs, is
+declined: the rule is three lines and the failure it prevents (a parent flagging stale on every child
+commit) is silent and permanent, which is worse than carrying an unused rule.
 
 ---
 
