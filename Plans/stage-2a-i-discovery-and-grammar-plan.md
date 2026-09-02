@@ -8,7 +8,36 @@
 
 **Tech Stack:** Markdown instruction files (`stow/RepoSkills/*.md`), POSIX `sh` for the test harness, `git` for the fixture repo. No new dependencies.
 
-**Spec:** `Plans/RepoSkills-readme-mode-and-backlog-design.md`, sections 3, 3.1, 4, 5.1, 5.2, 5.3, and stage 2a of section 8.
+**Spec:** `/Users/powerx/src/github.com/mec07/claude_skills/Plans/RepoSkills-readme-mode-and-backlog-design.md`, sections 3, 3.1, 4, 5.1, 5.2, 5.3, and stage 2a of section 8.
+
+## Where everything lives
+
+Absolute paths, because each task may be executed by a fresh agent in a fresh session with no
+inherited shell state. **Nothing in this plan relies on a variable set by an earlier task.**
+
+| | Path |
+|---|---|
+| **Repository** | `/Users/powerx/src/github.com/mec07/claude_skills` |
+| **Branch** | `reposkills-readme-mode-spec` (already checked out; do not create a new one) |
+| **Skill source** | `/Users/powerx/src/github.com/mec07/claude_skills/stow/RepoSkills/` |
+| **Fixture repo** | `/Users/powerx/src/github.com/mec07/claude_skills/tests/fixture-repo` |
+| **Fixture state file** | `~/.claude/MEMORY/RepoSkills/fixture-repo/state.md` |
+
+### Run this first, in every task
+
+```bash
+cd /Users/powerx/src/github.com/mec07/claude_skills
+git branch --show-current      # expect: reposkills-readme-mode-spec
+export REPO="$PWD"
+export FIXTURE="$REPO/tests/fixture-repo"
+export STATE="$HOME/.claude/MEMORY/RepoSkills/fixture-repo/state.md"
+```
+
+Every path in this plan is either absolute or relative to `$REPO`. The fixture lives at a fixed,
+gitignored location rather than a `mktemp` directory precisely so that a task run hours later, by a
+different agent, finds the same repo in the same state.
+
+**To reset the fixture** at any point: `rm -rf "$FIXTURE" && sh "$REPO/tests/fixtures/make-fixture-repo.sh" "$FIXTURE"`
 
 ## Global Constraints
 
@@ -141,28 +170,42 @@ git -c user.email=fixture@example.com -c user.name=Fixture commit -q -m "fixture
 printf "%s" "$ROOT"
 ```
 
-- [ ] **Step 2: Make it executable and run it**
+- [ ] **Step 2: Gitignore the fixture location**
+
+The fixture is a git repo generated inside this one. It must never be committed, and it must live at
+a fixed path so later tasks find it.
+
+Append to `$REPO/.gitignore`:
+
+```
+# Generated test fixture repo (tests/fixtures/make-fixture-repo.sh recreates it)
+tests/fixture-repo/
+```
+
+- [ ] **Step 3: Make it executable and run it**
 
 ```bash
-chmod +x tests/fixtures/make-fixture-repo.sh
-FIX="$(mktemp -d)/fixture"
-sh tests/fixtures/make-fixture-repo.sh "$FIX"
-find "$FIX" -name package.json -not -path '*/node_modules/*' | sort
+chmod +x "$REPO/tests/fixtures/make-fixture-repo.sh"
+rm -rf "$FIXTURE"
+sh "$REPO/tests/fixtures/make-fixture-repo.sh" "$FIXTURE"
+find "$FIXTURE" -name package.json -not -path '*/node_modules/*' | sed "s|$FIXTURE|<FIXTURE>|" | sort
 ```
 
 Expected, exactly seven manifests:
 
 ```
-<FIX>/package.json
-<FIX>/packages/utils/package.json
-<FIX>/experiments/spike/package.json
-<FIX>/services/billing/package.json
-<FIX>/services/notifications/package.json
-<FIX>/services/orders/package.json
-<FIX>/services/orders/vendor/pricing/package.json
+<FIXTURE>/experiments/spike/package.json
+<FIXTURE>/package.json
+<FIXTURE>/packages/utils/package.json
+<FIXTURE>/services/billing/package.json
+<FIXTURE>/services/notifications/package.json
+<FIXTURE>/services/orders/package.json
+<FIXTURE>/services/orders/vendor/pricing/package.json
 ```
 
-- [ ] **Step 3: Document what each shape pins down**
+Confirm it is ignored: `git status --short tests/` should print nothing.
+
+- [ ] **Step 4: Document what each shape pins down**
 
 Create `tests/fixtures/README.md`:
 
@@ -185,10 +228,10 @@ adding the behaviour they test, and do not remove one without removing its asser
 | `node_modules/left-pad` | Manifest | **Never a unit.** Exclusion list |
 ```
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add tests/fixtures/
+git add tests/fixtures/ .gitignore
 git commit -m "add a deterministic discovery fixture repo
 
 Section 9 of the spec names three regression targets and makes naming them a
@@ -258,15 +301,20 @@ printf "\n%s\n" "$([ "$FAILED" -eq 0 ] && echo PASS || echo FAIL)"
 This is the red phase, and per the Global Constraints it is not optional.
 
 ```bash
-chmod +x tests/assert-phase0.sh
-FIX="$(mktemp -d)/fixture"; sh tests/fixtures/make-fixture-repo.sh "$FIX"
+chmod +x "$REPO/tests/assert-phase0.sh"
+rm -rf "$FIXTURE" && sh "$REPO/tests/fixtures/make-fixture-repo.sh" "$FIXTURE"
 ```
 
-Now run Phase 0 against `$FIX` following `stow/RepoSkills/phase-0-discover.md` as it stands, then:
+Now run Phase 0 against `$FIXTURE`, following
+`$REPO/stow/RepoSkills/phase-0-discover.md` as it stands, then:
 
 ```bash
-sh tests/assert-phase0.sh ~/.claude/MEMORY/RepoSkills/fixture/state.md
+sh "$REPO/tests/assert-phase0.sh" "$STATE"
 ```
+
+If `$STATE` does not exist after the run, Phase 0 did not complete. Check
+`~/.claude/MEMORY/RepoSkills/` for the slug it actually used: it derives from the repo directory
+name, which is `fixture-repo`.
 
 Expected: FAIL on all five `need` assertions about the Project System section, because no such section exists in the schema. `node_modules` should already pass, since Step 4's exclusion list covers it. Record the actual output in the commit message: that is the baseline.
 
@@ -337,7 +385,7 @@ Update `state.md`: mark step 0.5 complete.
 Re-run Phase 0 against a fresh copy of the fixture, then:
 
 ```bash
-sh tests/assert-phase0.sh ~/.claude/MEMORY/RepoSkills/fixture/state.md
+sh "$REPO/tests/assert-phase0.sh" "$STATE"
 ```
 
 Expected: `PASS`. In particular `enumeration-query` should name the root manifest's `workspaces`
@@ -391,7 +439,7 @@ need "spike is excluded"                             "experiments/spike.*exclude
 - [ ] **Step 2: Run to verify the new assertions fail**
 
 ```bash
-sh tests/assert-phase0.sh ~/.claude/MEMORY/RepoSkills/fixture/state.md
+sh "$REPO/tests/assert-phase0.sh" "$STATE"
 ```
 
 Expected: the eight new assertions FAIL (no `## Unit List` section exists), the Task 2 assertions still PASS.
@@ -467,7 +515,7 @@ Update `state.md`: mark steps 0.4 and 0.6 complete.
 - [ ] **Step 4: Re-run and verify**
 
 ```bash
-sh tests/assert-phase0.sh ~/.claude/MEMORY/RepoSkills/fixture/state.md
+sh "$REPO/tests/assert-phase0.sh" "$STATE"
 ```
 
 Expected: `PASS`, all assertions.
@@ -547,8 +595,8 @@ printf "\n%s\n" "$([ "$FAILED" -eq 0 ] && echo PASS || echo FAIL)"
 - [ ] **Step 2: Run the baseline**
 
 ```bash
-chmod +x tests/assert-artifacts.sh
-sh tests/assert-artifacts.sh "$FIX"
+chmod +x "$REPO/tests/assert-artifacts.sh"
+sh "$REPO/tests/assert-artifacts.sh" "$FIXTURE"
 ```
 
 Expected: FAIL on every assertion. `.ai/skills/conventions.md` does not exist, and
@@ -601,7 +649,7 @@ must never remove it for failing to verify. One rule, one direction: mark what i
 Run Phase 2 against the fixture, then:
 
 ```bash
-sh tests/assert-artifacts.sh "$FIX"
+sh "$REPO/tests/assert-artifacts.sh" "$FIXTURE"
 ```
 
 Expected: `PASS` on all five conventions assertions.
@@ -656,7 +704,7 @@ file_has "no Contracts owned section yet"     ".ai/skills/conventions.md" "prove
 - [ ] **Step 2: Run to verify they fail**
 
 ```bash
-sh tests/assert-artifacts.sh "$FIX"
+sh "$REPO/tests/assert-artifacts.sh" "$FIXTURE"
 ```
 
 Expected: the six new `readme-template.md` assertions FAIL, the Task 4 assertions still PASS.
@@ -789,17 +837,17 @@ Writing the per-unit READMEs themselves is a later stage.
 Run Phase 2 against the fixture, then:
 
 ```bash
-sh tests/assert-artifacts.sh "$FIX"
+sh "$REPO/tests/assert-artifacts.sh" "$FIXTURE"
 ```
 
-Expected: `PASS`. Then confirm by reading `$FIX/.ai/skills/readme-template.md` that it contains a
+Expected: `PASS`. Then confirm by reading `$FIXTURE/.ai/skills/readme-template.md` that it contains a
 slim skeleton without Observability or Running-locally sections, and that it does **not** mention
 `Contracts owned`.
 
 - [ ] **Step 6: Check the token budget you were warned about**
 
 ```bash
-wc -l stow/RepoSkills/phase-2-map-generate.md
+wc -l "$REPO/stow/RepoSkills/phase-2-map-generate.md"
 ```
 
 Expected: no more than about 1215 lines, up from 1199. Steps 2.2b and 2.2c together should add
@@ -909,8 +957,8 @@ canonical statement is how canonical statements stop being canonical."
 - [ ] **Step 1: Read the current tables**
 
 ```bash
-sed -n '/^### Skills/,/^### Platform glue/p' stow/RepoSkills/SKILL.md
-grep -n "readme-grammar\|conventions" stow/RepoSkills/SKILL.md
+sed -n '/^### Skills/,/^### Platform glue/p' "$REPO/stow/RepoSkills/SKILL.md"
+grep -n "readme-grammar\|conventions" "$REPO/stow/RepoSkills/SKILL.md"
 ```
 
 Expected: the Output table lists `orientation.md`, `domain-context.md`, `modules/<name>.md`,
@@ -939,8 +987,8 @@ In the `### Templates` section's preceding table, add:
 - [ ] **Step 4: Verify the whole suite still passes**
 
 ```bash
-sh tests/assert-phase0.sh ~/.claude/MEMORY/RepoSkills/fixture/state.md
-sh tests/assert-artifacts.sh "$FIX"
+sh "$REPO/tests/assert-phase0.sh" "$STATE"
+sh "$REPO/tests/assert-artifacts.sh" "$FIXTURE"
 ```
 
 Expected: `PASS` from both.
@@ -950,7 +998,7 @@ Expected: `PASS` from both.
 The single most important check in this plan. Confirm module skills are still generated:
 
 ```bash
-ls "$FIX/.ai/skills/modules/" | head
+ls "$FIXTURE/.ai/skills/modules/" | head
 ```
 
 Expected: module skill files present. If `modules/` is empty or absent, this plan has done 2b's job
@@ -983,8 +1031,9 @@ reconstruction and `--update` changes (2a-iii). Section 3.5's inventory rows are
 and 2b, not by this plan, which adds only new outputs.
 
 **Placeholder scan.** No TBD or TODO. Every step carries the content to be written. The three
-assertion scripts are complete and runnable. The one deliberate non-literal is `$FIX`, the fixture
-path, which is created in Task 1 Step 2 and exported by the executing agent.
+assertion scripts are complete and runnable. The only non-literals are `$REPO`, `$FIXTURE` and
+`$STATE`, all three defined in the "Run this first" block at the top of this plan and re-exported by
+every task, so no task depends on state inherited from another.
 
 **Type consistency.** `state.md`'s `## Project System` keys are defined in Task 2 and read by Tasks
 3, 4 and 5. `## Unit List` fields (`path`, `signals`, `deployable`, `readme`, `action`,
