@@ -101,8 +101,8 @@ baselines deliberately assert against a previous task's output.
 | `tests/assert-phase0.sh` | Asserts on `state.md` after a Phase 0 run | 2, 3 |
 | `tests/assert-artifacts.sh` | Asserts on the three generated grammar artifacts | 4, 5, 6 |
 | `stow/RepoSkills/phase-0-discover.md` | Gains project-system discovery (Step 4a) and the create/update gate (Step 4b), each tracked in the Phase 0 checklist | 2, 3 |
-| `stow/RepoSkills/orchestration.md` | `state.md` schema additions; the `:414` amendment; the Phase 9 skip-condition additions | 2, 3, 4 |
-| `stow/RepoSkills/phase-9-human-checkpoint.md` | Confirmation venue: two new skip-blocking conditions and the unit-and-pattern confirmation step | 4 |
+| `stow/RepoSkills/orchestration.md` | `state.md` schema additions; the `:414` amendment; the Phase 9 skip-condition additions | 2, 3, 4, 5 |
+| `stow/RepoSkills/phase-9-human-checkpoint.md` | Confirmation venue: two new skip-blocking conditions and the unit-and-pattern confirmation step | 5 |
 | `stow/RepoSkills/readme-grammar.md` | **New.** The section grammar, the include test, the induction loop | 5 |
 | `stow/RepoSkills/phase-2-map-generate.md` | Wiring only: a step that reads `readme-grammar.md` and emits the three artifacts | 4, 5, 6 |
 | `stow/RepoSkills/SKILL.md` | Output table and phase-file table | 7 |
@@ -759,7 +759,7 @@ exists() {
 
 exists   "conventions.md generated"          ".ai/skills/conventions.md"
 file_has "records the precedence rule"       ".ai/skills/conventions.md" "code > README > conventions"
-file_has "records the confirmed unit list"   ".ai/skills/conventions.md" "services/orders"
+file_has "records a settled unit decision"   ".ai/skills/conventions.md" "src/reporting"
 file_has "records declined candidates too"   ".ai/skills/conventions.md" "declined"
 file_has "marks generated sections"          ".ai/skills/conventions.md" "provenance=generated"
 
@@ -807,7 +807,7 @@ Required sections, in this order:
 | Section | Contents |
 |---|---|
 | What counts as a unit | The `enumeration-query`, the `authoritative-source` and its counterexample, and the exclusion list. Not a hand-maintained inventory: name the query |
-| Confirmed units | One line per unit from `## Unit List`: path, name, deployable yes or no, nested-under |
+| Unit decisions | **Decisions only, never an inventory.** One line per candidate whose disposition a human settled or whose treatment departs from what the query implies: a Medium-only boundary confirmed, a deployability call that contradicts the `deployability-predicate`, an exclusion that needed a ruling. A unit the enumeration query already returns and that nobody argued about gets no line, because the query is its record |
 | Declined candidates | Candidates a human declined, with the date. A decline recorded only in `state.md` would be re-proposed on every other machine forever |
 | Standard layout | Where source, tests and infrastructure live, when the repo is consistent about it |
 | Standard commands | Build, test, lint and run, as the repo actually declares them |
@@ -817,6 +817,28 @@ Required sections, in this order:
 **Mark generated sections.** Stamp each section this step writes with `provenance=generated` inside
 the existing `<!-- repo-skills: ... -->` comment. Anything unmarked is human-taught and a later run
 must never remove it for failing to verify. One rule, one direction: mark what is generated.
+```
+
+In the same edit, add the new step to the Phase 2 checklist at `phase-2-map-generate.md:14-21`,
+between the `2.2` and `2.3` lines, for the same reason Task 2 amends Phase 0's checklist: the
+checklist is what agents copy into `state.md`, and an untracked step is silently skipped after a
+context loss.
+
+```markdown
+- [ ] 2.2b: Generate conventions.md (.ai/skills/conventions.md)
+```
+
+And in the same edit, amend the self-review item at `phase-2-map-generate.md:1083`, the Structural
+Integrity checklist's no-duplicate-facts item. During the expand stage, `conventions.md`'s Standard
+commands deliberately coexist with orientation's Quick Reference (`phase-2-map-generate.md:226`) and
+the full reference in `tasks/scripts.md`, so a diligent Phase 2 agent following that checklist item
+would strip one of the copies and undo this step's work. Append directly below the item, as an
+indented note:
+
+```markdown
+  (Expand-stage exemption: `conventions.md` Standard commands deliberately duplicate
+  orientation's Quick Reference and `tasks/scripts.md` while module skills and unit READMEs
+  coexist. Do not strip either copy; removing the duplication is stage 2b's job.)
 ```
 
 - [ ] **Step 5: Run the scenario and assertions**
@@ -852,28 +874,65 @@ boundary the owner declined is re-proposed on every machine forever."
 **Files:**
 - Create: `stow/RepoSkills/readme-grammar.md`
 - Modify: `stow/RepoSkills/phase-2-map-generate.md` (wiring only)
+- Modify: `stow/RepoSkills/phase-9-human-checkpoint.md` (the confirmation venue)
+- Modify: `stow/RepoSkills/orchestration.md` (the Phase 9 skip condition, kept in step with the phase file)
 - Modify: `tests/assert-artifacts.sh`
 
 **Interfaces:**
 - Consumes: `## Unit List` from Task 3, `conventions.md` from Task 4.
-- Produces: `.ai/skills/readme-template.md` in the target repo, the repo-specific instantiation of the grammar. Consumed by plan 2a-ii, which writes the READMEs themselves.
+- Produces: `.ai/skills/readme-template.md` in the target repo, the repo-specific instantiation of the grammar, and the Phase 9 confirmation venue the grammar's induction loop names. Consumed by plan 2a-ii, which writes the READMEs themselves.
 
 **Why a separate file.** Spec section 9: six backlog items already target
 `phase-2-map-generate.md`, which is 1199 lines and the largest file in the skill. Growing it risks
 the context failure these changes exist to prevent. Phase 2 gets wiring; the grammar lives apart.
 
+**Why the grammar adopts before it imposes.** The reference repo
+(`/Users/powerx/src/github.com/powerxai/data`, main) already enforces a README convention in CI:
+`ci/cli/scripts/check-readme-conformance.py` (updated 2026-09-01, with good and bad test fixtures
+including a miscased-filename case) checks every affected project's README against
+`docs/readme-template.md` for filename case, H1, info-box text, section order, skeleton membership
+by deploy target, Monitoring rows and unfilled placeholders, and `check-nx-project-readmes.sh`
+checks presence. A generator imposing its own section names on that repo would emit a second
+template beside a checker enforcing the first, every README would satisfy at most one of them, and
+stage 6's regression against the reference could never pass. The names prove the point:
+`## Monitoring` appears 68 times across that repo's tracked READMEs and `## Observability` zero,
+yet an earlier draft of this grammar said `Observability`. The template's conditional sections are
+`Endpoints`, `Environment Variables` and `Runbook` (`docs/readme-template.md:136-137`), where the
+draft said `Configuration`, a name the reference never uses. `## Build and packaging` recurs in 26
+READMEs without a slot in the template's own conditional list, so a generator without a rule for
+recurring repo sections meets it with no instruction at all. And real conformant READMEs carry more
+than one unit-specific section (`services/monitoring` has both `Dashboards` and `Alert rules`),
+where the draft allowed exactly one. The grammar below therefore detects and adopts an existing
+convention, and its own names, corrected to the reference's converged names, are the fallback for a
+repo that has none.
+
 - [ ] **Step 1: Add the assertions**
 
-Append to `tests/assert-artifacts.sh` before the summary:
+Append to `tests/assert-artifacts.sh` before the summary. The `file_lacks` helper is the negative
+counterpart of `file_has` and exists for the deferred-sections check: a `file_has` on
+`conventions.md` cannot test that `readme-template.md` omits something, and the earlier draft's
+version of this assertion did exactly that, passing on any run where Task 4 passed.
 
 ```sh
-exists   "readme-template.md generated"       ".ai/skills/readme-template.md"
-file_has "has a full skeleton"                ".ai/skills/readme-template.md" "full skeleton"
-file_has "has a slim skeleton"                ".ai/skills/readme-template.md" "slim skeleton"
-file_has "Agent Notes is last"                ".ai/skills/readme-template.md" "Agent Notes"
-file_has "carries the include test"           ".ai/skills/readme-template.md" "10 seconds"
-file_has "configuration is a pointer"         ".ai/skills/readme-template.md" "\.env\.example\|declaring file"
-file_has "no Contracts owned section yet"     ".ai/skills/conventions.md" "provenance=generated"
+file_lacks() {
+    # file_lacks <description> <file> <grep-pattern>
+    # Passes when the file exists and nothing in it matches.
+    if [ -f "$REPO/$2" ] && ! grep -qi -- "$3" "$REPO/$2"; then
+        printf "  ok   %s\n" "$1"
+    else
+        printf "  FAIL %s\n       %s missing or has a match for [%s]\n" "$1" "$2" "$3"
+        FAILED=1
+    fi
+}
+
+exists     "readme-template.md generated"        ".ai/skills/readme-template.md"
+file_has   "has a full skeleton"                 ".ai/skills/readme-template.md" "full skeleton"
+file_has   "has a slim skeleton"                 ".ai/skills/readme-template.md" "slim skeleton"
+file_has   "Agent Notes is last"                 ".ai/skills/readme-template.md" "Agent Notes"
+file_has   "carries the include test"            ".ai/skills/readme-template.md" "10 seconds"
+file_has   "environment variables are a pointer" ".ai/skills/readme-template.md" "\.env\.example\|declaring file"
+file_has   "fallback section names used, since the fixture has no convention" ".ai/skills/readme-template.md" "## Monitoring"
+file_lacks "deferred sections are not shipped"   ".ai/skills/readme-template.md" "Contracts owned"
 ```
 
 - [ ] **Step 2: Run to verify they fail**
@@ -882,7 +941,8 @@ file_has "no Contracts owned section yet"     ".ai/skills/conventions.md" "prove
 sh "$REPO/tests/assert-artifacts.sh" "$FIXTURE"
 ```
 
-Expected: the six new `readme-template.md` assertions FAIL, the Task 4 assertions still PASS.
+Expected: the eight new `readme-template.md` assertions FAIL (`file_lacks` fails too, because the
+file does not exist yet), the Task 4 assertions still PASS.
 
 - [ ] **Step 3: Write the grammar file**
 
@@ -895,24 +955,70 @@ RepoSkills does not ship a README template. It ships this grammar, and generates
 `.ai/skills/readme-template.md` from it during Phase 2. Read `## Project System` and `## Unit List`
 from `state.md` before generating.
 
+## Adopt and align
+
+Where the target repo already has a README convention, adopt it. The section names and section set
+in this file are the fallback for a repo with no existing convention, never a standard to impose on
+one that does: a generated template that disagrees with a checker the repo already runs creates two
+competing conventions, and every README that satisfies one fails the other.
+
+**Detect an existing convention in this order.** The first source found is authoritative; later
+ones only fill what it leaves unstated.
+
+1. **CI enforcement.** Search the repo's CI scripts and workflows for a README structure check
+   (grep the CI directory for `readme`). What such a checker enforces, the section names, order,
+   skeleton membership and any exact required text it tests, is the convention's definition, adopted
+   verbatim: it is what merges are gated on.
+2. **A README template document**, commonly `docs/readme-template.md` or similar. Adopt its
+   skeletons, its section names and its conditional-section list.
+3. **A conventions document** that names README sections.
+4. **The de facto pattern.** Where none of the above exists but most existing unit READMEs share a
+   section set, induce that set and confirm it through the induction loop below before adopting it.
+
+**When the repo's names and this file's names disagree, the repo's names win.** Map by role, never
+by string: the repo's post-Overview operational-links section fills the Monitoring slot whatever it
+is called, its configuration-pointer section fills the Environment Variables slot, and so on.
+Record the mapping in the generated template, so a drafting agent never reintroduces the fallback
+names.
+
+**A recurring section this grammar does not name is adopted, not dropped.** A section name that
+recurs across the repo's conformant READMEs in the conditional slot is a repo-convention
+conditional section: add it to the generated template's conditional list with a one-line contents
+note induced from how the repo uses it, and confirm the note through the induction loop.
+
+**When the sources disagree with each other**, a template internally inconsistent, or out of step
+with the checker or with the READMEs: whatever CI enforces wins, because it is what merges are
+gated on. Where no check settles the conflict, follow the majority of existing conformant READMEs,
+record the inconsistency in the run report, and put the question to a human through the induction
+loop's venue. Never silently pick a side, and never emit a template the repo's own checker would
+fail.
+
+How far a run may restructure an existing README to align it with the adopted convention (the
+bounded write territory) is pending spec section 3.2 and lands in a follow-up; this file governs
+only what the generated template says.
+
 ## Two skeletons, chosen by deployability
 
 A unit is deployable when the repo's `deployability-predicate` says it ships. Otherwise nothing runs
-and the sections about running and watching it do not apply.
+and the sections about running and watching it do not apply. The names below are the fallback set,
+following the reference implementation's converged names, and are used verbatim only where Adopt and
+align found no existing convention.
 
 | Section | Full (deployable) | Slim | Contains |
 |---|---|---|---|
 | Title | yes | yes | The unit's canonical name as the project system reports it |
 | Conventions info-box | yes | yes | A link to `conventions.md` and the override rule |
 | Overview | yes | yes | One or two sentences on what the unit does and why |
-| Observability | yes | no | Only where a link pattern was confirmed. Unfillable rows stay `_not yet linked_` |
+| Monitoring | yes | no | Only where a link pattern was confirmed. Unfillable rows stay `_not yet linked_` |
 | Running and testing locally | yes | no | The quick loop, plus only what is specific to this unit |
 | Agent Notes | yes | yes | Gotchas and what the code cannot tell you. **Always last** |
 
 **Conditional sections**, either skeleton, after Running and testing locally and before Agent Notes,
-only where the substrate exists: `Endpoints` (an API surface), `Configuration` (a pointer to the
-declaring file, never values), `Runbook` (operational failure modes with known responses), or one
-unit-specific topic named for what it is.
+only where the substrate exists: `Endpoints` (an API surface), `Environment Variables` (a pointer to
+the declaring file, never values), `Runbook` (operational failure modes with known responses), one
+or more unit-specific topics named for what they are, and any recurring repo-convention section
+Adopt and align found. A unit may legitimately carry several: a monitoring service can have both a
+dashboards section and an alert-rules section.
 
 Section order is fixed. A slim README on a small library is the correct output, not a failure.
 
@@ -939,9 +1045,14 @@ definition. If the declaring file is itself wrong, fix that file rather than doc
 discrepancy.
 
 **Every section is a positive contract, never a prohibition list.** State what the section contains,
-in order. The `Configuration` slot reads "pointer to the declaring file", so there is no table to
-negotiate away. This is deliberate: agents under a competing incentive negotiate with prohibitions,
-and prohibition-form guidance measurably backfires on wrong-output-shape failures.
+in order. The `Environment Variables` slot reads "pointer to the declaring file", so there is no
+table to negotiate away. This is deliberate: agents under a competing incentive negotiate with
+prohibitions, and prohibition-form guidance measurably backfires on wrong-output-shape failures.
+
+**Agent Notes bullets cite their sources.** A bullet asserting a repo fact ends with the path or
+paths it derives from, so the next agent can verify the claim before acting on it and a drift check
+can test whether it still holds. A bullet that cannot name its source is a guess, and guesses do
+not belong in Agent Notes.
 
 ## Pattern induction with human confirmation
 
@@ -983,10 +1094,12 @@ human wrote.
 
 ## Generating the repo-specific template
 
-Write `.ai/skills/readme-template.md` containing: both skeletons as fenced markdown blocks with this
-repo's real commands and section names substituted in, the include test verbatim, the conditional
-section list filtered to those this repo has substrate for, and an authoring-rules banner the
-drafting agent honours and then deletes.
+Run Adopt and align first. Then write `.ai/skills/readme-template.md` containing: both skeletons as
+fenced markdown blocks with this repo's real commands and the adopted section names substituted in,
+the name mapping wherever the repo's names differ from this file's fallbacks, the include test
+verbatim, the Agent Notes citation rule, the conditional section list filtered to those this repo
+has substrate for plus the recurring sections Adopt and align found, and an authoring-rules banner
+the drafting agent honours and then deletes.
 
 Do **not** include `Contracts owned`, `Deviations` or `Lifecycle status`. Those three are absent
 from the reference implementation and land in a later stage with their own baseline test. Shipping
@@ -1007,6 +1120,65 @@ Output: `.ai/skills/readme-template.md` in the target repo. This step generates 
 Writing the per-unit READMEs themselves is a later stage.
 ```
 
+In the same edit, add the step to the Phase 2 checklist at `phase-2-map-generate.md:14-21`,
+immediately after the `2.2b` line Task 4 added:
+
+```markdown
+- [ ] 2.2c: Generate readme-template.md (.ai/skills/readme-template.md)
+```
+
+- [ ] **Step 4a: Add the confirmation venue**
+
+The File Structure table routes the confirmation venue here, and two artifacts already depend on it:
+the conventions document's Declined candidates and Confirmed patterns sections (Task 4) can only
+ever fill if some phase actually asks, and the grammar's induction loop names Phase 9 as the venue
+whenever Phase 1 is skipped. This step lives in this task rather than Task 4 because the
+phase-9 addition links `readme-grammar.md`, which exists from Step 3 of this task.
+
+In `stow/RepoSkills/phase-9-human-checkpoint.md`, the Skip Condition lists three conditions at
+`:14-16`. Append two more, and change "all three conditions" at `:18` to "all five conditions", so
+the skip is blocked while confirmations are pending:
+
+```markdown
+4. `state.md`'s `## Unit List` contains no `action: create-pending-confirmation` entry
+5. No induced pattern awaits confirmation (no generated artifact carries a `_not yet linked_` row
+   whose pattern was never presented to a human)
+```
+
+Mirror the same two conditions in `stow/RepoSkills/orchestration.md`'s Phase 9 skip condition
+(items at `:270-272`), changing "ALL THREE" at `:269` and "all three conditions" at `:274` to five,
+so the orchestrator and the phase file cannot disagree about when Phase 9 may be skipped.
+
+Then, in `phase-9-human-checkpoint.md`, after Step 3 (Present Missing Info Questions, `:178`) and
+before Step 4 (`:202`), insert a lettered step, plus its checklist entry
+(`- [ ] 9.3a: Confirm gated units and induced patterns`) immediately after the `9.3` line (`:33`)
+of the Phase 9 checklist:
+
+```markdown
+## Step 3a: Confirm Gated Units and Induced Patterns (Step 9.3a)
+
+Read `## Unit List` from `state.md`. For each entry with `action: create-pending-confirmation`,
+present the path and its signals and ask whether it should get a README. Record the outcome in
+`.ai/skills/conventions.md`: a yes moves the unit into Confirmed units, and its `action` in
+`state.md` becomes `create`; a no adds it to Declined candidates with the date. Never record an
+outcome only in `state.md`: that file lives on one machine, and a decline recorded nowhere else is
+re-proposed on every other machine forever.
+
+For each induced pattern awaiting confirmation, follow the induction loop in
+[readme-grammar.md](readme-grammar.md): present the examples and the derived pattern, and record a
+confirmed pattern in `conventions.md` under Confirmed patterns.
+
+When no human answers (a headless run), leave every pending item pending, keep the placeholders,
+and carry the full list forward in the final report: a blocked skip must never become a hung
+pipeline.
+
+Update `state.md`: mark step 9.3a complete.
+```
+
+The scenario runs in this plan dispatch Phases 0 and 2 only (see the Run protocol), so no assertion
+covers this step. Verify it by reading the two amended skip conditions side by side and confirming
+they list the same five conditions.
+
 - [ ] **Step 5: Run the scenario and assertions**
 
 Run Phase 2 against the fixture, then:
@@ -1016,7 +1188,7 @@ sh "$REPO/tests/assert-artifacts.sh" "$FIXTURE"
 ```
 
 Expected: `PASS`. Then confirm by reading `$FIXTURE/.ai/skills/readme-template.md` that it contains a
-slim skeleton without Observability or Running-locally sections, and that it does **not** mention
+slim skeleton without Monitoring or Running-locally sections, and that it does **not** mention
 `Contracts owned`.
 
 - [ ] **Step 6: Check the token budget you were warned about**
@@ -1025,20 +1197,29 @@ slim skeleton without Observability or Running-locally sections, and that it doe
 wc -l "$REPO/stow/RepoSkills/phase-2-map-generate.md"
 ```
 
-Expected: no more than about 1215 lines, up from 1199. Steps 2.2b and 2.2c together should add
-roughly 40 lines of wiring. If the number is materially higher, grammar content has leaked into
-phase 2 and belongs in `readme-grammar.md`.
+Expected: about 1237 lines, up from 1199. The additions are Task 4's Step 2.2b (about 22 lines), its
+expand-stage exemption note (about 4 lines), this task's Step 2.2c (about 10 lines) and one
+checklist line for each new step. If the count is materially above about 1245, grammar content has
+leaked into phase 2 and belongs in `readme-grammar.md`. This is not the final ceiling: Task 6 grows
+the same file once more and carries its own check.
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add stow/RepoSkills/readme-grammar.md stow/RepoSkills/phase-2-map-generate.md tests/assert-artifacts.sh
+git add stow/RepoSkills/readme-grammar.md stow/RepoSkills/phase-2-map-generate.md stow/RepoSkills/phase-9-human-checkpoint.md stow/RepoSkills/orchestration.md tests/assert-artifacts.sh
 git commit -m "add the README grammar as its own instruction file
 
 Spec section 5. RepoSkills ships a grammar and a generator; the concrete
 template is an artifact generated into the target repo, because the reference
 implementation's template is saturated with repo-specific mechanisms that
 cannot live in a tool targeting any repo.
+
+The grammar adopts an existing convention before imposing its own names: the
+reference repo enforces its template in CI, and a second template beside a
+checker enforcing the first is two conventions where there was one. The
+fallback names follow the reference's converged names (Monitoring, Environment
+Variables), and Phase 9 gains the confirmation venue the induction loop and the
+create gate both depend on.
 
 The grammar is a separate file rather than an extension of phase 2, per spec
 section 9: six backlog items already target phase-2-map-generate.md, which at
@@ -1100,7 +1281,16 @@ document, and duplicating them there and here is how the two drift apart.
 
 - [ ] **Step 4: Run and verify**
 
-Expected: `PASS`.
+Expected: `PASS`. Then check the final ceiling for `phase-2-map-generate.md`, since this is the last
+task in this plan that grows it:
+
+```bash
+wc -l "$REPO/stow/RepoSkills/phase-2-map-generate.md"
+```
+
+Expected: about 1254 lines. This task's generation instruction is about 17 lines on top of Task 5's
+count of about 1237. Anything materially above about 1260 means content that belongs in
+`readme-grammar.md` or `conventions.md` has leaked into phase 2.
 
 - [ ] **Step 5: Commit**
 
@@ -1197,32 +1387,85 @@ both shapes coexist, and removal is 2b's job."
 
 **Spec coverage.** Section 3's create/update gate is Task 3. Section 3.1's three legs are Tasks 4, 5
 and 6. Section 4's project-system discovery is Task 2. Sections 5.1, 5.2 and 5.3 are Task 5's grammar
-file. Section 9's token-budget mitigation is Task 5 Step 6, and its first-run regression target is
-Task 1.
+file, with 5.3's confirmation venue wired into Phase 9 by Task 5 Step 4a. Section 9's token-budget
+mitigation is Task 5 Step 6 plus the final ceiling in Task 6 Step 4, and its first-run regression
+target is Task 1.
 
 Deliberately **not** covered here, and belonging to the named sibling plans: writing or updating the
 per-unit READMEs (2a-ii), the harvest (2b), and the drift, routing, simulation-access, state
 reconstruction and `--update` changes (2a-iii). Section 3.5's inventory rows are consumed by 2a-iii
 and 2b, not by this plan, which adds only new outputs.
 
-**Placeholder scan.** No TBD or TODO. Every step carries the content to be written. The three
-assertion scripts are complete and runnable. The only non-literals are `$REPO`, `$FIXTURE` and
-`$STATE`, all three defined in the "Run this first" block at the top of this plan and re-exported by
-every task, so no task depends on state inherited from another.
+**Placeholder scan.** No TBD or TODO. Every step carries the content to be written. The fixture
+generator and both assertion scripts are complete and runnable. The only non-literals are `$REPO`,
+`$FIXTURE` and `$STATE`, all three defined in the "Run this first" block at the top of this plan and
+re-exported by every task, so no task depends on state inherited from another.
 
 **Type consistency.** `state.md`'s `## Project System` keys are defined in Task 2 and read by Tasks
-3, 4 and 5. `## Unit List` fields (`path`, `signals`, `deployable`, `readme`, `action`,
+3, 4 and 5. `## Unit List` fields (`path`, `name`, `signals`, `deployable`, `readme`, `action`,
 `nested-under`) are defined in Task 3 and read by Tasks 4, 5 and 6, and the `action` values used in
 Task 3's assertions (`create`, `update`, `create-pending-confirmation`, `excluded`) match the values
-its instruction text produces. `readme-grammar.md` is created in Task 5 and referenced by that same
-path in Tasks 5 and 7. `assert-phase0.sh` is created in Task 2 and extended in Task 3;
-`assert-artifacts.sh` is created in Task 4 and extended in Tasks 5 and 6.
+its instruction text produces, with `create-pending-confirmation` resolved to `create` or a recorded
+decline only by Phase 9 Step 9.3a (Task 5 Step 4a). `readme-grammar.md` is created in Task 5 and
+referenced by that same path within Task 5 (the phase 2 wiring and the Phase 9 venue) and in Task 7.
+The grammar's fallback section names (`Monitoring`, `Environment Variables`) match the names the
+Task 5 assertions test for and the names Task 5 Step 5 reads for, and the fixture repo carries no
+README template, no conventions document and no CI README check (its workflows never mention
+`readme`), so a fixture run always exercises the fallback branch of Adopt and align.
+`assert-phase0.sh` is created in Task 2 and extended in Task 3; `assert-artifacts.sh` is created in
+Task 4 and extended in Tasks 5 and 6.
 
 **One risk worth naming.** Every test here runs a pipeline phase by dispatching an agent against the
 fixture, so runs are slow and not bit-for-bit deterministic. The assertions are therefore written
 against structural facts (does the section exist, does this path carry this action) rather than
 against exact wording. Do not tighten them into string equality; that would make the suite flaky
 without making it stronger.
+
+---
+
+## Review amendments
+
+**Independent review, 2026-09-02 (Fable).** The plan was reviewed against the skill source, the
+fixture design and the reference repo by an independent agent briefed to find problems. Verdict: do
+not execute as written. The findings were applied in two passes: the five blockers and most majors
+in commit `f82d966`, the remainder in this amendment. Every finding was verified against the files
+before being acted on.
+
+Applied in commit `f82d966`:
+
+| Finding | Resolution |
+|---|---|
+| Every Task 3 assertion was a single-line grep against the multi-line block format the same task defines, so the suite was permanently red, or the Phase 0 agent would flatten `state.md` to satisfy it | Block-aware `awk` helper (`unit_has`) with exact path matching, so `services/orders` cannot swallow `services/orders/pricing`, and `create` anchored so it cannot match `create-pending-confirmation` |
+| The gate did not hold `src/reporting` back: `phase-0-discover.md:175` lists `index.ts` as a Strong signal and the fixture gave it one | The fixture drops the barrel `index.ts` and gains an unambiguous second Medium type, and a new `src/ingest` shape pins the rule that an entry point alone never earns ungated creation |
+| The nested-unit fixture sat under `vendor/`, which is on the never-browse exclusion lists, so Phase 0 could reach it only by disobeying its own rules | Moved to `services/orders/pricing` |
+| Tasks 2 and 3 added steps numbered 0.5 and 0.6, both already taken by existing Phase 0 steps | Renumbered to 0.4a and 0.4b, and the Phase 0 checklist agents copy into `state.md` is amended in the same task |
+| Phase 0 skips entirely when `_triage.md` exists, so every "re-run Phase 0" step would have written nothing | The explicit per-task Run protocol at the top of this plan |
+| The workspace root fell through the gate; a Strong root manifest would earn the repo root a create | Question 0 in Step 4b: the root is excluded by rule, and the fixture root pins it |
+| Exclusion and an existing README were unordered; an excluded directory with a README read as `update` | Question 1 states exclusion beats the README, and `experiments/spike` gained a README so the precedence is exercised |
+| Authoritative-source selection could never fire: the fixture had one project system, so no counterexample existed | A second project system, `analytics/pipeline`, invisible to the `workspaces` globs |
+
+Applied in this amendment:
+
+| Finding | Resolution |
+|---|---|
+| The grammar imposed its own section names on repos that already have a convention, and the reference repo now enforces its template in CI, so a run against it would emit a second, disagreeing template and stage 6's regression could never pass | The Adopt and align section: detection order (CI checker, template document, conventions document, de facto pattern), repo names win by role mapping, recurring unnamed sections adopted, CI wins internal inconsistencies, and never emit a template the repo's checker would fail. Owner's decision |
+| The fallback names contradicted the reference: `Observability` appears zero times across the reference's READMEs and `Monitoring` 68; `Configuration` is not in the reference template, whose conditional sections are `Endpoints`, `Environment Variables` and `Runbook` (`docs/readme-template.md:136-137`) | Fallback names corrected to the reference's converged names, as a consequence of Adopt and align rather than instead of it |
+| `## Build and packaging` recurs in 26 reference READMEs with no slot in any skeleton or conditional list, so a generating agent meeting one had no instruction | The recurring-section rule in Adopt and align, plus the conditional list carrying recurring repo-convention sections |
+| The grammar allowed exactly one unit-specific section where real conformant READMEs carry several (`services/monitoring` has both `Dashboards` and `Alert rules`) | One or more |
+| The Agent Notes citation discipline (a bullet asserting a repo fact ends with the paths it derives from, `docs/readme-template.md:90`) was in the reference and the spec's transfer-unchanged list, but not in the grammar | Added as a grammar rule and carried into the generated template |
+| Finding 16: `phase-2-map-generate.md:1083`'s no-duplicate-facts self-review item would make a diligent Phase 2 agent strip either `conventions.md`'s Standard commands or orientation's Quick Reference during the expand stage | Task 4 adds an expand-stage exemption note directly below that item |
+| Finding 12: spec 6.4's "no README-drift reference implementation exists" is stale input for 2a-iii | The note under the sibling-plans table below; the spec agent is correcting 6.4 itself |
+| Finding 18: Task 5 Step 6 expected at most about 1215 lines while its own arithmetic produced 1239, so the checkpoint read as a failure on a correct implementation, and Task 6 then grew the file again with no revised ceiling | Recounted against the file as it stands: about 1237 after Task 5, and Task 6 Step 4 carries the final ceiling of about 1260 |
+| The File Structure table routed the confirmation venue to Task 4, but no task step edited `phase-9-human-checkpoint.md` or the two skip conditions, so the venue the grammar and the conventions doc depend on was never built | Task 5 Step 4a: two skip-blocking conditions in both files that state them, and Step 9.3a confirming gated units and induced patterns, recording outcomes in `conventions.md` |
+| `f82d966`'s message also claimed the conventions doc had stopped specifying a hand-maintained unit inventory. Its diff never touched that row either: the Task 4 table still read "One line per unit from `## Unit List`", and its assertion grepped for `services/orders`, so the suite asserted the very inventory `data/docs/project-conventions.md:46` forbids. An audit had matched the warning text in the row above and mistaken it for the fix | The row becomes Unit decisions, recording only a candidate a human settled or one whose treatment departs from the query. The assertion now looks for `src/reporting`, the gated candidate, which is recorded either way once confirmed or declined |
+| `f82d966`'s message claimed the deferred-sections assertion was no longer a no-op, but its diff never touched it: the assertion grepped `conventions.md` for `provenance=generated`, which passes whenever Task 4 passes | The `file_lacks` helper, asserting `readme-template.md` exists and omits `Contracts owned` |
+| Steps 2.2b and 2.2c were added to Phase 2 but not to the Phase 2 checklist agents copy into `state.md`, the same untracked-step failure Task 2 fixes for Phase 0 | Both tasks add their checklist line in the same edit |
+| The Self-Review enumerated six `## Unit List` fields where Task 3 defines seven (`name` was missing), counted "three assertion scripts" where there are two plus the fixture generator, and mapped the token-budget check to Task 5 alone | All three corrected |
+
+Deliberately left alone: the bounded-write-territory semantics ("how much of an existing README a
+run may rewrite"). Spec section 3.2 is being settled this pass, and the grammar implements it in a
+follow-up once the spec is authoritative; the grammar carries a one-line pending note where the
+question arises.
 
 ---
 
@@ -1237,3 +1480,12 @@ without making it stronger.
 | Phase-4 checks and phase-1 questions | 6.5 items 2, 3, 4, 5, 12, 16 | 3 | 2b |
 | Remaining items | items 6, 8, 17 | 4 | 2b |
 | The three added README sections | 5.1 | 5 | 2b |
+
+**A stale spec input 2a-iii must not trust.** Spec 6.4 records that no README-drift reference
+implementation exists and that the work is greenfield. That was true of `data-2` in August and is
+not true of `data` main, which now carries `ci/cli/scripts/check-readme-conformance.py` (structure
+conformance against `docs/readme-template.md`, updated 2026-09-01, with good and bad test fixtures
+including a miscased-filename case), its CI wrapper `check-readme-conformance.sh`, and
+`check-nx-project-readmes.sh` (presence). 2a-iii ports that implementation rather than building
+one. The spec agent is correcting 6.4 itself; this note exists so 2a-iii is told even if it reads
+this plan first.
