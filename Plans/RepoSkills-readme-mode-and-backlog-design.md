@@ -1,6 +1,7 @@
 # RepoSkills: README output mode and backlog burn-down
 
-Design spec covering all 18 items in `~/.claude/skills/RepoSkills/IMPROVEMENTS.md`, plus the
+Design spec covering all 18 items of the improvements backlog, whose surviving reconstruction is at
+`stow/RepoSkills/IMPROVEMENTS.md` (see section 12), plus the
 architectural change that supersedes several of them.
 
 Status: design approved, not yet implemented.
@@ -111,30 +112,80 @@ proposes has nothing to detect. Both items are obviated and replaced by section 
 | `.ai/skills/orientation.md` | always |
 | `.ai/skills/domain-context.md` | always |
 | `.ai/skills/conventions.md` | always. Requires amending `orchestration.md:414`, see 3.1 |
-| `.ai/skills/readme-template.md` | always |
-| `.ai/skills/tasks/<name>.md` | always |
+| `.ai/skills/readme-template.md` | only where at least one unit is confirmed |
+| `.ai/skills/tasks/<name>.md` | always. `navigate-unit` specifically, only where at least one unit is confirmed |
 | `<unit-root>/README.md` | one per unit boundary, see section 4 |
 | `.ai/skills/Tools/` and root platform-glue files | always |
 
-**Every unit gets a README. There is no threshold.**
+**Which boundaries get a README, and which get one created.** These are different questions, and
+an earlier draft asked only the first.
 
-An earlier draft gated READMEs on a project system enumerating more than one project. That was wrong,
-and wrong in the worst direction: a single-package repo with real internal boundaries would have
-received no READMEs *and* no module skills, leaving only `orientation.md` and `domain-context.md`,
-each budgeted at roughly 2k tokens (`orchestration.md:642`). Four boundaries' worth of change-impact
-and gotcha knowledge does not fit in 2k. The draft removed a capability from the most common repo
-shape and described the removal as a design property.
+In any repo mature enough to be worth documenting, **most boundaries already have a README.**
+`data-2` main carries 197. That matters twice over. An existing README is the strongest ownership
+signal available, stronger than anything Step 4 can infer, because it is a decision a human already
+made rather than a property the pipeline guessed. And updating one is the safe operation: it is the
+human-territory verify-and-patch path of 3.2, which fixes wrong claims and leaves everything it
+cannot verify alone.
 
-The correct rule uses detection that already exists. `phase-0-discover.md` Step 4 evaluates **each
-candidate directory** against five signal types (package, service, domain, deployment, logical) and
-qualifies it on one Strong or two Medium signals. None of those require a project system, and every
-candidate is a directory, so every candidate can host a README. That detection stays authoritative
-and unchanged; section 4 only adds to how its candidates are seeded.
+The only action that can impose an unwanted artifact is **creating** a README where a human never
+put one. So that is the only action gated:
 
-**No grouping.** One README per boundary, always. `orchestration.md` currently permits Tier D runs to
-group several services into a single skill; backlog item 1 rejects that, and a README that lives in
-its own unit's directory makes grouping impossible by construction. Item 1 is resolved structurally
-rather than by instruction.
+| Situation | Action | Confirmation |
+|---|---|---|
+| A README already exists, in any letter case | Update it | None. The human already decided this directory deserves one |
+| No README, and any **Strong** signal: own package manifest, own Dockerfile or entry point | Create it | None. A directory that builds or ships on its own has owners |
+| No README, and a **Deployment** signal: own CI workflow, Terraform module, k8s manifest or Helm chart | Create it | None. Same reasoning |
+| No README, **Medium signals only**: domain or logical | Create it | **Yes.** Confirm the list first |
+
+`phase-0` Step 4 qualifies a candidate on one Strong signal *or two Medium ones*, so a Medium-only
+candidate can be a directory nobody considers a unit. Writing a README into it would reproduce the
+very thing this spec removes, an unowned document nobody maintains, relocated from a parallel tree
+into the source tree. Phase 0 already records per-candidate confidence (`high`, `medium`, `low`)
+under Step 4's "Recording boundary candidates", and the spec previously used that field nowhere. It
+is now the gate.
+
+**Case sensitivity decides "exists", and the local filesystem lies about it.** A miscased
+`readme.md` means the unit **has** a README: rename it and edit it, never author a second file
+beside it. Presence must be tested against the version-control file list rather than the working
+tree, because macOS hides the difference while CI does not. This is the same trap item 10 records
+for the drift signal, and it applies to the create-or-update decision first.
+
+**Confirmation venue:** the Phase 1 interview when it runs, the Phase 9 checkpoint otherwise, as one
+list the human accepts or trims. See 3.6 for why the venue needs both.
+
+**This replaces coverage tiering rather than merely deleting it.** Tier C currently ranks boundaries
+by *importance*, giving the top 10 full skills, the next 15-20 summaries and the rest a one-line
+mention (`orchestration.md:509-515`). Importance is a judgement the pipeline makes badly and cannot
+verify. Whether a boundary builds, ships or deploys is a fact the repo answers, and whether it
+already has a README is a fact the git index answers. So ranking by importance is removed and those
+two facts take its place. Accept the consequence honestly: a Tier C repo with 40 Strong-signal
+boundaries ends up with 40 READMEs, and that is correct, because each of those directories builds or
+deploys on its own and already has owners. In practice most of the 40 will already exist, so the run
+is mostly updates.
+
+**Unconfirmed Medium boundaries are not silently dropped.** They keep exactly what Tier 3 gave them:
+a one-line description in `orientation.md`, plus a place in the confirmation list so a human can
+promote any of them later.
+
+**No grouping of confirmed boundaries.** One README per confirmed boundary, always.
+`orchestration.md` currently permits Tier D runs to group several services into one skill; backlog
+item 1 rejects that, and a README living in its own unit's directory makes it impossible.
+
+Distinguish this from **merging**, which stays legitimate: `phase-2-map-generate.md:96-101` allows a
+"merge with parent" verdict during boundary confirmation, deciding a candidate is not a boundary at
+all. Merging reduces the boundary count; grouping would reduce the document count below it. Only
+the latter is forbidden.
+
+**Nested boundaries.** Step 4's exclusion-list exception explicitly admits a nested package inside a
+service, so a unit's directory can contain another unit. This never arose in `data-2`, whose project
+roots do not nest. Three rules:
+
+1. Both get a README. Nesting disqualifies neither.
+2. The parent's README does not describe the child. It names it and points at its README, under
+   *Contracts owned* if the child is a published interface, otherwise *Agent Notes*.
+3. **The freshness check subtracts nested unit paths.** Otherwise the parent's "last commit touching
+   non-test code in its unit" includes every child commit and the parent flags stale permanently. A
+   unit's freshness considers only paths beneath it that no nested unit claims.
 
 **A note on `orchestration.md:412`,** which says module skills "should map to real, coherent
 boundaries in the codebase -- not to directories." That rule forbids a skill per *arbitrary* folder,
@@ -237,9 +288,18 @@ rules like "never name an AWS profile or role", which is policy, not a code-deri
 statements are precisely what a remove-if-unverifiable rule destroys.
 
 So the discriminator is **provenance, not location**: content derived from code may be removed when
-it no longer verifies; content taught by a human may not. Generated files must therefore mark which
-sections are human-taught, so a later run can tell the difference. `domain-context.md` is
-human-taught in its entirety; `conventions.md` is mixed and needs per-section marking.
+it no longer verifies; content taught by a human may not.
+
+`domain-context.md` is human-taught in its entirety, so it needs no internal marking; the file is
+listed as human-taught and that is sufficient. `conventions.md` is mixed, carrying normative policy
+alongside code-derived facts, so it needs per-section provenance. The marker rides in the existing
+`<!-- repo-skills: ... -->` comment convention that generated files already carry, as a
+`provenance=taught` attribute on a section comment, with absence meaning code-derived. Two
+properties are required of it: drift patching must preserve the marker when it rewrites a section
+body, and a human adding a section by hand must default to taught rather than derived, since an
+unmarked human addition would otherwise be deletable on the next run. The default therefore inverts
+inside `conventions.md`: unmarked means taught, and code-derived sections are the ones marked
+explicitly by the generator.
 
 **The per-unit README rules**, which apply only in the humans' territory:
 
@@ -311,8 +371,11 @@ The pass is idempotent: once `modules/` is gone there is nothing to harvest and 
 
 ### 3.5 Contract inventory: everything that touches `modules/`
 
-The chapter an earlier draft was missing. `modules/` and "module skill" appear **143 times across
-12 files**. Section 6.5 routed edits to phase files only and never named `orchestration.md`, which is
+The chapter an earlier draft was missing. `grep -ci "modules/\|module skill"` across the skill's
+instruction files and templates returns **164 references in 11 contract files** (`orchestration.md`
+22, `phase-2` 74, `phase-3` 31, `phase-4` 9, `phase-drift-resolve` 5, `phase-9` 3, `phase-6/7/8` and
+`SKILL.md` 1 each, `templates/skill-drift.sh` 1). An earlier draft claimed 143 across 12 files
+without stating the command, so the figure was unverifiable and wrong. Section 6.5 routed edits to phase files only and never named `orchestration.md`, which is
 the file this change breaks most. Each row below is a contract that must be migrated, not discovered
 during implementation.
 
@@ -329,7 +392,11 @@ during implementation.
 | Token budget, `modules/<name>.md` at ~1.5k each | 642 | README budget. See below |
 | Split-a-large-module guidance | 659 | A README cannot be split. Overflow goes to a task skill |
 | Simulation agents read ONLY `.ai/skills/` and glue, never source | 665 | Must widen to include unit READMEs. See below |
-| Tier D grouping of services into one skill | 497-520 | Removed. One README per boundary |
+| Tier C coverage tiering by importance: 10 full, 15-20 summary, rest orientation-mention | 509-515 | Replaced by the signal gate in section 3, not simply deleted |
+| Tier D grouping of services into one skill | ~528 | Removed. One README per confirmed boundary |
+| Update Modes: targeted update "regenerate the skill file"; diff-update maps changes via `_boundaries.md` | 539-575 | Semantics change, not a rename. See 3.6 |
+| Phase 5 scenario table: "Bug Fix in Core Module" tests "Module skill routing" | 673+ | Retarget to unit README routing |
+| Parallelisation and model-selection rows keyed on module skills | various | Retarget to unit READMEs |
 
 #### Other files
 
@@ -355,6 +422,14 @@ exactly the failure section 6.3 exists to eliminate. These files must become **p
 frontmatter-scoped stub naming the unit and linking its README. This costs the agent one file read
 and removes an entire drift surface.
 
+**One surface degrades and the tradeoff is accepted deliberately.** `phase-2:920`'s stated rationale
+is to avoid cross-file references the platform cannot resolve. That still holds for GitHub Copilot
+*completions*, which inject the instructions file without any ability to follow a link; a pointer is
+inert there. Every agentic surface (Claude Code, Cursor, Codex, Copilot chat) resolves a pointer
+fine. Embedding human-owned prose into generated files to serve one non-agentic surface would
+reintroduce the drift this spec exists to remove, so the pointer wins and Copilot completions lose
+per-unit depth while keeping the routing table in the root instructions file.
+
 **Simulation access must widen.** `orchestration.md:665` restricts Phase 5 simulation agents to
 `.ai/skills/` and the platform glue, explicitly excluding source code. READMEs live in the source
 tree, so under the current contract phases 5, 7 and 8 can never see the primary output of this
@@ -370,6 +445,10 @@ would stop controlling. Proposal: the same ~1.5k ceiling applied to the agent-fa
 the human-authored Overview excluded from the count, since it is not RepoSkills' to trim. Overflow
 goes to a task skill rather than splitting the README, because a unit has exactly one README.
 
+**Enforcement is generation-time only.** The pipeline cannot trim a human-owned README it is
+forbidden to gut, so an existing README over budget is **flagged in the report, never truncated**.
+The ceiling binds what RepoSkills writes; it does not license editing down what a human wrote.
+
 #### The unit deletion cascade
 
 `orchestration.md:592-594` deletes a module's skill file, its routing rows and its per-module
@@ -377,6 +456,78 @@ platform files when the module disappears. Under README mode one part gets easie
 not: **the README dies with its directory automatically**, so step 1 becomes a no-op. Routing rows,
 per-module platform stubs, cross-references from other READMEs, and the manifest entry all still
 need explicit removal. The cascade must be rewritten to reflect that asymmetry, not deleted.
+
+---
+
+### 3.6 The re-run surface: what each path may do, and on whose machine
+
+Three problems that look separate and are one theme: what every re-run path is allowed to do in
+human territory, and whether it works for anyone other than the person who ran it first. Together
+they decide whether this is a tool one person operates or a tool a team shares.
+
+#### MEMORY is a per-machine cache. The repo is the record.
+
+`state.md` lives at `~/.claude/MEMORY/RepoSkills/<repo-slug>/state.md`, outside the repo, and today
+it gates everything:
+
+- Update-mode detection selects diff-based update only when it exists.
+- `phase-drift-resolve.md:171` **aborts** without it: "No prior pipeline run found. Run the full
+  RepoSkills pipeline first."
+- `--update <name>` inherits the same precondition.
+
+So anyone who clones a fully documented repo can run neither drift resolution nor a targeted update,
+and a plain re-run treats the repo as a first run and regenerates from scratch. For a skill intended
+to be shared this is a defect, not an inconvenience: the documentation travels with the repo while
+the ability to maintain it does not.
+
+The reconstruction is already latent in the design. Every generated file embeds `commit=HASH` in its
+`<!-- repo-skills: ... -->` header, and diff-update already declares `_boundaries.md` regenerable
+when missing.
+
+**Rule.** When `state.md` is absent but `.ai/skills/` is present, reconstruct state rather than
+aborting or restarting:
+
+| State | Reconstructed from |
+|---|---|
+| Commit anchor | The newest `commit=HASH` across generated file headers |
+| Boundaries | The routing tables plus `_manifest.md`, else re-run Phase 0 Step 4 |
+| Tier and platforms | Phase 0's classification, which is cheap and deterministic |
+
+Abort only when `.ai/skills/` is also absent, which genuinely is a first run.
+
+Two consequences to write in alongside it: `_manifest.md` needs the same reconstruction fallback
+`_boundaries.md` already has, and the 3.4 harvest report must be written into the repo rather than
+only into MEMORY, because it is the record of what was dropped and it is worthless on one machine.
+
+#### `--update` in human territory means verify-and-patch, never regenerate
+
+The targeted-update path says "regenerate the skill file", and diff-update maps changed files to
+module skills through `_boundaries.md`. For a README, "regenerate" is not the same operation under a
+new name: it would overwrite a human-owned file, which 3.2 forbids.
+
+**Rule.** Every re-run path, `--update` included, verifies and patches a README that exists. Only
+`--fresh`, or a unit that has no README at all, produces one whole. `SKILL.md`'s documented
+`--update <name>` contract must say so, since it currently promises regeneration.
+
+#### RepoSkills never commits into unit directories
+
+`phase-drift-resolve` step 9 commits what it patches. Correct for `.ai/skills/**`, wrong for a
+README in someone else's directory, and it interacts badly with the freshness anchor this spec
+adopted in item 10. Git-log freshness advances on commit, so a README that is patched but not
+committed flags stale forever, while one that is auto-committed pushes unreviewed edits into a unit
+its owners maintain. In a shared repo that is a social incident the first time it happens.
+
+**Rule.** Drift resolution splits its output by territory:
+
+- `.ai/skills/**` patches are committed, as today.
+- README patches are left staged, or on a branch, and listed in the drift report as "patched,
+  awaiting human commit".
+- The freshness check treats a README with uncommitted local modifications as **repair-pending**
+  rather than stale, which closes the loop without the tool taking commit authority in human
+  territory.
+
+This is also how the reference implementation works in practice: `update-readme` edits one project,
+reports what it changed, and a human opens the pull request.
 
 ---
 
@@ -449,7 +600,7 @@ Section order is fixed, and Agent Notes is always last.
 
 **These three sections are not in the reference implementation and must land separately.**
 `data-2/docs/readme-template.md` contains none of them, and `data-2` main carries 197 READMEs written
-without them. If the grammar ships with all three as expected sections, the stage-7 regression will
+without them. If the grammar ships with all three as expected sections, the stage-6 regression will
 either flag every one of those 197 files as incomplete or try to add sections to human-maintained
 documents at scale. So: **land the grammar matching the reference implementation first**, prove it,
 then add these three as a later stage with its own baseline test. They are specified here because the
@@ -517,11 +668,22 @@ patterns and therefore either placeholders or a repeated interview. The conventi
 natural home: it is already the place repo-wide facts live, it is version-controlled, and it travels
 with the repo.
 
-**Confirmation needs a venue that exists on re-runs.** Phase 1 is skipped when `domain-context.md`
-is already fresh, which is most re-runs, so a loop that only confirms "in the Phase 1 interview" has
-nowhere to run precisely when new unconfirmed fields appear. Unconfirmed patterns must therefore
-also surface at the Phase 9 human checkpoint, which runs on every pass, with the Phase 1 interview
-being the preferred venue when it runs at all.
+**Confirmation needs a venue that actually runs.** Phase 1 is skipped when `domain-context.md` is
+fresh, which is most re-runs. An earlier draft sent confirmation to the Phase 9 checkpoint instead,
+claiming Phase 9 "runs on every pass". It does not: Phase 9 is itself skippable when
+`_unresolved.md` is empty, the Reverse Glossary finds nothing and `_questions.md` has no open
+questions. Worse, the drift-resolution and diff-update paths never reach Phase 9 at all, yet drift
+resolution can create a new unit whose induced fields need confirming.
+
+Three changes, so the venue exists on every path:
+
+1. "Unconfirmed patterns exist" becomes a fourth condition that **blocks** the Phase 9 skip.
+2. The drift-resolution and diff-update reports list unconfirmed patterns explicitly, so a path that
+   never reaches Phase 9 still surfaces them.
+3. Phase 1 stays the preferred venue when it runs, because a human is already answering questions.
+
+The same three apply to the unit-confirmation list of section 3, which needs a venue for exactly the
+same reason.
 
 **An unconfirmed pattern produces a placeholder, never a guess.** This is what ties the placeholder
 discipline to the induction loop, and it is why `_not yet linked_` is a first-class output rather
@@ -543,7 +705,7 @@ All 18 items. Target file paths verified to exist, and section anchors re-verifi
 
 | # | Item | Disposition |
 |---|---|---|
-| 1 | Every microservice Tier-1 regardless of depth | Superseded by section 4. Depth stops mattering once the project system is authoritative. Lands in `phase-0-discover.md`. |
+| 1 | Every microservice Tier-1 regardless of depth | Resolved structurally by section 3's no-grouping rule: one README per confirmed boundary means depth and nesting cannot demote a service. Section 4 keeps `phase-0` Step 4 authoritative, with the project system as a high-confidence seed rather than the definition. |
 | 10 | Drift script surfaces collisions, missing skills, stale dirs | Becomes README presence plus freshness, which is the **cheap signal only**, not the whole self-maintenance story (see 3.2, Consequence for drift). Presence must be checked **case-sensitively** via the version-control file list, because the local filesystem hides a miscased `readme.md` that breaks CI elsewhere. Freshness compares **the last commit touching the README against the last commit touching filtered non-test code in its unit**, never mtime: a fresh clone stamps every file at checkout time so everything reads fresh, and a rebase re-stamps everything stale. The filter also matters, or the signal fires on every commit to an active unit and stays permanently red. Content accuracy stays with `phase-drift-resolve`. |
 | 11 | Dependency lists need source-verification | Becomes the *Contracts owned* section, governed by never-invent and `<file:line>` citation. Folds in item 15. |
 | 15 | Dependency omissions follow a consistent pattern | Folded into 11. |
@@ -647,21 +809,37 @@ decision on where it should live. It is therefore still unversioned, and still t
 |---|---|---|
 | 0 | ~~H1~~, **H2 gates everything** | H1 done. H2 open: the single surviving copy of `IMPROVEMENTS.md` is still untracked, and stage 1 modifies the very installer that destroyed the original. Get it committed somewhere first |
 | 1 | `install.sh` hardening: `--check`, refuse to delete untracked files | Cheap, independent, prevents a recurrence. Plan already written |
-| 2 | **Atomic block:** sections 3, 3.1, 3.5, 4, 5 (grammar matching the reference implementation), 3.4 migration, and the drift and routing retooling | Cannot be split. See below |
-| 3 | Items 2, 4, 12 (phase-4 Checks 13 and 14), items 3, 5, 16 (phase-1 questions) | Additive. Note the check renumbering touches `phase-drift-resolve` and `orchestration.md` too |
+| 2a | **Expand.** Generate unit READMEs *alongside* `modules/`. Retool drift, routing and the re-run paths (3.6) to recognise both shapes: the drift regex accepts either, routing rows may point at either | Every repo stays internally consistent at all times. Also manufactures the harvest test bed 3.4 says does not exist |
+| 2b | **Contract.** Stop generating module skills, run the 3.4 harvest, remove the `modules/` contracts from 3.5 | The cutover, still atomic, but now half the review surface |
+| 3 | Items 2, 4, 12 (phase-4 Checks 13 and 14), items 3, 5, 16 (phase-1 questions) | Additive. Checks 13 and 14 append after the existing 12, so nothing renumbers and no other file is touched |
 | 4 | Items 6, 8, 17 | Independent of everything else |
 | 5 | The three added README sections from 5.1, with their own baseline test | Deliberately after the grammar is proven |
 | 6 | Regression run: first-run generation, then update-path against current `data-2` main | Needs everything above |
 
-**Stage 2 cannot be split, and an earlier draft's claim that stages are independently stoppable was
-false.** Between deleting `modules/` and retooling drift and routing, a repo is in the worst state
-available: module skills gone, READMEs present, `skill-drift.sh` blind to them by regex, Phase 3
-iterating an empty directory, `phase-drift-resolve` still expecting `modules/`, the Module Deletion
-Cascade deleting files that no longer exist, and the Module Routing tables pointing at nothing. The
-previous ordering put the retooling two stages after the deletion. Anything that touches `modules/`
-lands together or the tool is broken for any repo run in between.
+**Why 2a and 2b rather than one block, and why not four stages.** An earlier draft had the retooling
+land two stages *after* the deletion, which left a window where a repo had module skills gone,
+READMEs present, `skill-drift.sh` blind to them by regex, Phase 3 iterating an empty directory,
+`phase-drift-resolve` still expecting `modules/`, the deletion cascade removing files that no longer
+exist, and routing tables pointing at nothing. Correcting that produced a single atomic stage
+covering most of a 5,400-line skill, which is right as a *release* boundary and unreviewable as a
+unit of work.
 
-Stages 3 and 4 are genuinely independent of each other and can run in parallel once stage 2 lands.
+Expand-then-contract keeps both properties. 2a adds the new shape without removing the old one, so
+no repo is ever in a broken intermediate state and the change is releasable at the end of 2a. 2b
+removes the old shape once the new one is proven. The cutover stays atomic; the review surface
+halves. The side benefit is real: running 2a against a repo that still carries `modules/` gives 2b's
+harvest the rehearsal bed section 3.4 correctly says is missing.
+
+Stages 3 and 4 are genuinely independent of each other and can run in parallel once 2b lands.
+
+**One gap the staging creates and must close in 2b.** The grammar landing in stage 2 matches the
+reference implementation, which has no *Contracts owned* section, while module skills, which carried
+the dependency and change-impact content, are deleted in 2b. *Contracts owned*, which section 6.1
+says items 11 and 15 "become", does not arrive until stage 5. Between 2b and stage 5 the pipeline
+would stop emitting its highest-value content with nowhere to put it. So 2b must state that
+change-impact and dependency content goes into *Agent Notes* until *Contracts owned* lands, which is
+where the reference implementation keeps it anyway. Without that line the stage-6 regression will
+report a regression this spec caused.
 
 ## 9. Verification
 
@@ -687,9 +865,9 @@ branches the backlog names are similarly stale: `repo-skills` (2026-06-24, 788 b
 
 **Define the counting query before comparing counts.** `git ls-files | grep -c 'README.md$'` on main
 returned 145 on 2026-08-27 and **197 on 2026-09-02**. The number moves weekly and counts every
-README in the repo, including ones no unit owns. The meaningful count is READMEs at unit roots as
-the enumeration query of section 4 defines them. Any comparison against the migration branches must
-use that query on both sides or it is measuring noise.
+README in the repo, including ones no unit owns. The meaningful count is READMEs at the roots of
+confirmed units as section 3 defines them, which is not the same set. Any comparison against the
+migration branches must use that query on both sides or it is measuring noise.
 
 More usefully, **the migration is already merged into main by some route other than those branches**
 (`repo-skills-to-readmes` is not an ancestor of HEAD, yet main carries 145 READMEs and has no
@@ -776,9 +954,33 @@ Acted on in this revision:
 | README counts stale and the counting query undefined | Section 9: query defined, both figures recorded |
 | No first-run, no-project-system, or harvest test target | Section 9: three targets named as a stage 6 prerequisite |
 
-Noted and not yet acted on: who commits into human-owned unit directories during drift resolution
-(`phase-drift-resolve` step 9 currently commits skill files), which the territory change makes
-sharper but which is pre-existing behaviour.
+**Second pass, 2026-09-02.** Same reviewer, re-reading the restructured spec with a brief to audit
+the fixes and find what the restructure broke. Verdict moved from "do not execute" to **execute with
+named changes**, with 16 of the 18 first-pass findings confirmed genuinely fixed in the text. Its new
+findings, all verified before being acted on:
+
+| Finding | Resolution |
+|---|---|
+| "Every unit gets a README, always" collides with Tier C coverage tiering, and a Medium-only boundary may be a directory nobody owns, so a README there recreates the unowned artifact this spec removes | Section 3 now gates on signal strength and on whether a README already exists. Owner's decision |
+| Existing READMEs are the common case, which the gate ignored | Section 3: an existing README is the strongest ownership signal there is, so updating is ungated and only *creating* a new file is gated. Owner's observation |
+| Nested units unhandled: ambiguous ownership, and the parent's freshness signal fires on every child commit | Section 3: three rules, including subtracting nested unit paths from freshness |
+| "No grouping, always" reads as forbidding phase-2's legitimate merge-with-parent verdict | Section 3 distinguishes merging from grouping |
+| `state.md` lives outside the repo and `phase-drift-resolve.md:171` aborts without it, so nobody who clones the repo can run drift resolution or `--update` | Section 3.6: MEMORY is a per-machine cache, the repo is the record. State reconstructs from file headers, routing tables and the manifest |
+| `--update` promises to "regenerate the skill file", which would overwrite human-owned content | Section 3.6: every re-run path verifies and patches. Only `--fresh` or an absent README generates whole |
+| Drift resolution's commit step: committing pushes unreviewed edits into human directories, not committing leaves the git-log freshness anchor stuck stale forever | Section 3.6: output splits by territory, README patches left staged and reported, freshness treats locally-modified as repair-pending |
+| Atomic stage 2 was right as a release boundary and unreviewable as a unit of work | Section 8 split into 2a expand and 2b contract, which also manufactures the harvest test bed |
+| Change-impact content homeless between 2b and stage 5 | Section 8: 2b routes it to Agent Notes until *Contracts owned* lands |
+| Phase 9 is not a reliable confirmation venue: it is skippable, and drift and diff-update never reach it | Section 5.3: unconfirmed patterns block the Phase 9 skip, and the drift and diff reports surface them |
+| Update Modes, the Phase 5 scenario table and the parallelisation rows were missing from the inventory | Added to 3.5 |
+| Reference count of 143 was wrong and the command unstated | 3.5 states the grep and the real figure, 164 across 11 files |
+| `orchestration.md:497-520` cited for Tier D grouping; that range is Tier C tiering | Corrected to 509-515 and ~528, as separate rows |
+| README token budget had no defined action for an over-budget human README | 3.5: flagged, never truncated. Generation-time enforcement only |
+| Per-section provenance marking for `conventions.md` was a new mechanism with no format | 3.2: marker format, and the default inverts to taught inside that file |
+| Routing pointers silently reverse `phase-2:920`'s rationale, degrading Copilot completions | 3.5: tradeoff stated and accepted |
+| Fossils: item 1's disposition, "stage-7", stage 3's renumbering note, the counting query, the destroyed `~/.claude` path, unconditional template and `navigate-unit` rows | All swept |
+
+Remaining first-pass item, now closed: the drift-resolution commit question is answered in 3.6
+rather than left as a note.
 
 ---
 
