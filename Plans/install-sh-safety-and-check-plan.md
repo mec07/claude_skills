@@ -313,7 +313,15 @@ test_force_still_works_on_symlinks_only
 
 Run: `sh tests/install.test.sh`
 
-Expected: `real file survives --force` FAILS (the file is destroyed), `error names the file at risk` FAILS (no such message), `--allow-destroy removes the file` FAILS (unknown option causes `die`).
+Expected: red overall. Specifically, every guard and set-aside assertion fails, because no guard
+exists yet: `human file survives --force`, `error names the file at risk`, `nested human file
+survives --force`, `human file survives --uninstall`, and all three `--allow-destroy` assertions
+(the flag is unknown, so `die` rejects it).
+
+Two of the new tests pass at this point and are expected to: `clean --force still reports installed`
+(existing behaviour, which must not regress) and `a protected skill does not abort later skills`
+(current `--force` deletes and reinstalls happily). The latter guards against the naive `exit 1`
+form of the fix rather than against current behaviour, so do not expect it red here.
 
 - [ ] **Step 3: Write the minimal implementation**
 
@@ -348,20 +356,36 @@ remove_install() {
 
         # --allow-destroy sets files aside; it does not destroy them. A backup
         # costing one mv would have saved the 523-line file this guard exists for.
+        #
+        # Every step here is failure-checked, and that is NOT optional. Because
+        # remove_install is called as `remove_install ... || { ... }`, POSIX
+        # suppresses `set -e` for this entire function body, so an unchecked
+        # failing mv would be ignored and execution would fall through to the
+        # rm -rf below, destroying the files that were never set aside. Verified
+        # empirically on macOS /bin/sh.
         local backup rel
-        backup="$(mktemp -d)"
+        backup="$(mktemp -d)" && [ -n "$backup" ] || return 1
         printf "%s\n" "$real_files" | while IFS= read -r f; do
             [ -n "$f" ] || continue
             rel="${f#"$skill_dir"/}"
-            mkdir -p "$backup/$(dirname "$rel")"
-            mv "$f" "$backup/$rel"
-        done
+            mkdir -p "$backup/$(dirname "$rel")" && mv "$f" "$backup/$rel" || exit 1
+        done || {
+            printf "Error: failed to set aside files from %s. Partial backup in %s. Nothing deleted.\n" \
+                "$skill_dir" "$backup" >&2
+            return 1
+        }
         printf "  %-20s set aside human files in %s\n" "$skill_name" "$backup"
     fi
 
     rm -rf "$skill_dir"
 }
 ```
+
+The `exit 1` exits only the pipeline's subshell; the `|| { ... }` after `done` catches that non-zero
+status and returns before `rm -rf` is reached. Both halves were verified on macOS `/bin/sh`: a
+failing command inside a `||`-invoked function body does continue, and this construct does intercept.
+With the guard in place the worst outcome of any failure is files split between the skill directory
+and a named backup. Nothing is lost.
 
 `return 1` rather than `exit 1` is deliberate. `install_skill` runs inside a `for` loop
 (`install.sh:335-337`), so exiting would abandon every skill after the offending one, silently
@@ -381,8 +405,9 @@ remove_install "$skill_name" || {
 remove_install "$skill_name" || { RC=1; return 0; }
 ```
 
-Initialise `RC=0` beside the other flag defaults, and make the script's final line `exit "$RC"` so a
-protected skill still yields a non-zero exit without stopping the run.
+Initialise `RC=0` beside the other flag defaults, and add `exit "$RC"` **after the closing `fi` at
+`install.sh:344`**, not inside the else branch, so it is reached on both the install and uninstall
+paths. `--check` exits earlier through its own accumulator by design.
 
 Add to the usage heredoc, under `Options:`:
 
@@ -449,36 +474,36 @@ Append to `tests/install.test.sh`, before the summary line:
 
 ```sh
 test_check_passes_on_clean_install() {
-    target="$(setup_fixture)"
-    CLAUDE_SKILLS_DIR="$target" sh "$INSTALL" Sleep >/dev/null 2>&1
-    if CLAUDE_SKILLS_DIR="$target" sh "$INSTALL" --check Sleep >/dev/null 2>&1; then
+    target="$(setup_fixture)"; home="$(dirname "$(dirname "$target")")"
+    run_install "$home" Sleep >/dev/null
+    if run_install "$home" --check Sleep >/dev/null; then
         pass "--check exits 0 on a clean install"
     else
         fail "--check exits 0 on a clean install" "non-zero exit"
     fi
-    rm -rf "$(dirname "$target")"
+    rm -rf "$home"
 }
 
 test_check_detects_missing_file() {
-    target="$(setup_fixture)"
-    CLAUDE_SKILLS_DIR="$target" sh "$INSTALL" Sleep >/dev/null 2>&1
+    target="$(setup_fixture)"; home="$(dirname "$(dirname "$target")")"
+    run_install "$home" Sleep >/dev/null
     # Simulate the April failure: a file exists in stow but was never linked.
     victim="$(cd "$target/Sleep" && find . -type l | sed 's|^\./||' | head -1)"
     rm -f "$target/Sleep/$victim"
 
-    out="$(CLAUDE_SKILLS_DIR="$target" sh "$INSTALL" --check Sleep 2>&1)" && rc=0 || rc=1
+    out="$(run_install "$home" --check Sleep)" && rc=0 || rc=1
 
     assert_eq "--check exits 1 when a file is missing" "1" "$rc"
     assert_contains "--check names the missing file" "$victim" "$out"
-    rm -rf "$(dirname "$target")"
+    rm -rf "$home"
 }
 
 test_check_reports_not_installed() {
-    target="$(setup_fixture)"
-    out="$(CLAUDE_SKILLS_DIR="$target" sh "$INSTALL" --check Sleep 2>&1)" && rc=0 || rc=1
+    target="$(setup_fixture)"; home="$(dirname "$(dirname "$target")")"
+    out="$(run_install "$home" --check Sleep)" && rc=0 || rc=1
     assert_eq "--check exits 1 when the skill is absent" "1" "$rc"
     assert_contains "--check says not installed" "not installed" "$out"
-    rm -rf "$(dirname "$target")"
+    rm -rf "$home"
 }
 
 test_check_detects_orphaned_symlink() {
@@ -504,7 +529,16 @@ test_check_detects_orphaned_symlink
 
 Run: `sh tests/install.test.sh`
 
-Expected: all three FAIL. `--check` is an unknown option, so `die` reports `unknown option: --check` and exits 1 in every case, which makes `test_check_passes_on_clean_install` fail and makes the two `assert_contains` checks fail on message content.
+Expected: red overall, but not uniformly, and the detail matters so you do not mistake a pass for a
+missing test. There are four tests here. `--check` is an unknown option, so `die` exits 1 in every
+case. That means:
+
+- `--check exits 0 on a clean install` FAILS.
+- The three `assert_contains` message checks FAIL, since `die` prints `unknown option: --check`
+  rather than any of `MISSING`, `not installed` or `ORPHANED`.
+- The two exit-code assertions (`--check exits 1 when a file is missing`, `--check exits 1 when the
+  skill is absent`) **pass**, coincidentally: `die` also exits 1. A coincidental pass is not
+  evidence of anything.
 
 - [ ] **Step 3: Write the minimal implementation**
 
@@ -684,11 +718,13 @@ git commit -m "document install.sh --check and --allow-destroy"
 
 ## Self-Review
 
-**Spec coverage.** This plan implements section 7 (Housekeeping) and stage 1 of section 8. Both recommendations in section 7 are covered: `--check` in Task 3, and the refusal to delete untracked files in Task 2. Sections 3, 4, 5, 6 and 9 of the spec are out of scope for this plan and belong to the four sibling plans listed below.
+**Spec coverage.** This plan implements section 7 (Housekeeping) and stage 1 of section 8. Both recommendations in section 7 are covered: `--check` in Task 3, and the refusal to delete regular files in Task 2. Sections 3, 4, 5, 6 and 9 of the spec are out of scope for this plan and belong to the sibling plans listed below.
 
-**Placeholder scan.** No TBD, TODO, or "add error handling". Every code step carries the actual code. The one place a value is not given literally is `victim="$(ls "$target/Sleep" | head -1)"` in Task 3, which is computed at test time on purpose so the test does not hardcode a filename that may change.
+**Placeholder scan.** No TBD, TODO, or "add error handling". Every code step carries the actual code. The one place a value is not given literally is the `victim` in Task 3, selected at test time via `find . -type l | head -1` so the test does not hardcode a filename that may change, and so it can never pick a directory.
 
-**Type consistency.** `ALLOW_DESTROY` is introduced in Task 2 and read only there. `CHECK` and `check_skill` are introduced in Task 3 and read only there. `CLAUDE_SKILLS_DIR` is introduced in Task 1 and used by every later test. `setup_fixture`, `assert_eq`, `assert_contains`, `pass` and `fail` are defined in Task 1 and used unchanged in Tasks 2 and 3. Test counts are cumulative and stated per task: 2, then 7, then 13.
+**Type consistency.** `ALLOW_DESTROY` and `RC` are introduced in Task 2; `RC` is also read by `uninstall_skill` and by the final `exit`. `CHECK` and `check_skill` are introduced in Task 3 and read only there. `CLAUDE_SKILLS_DIR`, `setup_fixture` and `run_install` are introduced in Task 1 and used by every later test, and every test invokes the installer through `run_install` so `HOME` is always sandboxed. `assert_eq`, `assert_contains`, `pass` and `fail` are defined in Task 1 and used unchanged.
+
+**No test-count gates.** Every step gates on `0 failed` rather than a total, because the runner counts assertions and the total shifts whenever an assert is added or split.
 
 ---
 
