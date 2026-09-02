@@ -870,10 +870,20 @@ only ever writes symlinks and directories (`install.sh:81-97`), so a regular fil
 always human-authored, whereas `~/.claude/skills` is not a git repository at all and tracked-ness is
 meaningless there.
 
-**H2.** `IMPROVEMENTS.md` was never committed to this repo and existed only in `~/.claude`. It was
-destroyed on 2026-08-27 (see section 11). A partial reconstruction now sits at
-`stow/RepoSkills/IMPROVEMENTS.md`, **deliberately untracked** at Electra's instruction pending a
-decision on where it should live. It is therefore still unversioned, and still the single copy.
+**H2. Closed, and not by committing the file.** The original `IMPROVEMENTS.md` was a real file
+inside `~/.claude/skills/RepoSkills/`, which is the directory `install.sh` deletes, and that is why
+`--force` destroyed it (see section 12).
+
+The partial reconstruction sits at `stow/RepoSkills/IMPROVEMENTS.md` and stays **deliberately
+untracked**, by the owner's decision. That is a safe resting place, and an earlier draft of this
+section overstated the risk of leaving it there. The installer cannot reach it: it removes
+`$TARGET_DIR/<skill>`, where the file appears only as a symlink, and removing a symlink never
+touches its target. The structural fix was moving the file out of the target directory into `stow/`,
+which is already done, not committing it.
+
+Residual exposure, for the record rather than as a recommendation: an untracked file is still
+vulnerable to `git clean -fdx` in this repo, and to nothing else the tooling does. The owner has
+weighed that and chosen to leave it untracked.
 
 ---
 
@@ -881,7 +891,7 @@ decision on where it should live. It is therefore still unversioned, and still t
 
 | Stage | Content | Rationale |
 |---|---|---|
-| 0 | ~~H1~~, **H2 gates everything** | H1 done. H2 open: the single surviving copy of `IMPROVEMENTS.md` is still untracked, and stage 1 modifies the very installer that destroyed the original. Get it committed somewhere first |
+| 0 | ~~H1, H2~~ | Both closed. H1: install repaired and verified. H2: the reconstruction lives in `stow/`, outside the directory the installer deletes, and stays untracked by decision. Nothing gates stage 1 |
 | 1 | `install.sh` hardening: `--check`, and refuse to delete **regular** files in the target | Cheap, independent, prevents a recurrence. Plan written and reviewed |
 | 2a | **Expand.** Generate unit READMEs *alongside* `modules/`. Retool drift, routing and the re-run paths (3.6) to recognise both shapes: the drift regex accepts either, routing rows may point at either | Every repo stays internally consistent at all times. Also manufactures the harvest test bed 3.4 says does not exist |
 | 2b | **Contract.** Stop generating module skills, run the 3.4 harvest, remove the `modules/` contracts from 3.5 | The cutover, still atomic, but now half the review surface |
@@ -1090,6 +1100,12 @@ with the grammar. Only the three genuinely absent sections are deferred.
 Its remaining suggestion, deferring the nested-freshness rule until nesting first occurs, is
 declined: the rule is three lines and the failure it prevents (a parent flagging stale on every child
 commit) is silent and permanent, which is worse than carrying an unused rule.
+
+**A claim this spec repeated and had wrong.** Four successive revisions warned that the untracked
+reconstruction was at risk from `install.sh`. It is not, and never was once it moved to `stow/`: the
+installer deletes `$TARGET_DIR/<skill>`, where the file exists only as a symlink. Section 7's H2 is
+corrected and the stage-0 gate it created is removed. The lesson is the one item 2 of the backlog
+already states: a claim repeated confidently is not a claim verified.
 
 ---
 
