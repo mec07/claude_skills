@@ -134,15 +134,35 @@ put one. So that is the only action gated:
 |---|---|---|
 | A README already exists, in any letter case | Update it | None. The human already decided this directory deserves one |
 | No README, and any **Strong** signal: own package manifest, own Dockerfile or entry point | Create it | None. A directory that builds or ships on its own has owners |
-| No README, and a **Deployment** signal: own CI workflow, Terraform module, k8s manifest or Helm chart | Create it | None. Same reasoning |
-| No README, **Medium signals only**: domain or logical | Create it | **Yes.** Confirm the list first |
+| No README, **Medium signals only**: any two of domain, deployment or logical | Create it | **Yes.** Confirm the list first |
 
 `phase-0` Step 4 qualifies a candidate on one Strong signal *or two Medium ones*, so a Medium-only
 candidate can be a directory nobody considers a unit. Writing a README into it would reproduce the
 very thing this spec removes, an unowned document nobody maintains, relocated from a parallel tree
-into the source tree. Phase 0 already records per-candidate confidence (`high`, `medium`, `low`)
-under Step 4's "Recording boundary candidates", and the spec previously used that field nowhere. It
-is now the gate.
+into the source tree.
+
+**Gate on the "Signals detected" field, not on Confidence.** Step 4 records both
+(`phase-0-discover.md:199-200`), and Confidence cannot express this gate: it is defined as `medium`
+for "one strong **or** two medium", so the two cases the gate must separate collapse into one value.
+"Signals detected" lists the actual signal types and is the only field that works. An earlier draft
+named Confidence, which would have been unimplementable.
+
+**Deployment is a Medium signal** (`phase-0-discover.md:177`), not a Strong one. An earlier draft
+gave it its own unconditional row, which was incoherent: a deployment-only directory never qualifies
+as a boundary at all, since qualifying needs one Strong or two Medium. It now sits with the other
+Medium signals, and Step 4's signal table needs no change.
+
+**The outcome is recorded in the repo, declines included.** Section 5.3 fixed where induced
+*patterns* live; the confirmation outcome needs the same treatment for the same reason. Kept only in
+`state.md`, anyone who clones the repo is re-asked and a boundary the owner deliberately declined is
+re-proposed on every machine forever, which is the single-machine defect 3.6 exists to remove.
+Confirmed units and declined candidates both go into `.ai/skills/conventions.md`, so a decline is
+durable and a later human can reverse it deliberately.
+
+**Ungated does not mean invisible.** On a first run against a repo with no existing READMEs, the
+Strong-signal path would otherwise write dozens of files into someone's source tree with nobody
+having seen the list. Ungated means no per-unit interrogation, not no visibility: the **full** create
+list, Strong candidates included, is presented at the checkpoint before anything is written.
 
 **Case sensitivity decides "exists", and the local filesystem lies about it.** A miscased
 `readme.md` means the unit **has** a README: rename it and edit it, never author a second file
@@ -283,23 +303,28 @@ regulatory context, architecture rationale. It is unverifiable from code **by de
 why the interview exists. A blanket "unverifiable means stale, remove it" rule pointed at
 `.ai/skills/**` would delete the entire domain interview on the first re-run.
 
-The same applies to normative content in the conventions document. `data-2`'s equivalent carries
-rules like "never name an AWS profile or role", which is policy, not a code-derivable fact. Policy
-statements are precisely what a remove-if-unverifiable rule destroys.
+The same applies to normative content wherever it lives. `data-2` carries rules like "never name an
+AWS profile or role", which is policy rather than a code-derivable fact. (That rule sits in its
+`readme-template.md` rather than its conventions doc; the point holds regardless of which document
+carries it.) Policy statements are precisely what a remove-if-unverifiable rule destroys.
 
 So the discriminator is **provenance, not location**: content derived from code may be removed when
 it no longer verifies; content taught by a human may not.
 
-`domain-context.md` is human-taught in its entirety, so it needs no internal marking; the file is
-listed as human-taught and that is sufficient. `conventions.md` is mixed, carrying normative policy
-alongside code-derived facts, so it needs per-section provenance. The marker rides in the existing
-`<!-- repo-skills: ... -->` comment convention that generated files already carry, as a
-`provenance=taught` attribute on a section comment, with absence meaning code-derived. Two
-properties are required of it: drift patching must preserve the marker when it rewrites a section
-body, and a human adding a section by hand must default to taught rather than derived, since an
-unmarked human addition would otherwise be deletable on the next run. The default therefore inverts
-inside `conventions.md`: unmarked means taught, and code-derived sections are the ones marked
-explicitly by the generator.
+**One rule, one direction: mark what is generated, and treat everything unmarked as taught.** The
+generator stamps each code-derived section `provenance=generated` inside the existing
+`<!-- repo-skills: ... -->` comment convention that generated files already carry. Anything without
+that stamp is human-taught and is never removed for failing to verify.
+
+An earlier draft had the marker mean `taught` and inverted its default inside `conventions.md`
+specifically: the same marker with opposite defaults in different files, which is the shape of rule
+agents reliably get wrong. Marking only what is generated needs no per-file exception, makes the
+safe outcome the default everywhere, and protects a human who adds a section by hand without their
+having to know the convention exists. `domain-context.md` then needs no internal marking at all,
+since none of it is generated from code.
+
+One property is required: drift patching must preserve a section's marker when it rewrites the
+section body.
 
 **The per-unit README rules**, which apply only in the humans' territory:
 
@@ -371,11 +396,11 @@ The pass is idempotent: once `modules/` is gone there is nothing to harvest and 
 
 ### 3.5 Contract inventory: everything that touches `modules/`
 
-The chapter an earlier draft was missing. `grep -ci "modules/\|module skill"` across the skill's
-instruction files and templates returns **164 references in 11 contract files** (`orchestration.md`
-22, `phase-2` 74, `phase-3` 31, `phase-4` 9, `phase-drift-resolve` 5, `phase-9` 3, `phase-6/7/8` and
-`SKILL.md` 1 each, `templates/skill-drift.sh` 1). An earlier draft claimed 143 across 12 files
-without stating the command, so the figure was unverifiable and wrong. Section 6.5 routed edits to phase files only and never named `orchestration.md`, which is
+The chapter an earlier draft was missing. **The rows below are the inventory; there is deliberately
+no total.** Three successive revisions quoted a reference count (143, then 164) and every one was
+wrong: `grep -c` counts matching lines rather than references, and the per-file figures never summed
+to the total quoted. Regenerate a count at implementation time if you want one. What matters is that
+every contract has a row, not how many times each is mentioned. Section 6.5 routed edits to phase files only and never named `orchestration.md`, which is
 the file this change breaks most. Each row below is a contract that must be migrated, not discovered
 during implementation.
 
@@ -682,6 +707,10 @@ Three changes, so the venue exists on every path:
    never reaches Phase 9 still surfaces them.
 3. Phase 1 stays the preferred venue when it runs, because a human is already answering questions.
 
+**When no human answers**, the headless and CI case, placeholders stand and the report carries the
+unconfirmed list forward. A blocked skip must never become a hung pipeline. The same applies to the
+unit-confirmation list.
+
 The same three apply to the unit-confirmation list of section 3, which needs a venue for exactly the
 same reason.
 
@@ -736,7 +765,17 @@ the full content, while removing the maintenance burden item 14 was created to m
 
 | # | Item | Disposition |
 |---|---|---|
-| 7 | Wire drift tooling into CI by default | `data-2/.github/workflows/skills-drift.yml` is a working example. Note per C2 that the script item 18 cites is gone, so the workflow must be re-read before being generalised. |
+| 7 | Wire drift tooling into CI by default | **Weaker than it looks.** `data-2/.github/workflows/skills-drift.yml` runs only `sync-agent-context.sh --check`, which is glue-file sync (the 6.3 pattern), **not** skill or README drift. A reference for CI wiring shape only. |
+
+**No reference implementation exists for README drift.** The June removal commit promised drift
+detection "rewritten for READMEs" in a stacked PR, and no such script exists in `data-2` main today:
+`.ai/skills/scripts/` holds only `sync-agent-context.sh`. Item 10's presence-and-freshness signal is
+therefore **greenfield**, and the one deployment that ever ran RepoSkills' drift tooling deleted it.
+Plan that work as new, not as a port.
+
+**Generated tooling must target bash 3.2.** The shipped `templates/skill-drift.sh` requires bash 4+
+while macOS stock is 3.2 (`phase-2-map-generate.md:958`). `data-2`'s replacement deliberately targets
+3.2+. Anything RepoSkills generates for a repo it may be shared into must do the same.
 
 ### 6.5 Genuine gaps, fixed in place
 

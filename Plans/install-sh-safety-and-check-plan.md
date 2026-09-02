@@ -4,7 +4,7 @@
 
 **Goal:** Stop `install.sh` destroying files it did not create, and give it a `--check` mode that reports drift between `stow/` and the installed skills.
 
-**Architecture:** Two surgical changes to the existing `install.sh`, plus a dependency-free test harness. `remove_install()` gains a guard that refuses to proceed when the target directory holds regular files (which are never installer-created, since the installer only writes symlinks and directories), returning non-zero so one protected skill does not abandon the rest of the run. `--allow-destroy` sets such files aside in a temp directory rather than deleting them. A new `--check` mode walks the same source tree the installer walks and reports what is missing, stale, unmanaged, orphaned or foreign. `TARGET_DIR` becomes overridable so tests never touch the real `~/.claude/skills`.
+**Architecture:** Two surgical changes to the existing `install.sh`, plus a dependency-free test harness. `remove_install()` gains a guard that refuses to proceed when the target directory holds regular files (which are never installer-created, since the installer only writes symlinks and directories), returning non-zero so one protected skill does not abandon the rest of the run. `--allow-destroy` sets such files aside in a temp directory rather than deleting them. A new `--check` mode walks the same source tree the installer walks and reports what is missing, stale, unmanaged, orphaned or foreign. A plain install also stops skipping a partially-linked skill and tops it up instead, since detecting the April failure without repairing it would be half a tool. `TARGET_DIR` becomes overridable so tests never touch the real `~/.claude/skills`.
 
 **Tech Stack:** POSIX `sh` (`install.sh` is `#!/bin/sh`), `find`, `shellcheck` (already installed at `/opt/homebrew/bin/shellcheck`). No bats, no new dependencies.
 
@@ -636,26 +636,96 @@ Expected: `0 failed`
 sh install.sh --check
 ```
 
-Expected: every skill reports `ok`. If any report `MISSING`, that is real drift found by the new tool and should be fixed with `sh install.sh <skill>` before committing.
+Expected: every skill reports `ok`. If any report `MISSING`, that is real drift the new tool found.
 
-- [ ] **Step 6: Lint**
+**Fix it with `--force`, not a plain install, and note why the plain install fails.** This is worth
+understanding because it is the actual April failure. `is_current_install` (`install.sh:63-69`) tests
+only whether `SKILL.md` resolves to the same inode as its source. If it does, and `--force` is not
+set, `install_skill` prints "already installed, skipping" and returns (`install.sh:106-110`) without
+ever calling `install_symlinks`. So a skill missing four of its files still looks installed, and a
+plain `sh install.sh RepoSkills` in April would have reported success and changed nothing. Only
+`--force` would have repaired it, by removing and relinking.
+
+- [ ] **Step 6: Make a plain install top up missing links**
+
+`--check` now detects the April failure, but the natural fix for it silently does nothing, which is
+half a tool. Because `install_symlinks` is `ln -sf` over a directory tree, running it on an
+already-correct install is idempotent and cheap, so the skip can simply become a top-up.
+
+In `install_skill`, replace the early return:
+
+```sh
+    if is_current_install "$skill_name"; then
+        if [ "$FORCE" = 0 ]; then
+            printf "  %-20s already installed — skipping\n" "$skill_name"
+            return
+        fi
+        remove_install "$skill_name" || { RC=1; return 0; }
+    elif
+```
+
+with:
+
+```sh
+    if is_current_install "$skill_name"; then
+        if [ "$FORCE" = 0 ]; then
+            # SKILL.md matching does not mean every file is linked: that is exactly
+            # how four RepoSkills files went missing for four months. ln -sf is
+            # idempotent, so top up rather than skipping.
+            install_symlinks "$source_dir" "$skill_dir"
+            printf "  %-20s up to date\n" "$skill_name"
+            return
+        fi
+        remove_install "$skill_name" || { RC=1; return 0; }
+    elif
+```
+
+Add a test for it:
+
+```sh
+test_plain_install_tops_up_missing_files() {
+    target="$(setup_fixture)"; home="$(dirname "$(dirname "$target")")"
+    run_install "$home" RepoSkills >/dev/null
+    victim="$(cd "$target/RepoSkills" && find . -type l ! -name 'SKILL.md' | sed 's|^\./||' | head -1)"
+    rm -f "$target/RepoSkills/$victim"
+
+    run_install "$home" RepoSkills >/dev/null
+
+    if [ -e "$target/RepoSkills/$victim" ]; then
+        pass "plain install restores a missing link"
+    else
+        fail "plain install restores a missing link" "$victim still absent after reinstall"
+    fi
+    rm -rf "$home"
+}
+```
+
+Run it before the change to confirm it fails ("already installed, skipping" leaves the gap), then
+after to confirm it passes. Note this changes the "already installed" message to "up to date",
+which the earlier tests do not assert on.
+
+- [ ] **Step 7: Lint**
 
 Run: `shellcheck install.sh tests/install.test.sh`
 
 Note: `check_skill` uses unquoted `$(...)` in `for` loops to word-split on newlines, which shellcheck flags as `SC2044`/`SC2086`. This is intentional here because skill paths contain no whitespace. Add `# shellcheck disable=SC2044,SC2086` immediately above each loop with a one-line comment saying why, rather than silencing the whole file.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add install.sh tests/install.test.sh
-git commit -m "add --check mode reporting drift between stow/ and installed skills
+git commit -m "add --check mode, and make a plain install top up missing links
 
 The RepoSkills install went four months missing four files, including
 all three templates Phase 2 reads, because install.sh symlinks per file
 and had not been re-run since new files landed. Nothing detected it.
 
---check reports MISSING, STALE and UNMANAGED per skill and exits 1 on
-drift, so it works as a CI or pre-commit gate."
+--check reports MISSING, STALE, UNMANAGED, ORPHANED and FOREIGN per skill and
+exits 1 on drift, so it works as a CI or pre-commit gate.
+
+Detection alone was half a fix: is_current_install only tests SKILL.md, so a
+plain install reported success and changed nothing on a skill missing files.
+It now tops up via idempotent ln -sf instead of skipping."
 ```
 
 ---
