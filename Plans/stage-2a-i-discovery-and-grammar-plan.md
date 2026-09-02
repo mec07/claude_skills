@@ -729,7 +729,7 @@ miscased readme.md is invisible locally and breaks CI elsewhere."
 
 **Interfaces:**
 - Consumes: `## Project System` and `## Unit List` from Tasks 2 and 3.
-- Produces: `.ai/skills/conventions.md` in the target repo, containing the confirmed unit list, the precedence rule, and any confirmed induced patterns.
+- Produces: `.ai/skills/conventions.md` in the target repo, containing the recorded decisions (declines, gated-candidate confirmations, deployability exceptions), the precedence rule, and any confirmed induced patterns. Never a per-unit inventory: the authoritative unit list is whatever the enumeration query resolves.
 
 - [ ] **Step 1: Write the assertion script**
 
@@ -759,13 +759,19 @@ exists() {
 
 exists   "conventions.md generated"          ".ai/skills/conventions.md"
 file_has "records the precedence rule"       ".ai/skills/conventions.md" "code > README > conventions"
-file_has "records a settled unit decision"   ".ai/skills/conventions.md" "src/reporting"
+file_has "records the gated candidate's decision line" ".ai/skills/conventions.md" "src/reporting"
 file_has "records declined candidates too"   ".ai/skills/conventions.md" "declined"
 file_has "marks generated sections"          ".ai/skills/conventions.md" "provenance=generated"
 
 printf "\n%s\n" "$([ "$FAILED" -eq 0 ] && echo PASS || echo FAIL)"
 [ "$FAILED" -eq 0 ]
 ```
+
+The `src/reporting` assertion holds even on this plan's unattended runs, where no human ever
+confirms or declines anything, because Step 4's generation instruction writes a pending Unit
+decisions line for every gated candidate at generation time; a settled decision later replaces
+`pending` in place. Without that rule the assertion could only pass after a human answered, and
+this suite never has one.
 
 - [ ] **Step 2: Run the baseline**
 
@@ -813,6 +819,11 @@ Required sections, in this order:
 | Standard commands | Build, test, lint and run, as the repo actually declares them |
 | Precedence | Verbatim: `code > README > conventions document`. This is its canonical home; the READMEs and `navigate-unit` link here rather than restating it |
 | Confirmed patterns | Induced patterns confirmed by a human, per the grammar file's induction loop |
+
+**A gated candidate not yet settled still gets its Unit decisions line**, marked pending
+confirmation and carrying its signals, written at generation time: the open question must travel
+with the repo rather than sit in one machine's `state.md`, and the Phase 9 confirmation step
+updates that line in place once a human answers, rather than inventing a new one.
 
 **Mark generated sections.** Stamp each section this step writes with `provenance=generated` inside
 the existing `<!-- repo-skills: ... -->` comment. Anything unmarked is human-taught and a later run
@@ -1159,10 +1170,16 @@ of the Phase 9 checklist:
 
 Read `## Unit List` from `state.md`. For each entry with `action: create-pending-confirmation`,
 present the path and its signals and ask whether it should get a README. Record the outcome in
-`.ai/skills/conventions.md`: a yes moves the unit into Confirmed units, and its `action` in
-`state.md` becomes `create`; a no adds it to Declined candidates with the date. Never record an
-outcome only in `state.md`: that file lives on one machine, and a decline recorded nowhere else is
-re-proposed on every other machine forever.
+`.ai/skills/conventions.md`: a yes updates the candidate's pending line under Unit decisions to
+confirmed, and its `action` in `state.md` becomes `create`; a no updates the line and adds the
+candidate to Declined candidates with the date. Never record an outcome only in `state.md`: that
+file lives on one machine, and a decline recorded nowhere else is re-proposed on every other
+machine forever.
+
+Then present the full list of `action: create` units, Strong candidates included. Ungated means no
+per-unit interrogation, not no visibility: on a first run this list is every file about to appear
+in someone's source tree, and this checkpoint is where a human sees it before any writing phase
+runs. Presentation only; no confirmation is asked for an ungated create.
 
 For each induced pattern awaiting confirmation, follow the induction loop in
 [readme-grammar.md](readme-grammar.md): present the examples and the derived pattern, and record a
@@ -1197,9 +1214,9 @@ slim skeleton without Monitoring or Running-locally sections, and that it does *
 wc -l "$REPO/stow/RepoSkills/phase-2-map-generate.md"
 ```
 
-Expected: about 1237 lines, up from 1199. The additions are Task 4's Step 2.2b (about 22 lines), its
+Expected: about 1242 lines, up from 1199. The additions are Task 4's Step 2.2b (about 27 lines), its
 expand-stage exemption note (about 4 lines), this task's Step 2.2c (about 10 lines) and one
-checklist line for each new step. If the count is materially above about 1245, grammar content has
+checklist line for each new step. If the count is materially above about 1250, grammar content has
 leaked into phase 2 and belongs in `readme-grammar.md`. This is not the final ceiling: Task 6 grows
 the same file once more and carries its own check.
 
@@ -1288,8 +1305,8 @@ task in this plan that grows it:
 wc -l "$REPO/stow/RepoSkills/phase-2-map-generate.md"
 ```
 
-Expected: about 1254 lines. This task's generation instruction is about 17 lines on top of Task 5's
-count of about 1237. Anything materially above about 1260 means content that belongs in
+Expected: about 1259 lines. This task's generation instruction is about 17 lines on top of Task 5's
+count of about 1242. Anything materially above about 1265 means content that belongs in
 `readme-grammar.md` or `conventions.md` has leaked into phase 2.
 
 - [ ] **Step 5: Commit**
@@ -1455,17 +1472,18 @@ Applied in this amendment:
 | The Agent Notes citation discipline (a bullet asserting a repo fact ends with the paths it derives from, `docs/readme-template.md:90`) was in the reference and the spec's transfer-unchanged list, but not in the grammar | Added as a grammar rule and carried into the generated template |
 | Finding 16: `phase-2-map-generate.md:1083`'s no-duplicate-facts self-review item would make a diligent Phase 2 agent strip either `conventions.md`'s Standard commands or orientation's Quick Reference during the expand stage | Task 4 adds an expand-stage exemption note directly below that item |
 | Finding 12: spec 6.4's "no README-drift reference implementation exists" is stale input for 2a-iii | The note under the sibling-plans table below; the spec agent is correcting 6.4 itself |
-| Finding 18: Task 5 Step 6 expected at most about 1215 lines while its own arithmetic produced 1239, so the checkpoint read as a failure on a correct implementation, and Task 6 then grew the file again with no revised ceiling | Recounted against the file as it stands: about 1237 after Task 5, and Task 6 Step 4 carries the final ceiling of about 1260 |
-| The File Structure table routed the confirmation venue to Task 4, but no task step edited `phase-9-human-checkpoint.md` or the two skip conditions, so the venue the grammar and the conventions doc depend on was never built | Task 5 Step 4a: two skip-blocking conditions in both files that state them, and Step 9.3a confirming gated units and induced patterns, recording outcomes in `conventions.md` |
-| `f82d966`'s message also claimed the conventions doc had stopped specifying a hand-maintained unit inventory. Its diff never touched that row either: the Task 4 table still read "One line per unit from `## Unit List`", and its assertion grepped for `services/orders`, so the suite asserted the very inventory `data/docs/project-conventions.md:46` forbids. An audit had matched the warning text in the row above and mistaken it for the fix | The row becomes Unit decisions, recording only a candidate a human settled or one whose treatment departs from the query. The assertion now looks for `src/reporting`, the gated candidate, which is recorded either way once confirmed or declined |
+| Finding 18: Task 5 Step 6 expected at most about 1215 lines while its own arithmetic produced 1239, so the checkpoint read as a failure on a correct implementation, and Task 6 then grew the file again with no revised ceiling | Recounted against the file as it stands: about 1242 after Task 5, and Task 6 Step 4 carries the final ceiling of about 1265 |
+| The File Structure table routed the confirmation venue to Task 4, but no task step edited `phase-9-human-checkpoint.md` or the two skip conditions, so the venue the grammar and the conventions doc depend on was never built | Task 5 Step 4a: two skip-blocking conditions in both files that state them, and Step 9.3a confirming gated units and induced patterns, recording outcomes in `conventions.md`, and presenting the full ungated create list per the spec's ungated-does-not-mean-invisible rule |
+| `f82d966`'s message also claimed the conventions doc had stopped specifying a hand-maintained unit inventory. Its diff never touched that row either: the Task 4 table still read "One line per unit from `## Unit List`", and its assertion grepped for `services/orders`, so the suite asserted the very inventory `data/docs/project-conventions.md:46` forbids. An audit had matched the warning text in the row above and mistaken it for the fix | The row becomes Unit decisions, recording only a candidate a human settled or one whose treatment departs from the query. The assertion now looks for `src/reporting`, the gated candidate, whose pending line is written at generation time and updated in place once a human settles it, so the assertion holds on unattended runs too |
 | `f82d966`'s message claimed the deferred-sections assertion was no longer a no-op, but its diff never touched it: the assertion grepped `conventions.md` for `provenance=generated`, which passes whenever Task 4 passes | The `file_lacks` helper, asserting `readme-template.md` exists and omits `Contracts owned` |
 | Steps 2.2b and 2.2c were added to Phase 2 but not to the Phase 2 checklist agents copy into `state.md`, the same untracked-step failure Task 2 fixes for Phase 0 | Both tasks add their checklist line in the same edit |
 | The Self-Review enumerated six `## Unit List` fields where Task 3 defines seven (`name` was missing), counted "three assertion scripts" where there are two plus the fixture generator, and mapped the token-budget check to Task 5 alone | All three corrected |
 
 Deliberately left alone: the bounded-write-territory semantics ("how much of an existing README a
-run may rewrite"). Spec section 3.2 is being settled this pass, and the grammar implements it in a
-follow-up once the spec is authoritative; the grammar carries a one-line pending note where the
-question arises.
+run may rewrite"). Spec 3.2 has now settled them, marker-based on `provenance=generated` rather
+than positional, with skeleton-section insertion permitted file-wide; the grammar implements that
+in a follow-up and carries a one-line pending note where the question arises. Nothing in this plan
+presupposes a positional rule.
 
 ---
 
