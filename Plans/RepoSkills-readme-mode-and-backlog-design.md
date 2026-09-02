@@ -796,6 +796,11 @@ installation. A `--check` mode on `install.sh`, comparing `stow/` against `~/.cl
 the same generate-and-verify pattern this spec applies to platform-glue files in 6.3. Worth
 adopting for consistency, and it would have caught this in April.
 
+Note the predicate: the guard refuses to delete **regular files**, not untracked ones. `install.sh`
+only ever writes symlinks and directories (`install.sh:81-97`), so a regular file in the target is
+always human-authored, whereas `~/.claude/skills` is not a git repository at all and tracked-ness is
+meaningless there.
+
 **H2.** `IMPROVEMENTS.md` was never committed to this repo and existed only in `~/.claude`. It was
 destroyed on 2026-08-27 (see section 11). A partial reconstruction now sits at
 `stow/RepoSkills/IMPROVEMENTS.md`, **deliberately untracked** at Electra's instruction pending a
@@ -808,7 +813,7 @@ decision on where it should live. It is therefore still unversioned, and still t
 | Stage | Content | Rationale |
 |---|---|---|
 | 0 | ~~H1~~, **H2 gates everything** | H1 done. H2 open: the single surviving copy of `IMPROVEMENTS.md` is still untracked, and stage 1 modifies the very installer that destroyed the original. Get it committed somewhere first |
-| 1 | `install.sh` hardening: `--check`, refuse to delete untracked files | Cheap, independent, prevents a recurrence. Plan already written |
+| 1 | `install.sh` hardening: `--check`, and refuse to delete **regular** files in the target | Cheap, independent, prevents a recurrence. Plan written and reviewed |
 | 2a | **Expand.** Generate unit READMEs *alongside* `modules/`. Retool drift, routing and the re-run paths (3.6) to recognise both shapes: the drift regex accepts either, routing rows may point at either | Every repo stays internally consistent at all times. Also manufactures the harvest test bed 3.4 says does not exist |
 | 2b | **Contract.** Stop generating module skills, run the 3.4 harvest, remove the `modules/` contracts from 3.5 | The cutover, still atomic, but now half the review surface |
 | 3 | Items 2, 4, 12 (phase-4 Checks 13 and 14), items 3, 5, 16 (phase-1 questions) | Additive. Checks 13 and 14 append after the existing 12, so nothing renumbers and no other file is touched |
