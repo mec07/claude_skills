@@ -894,11 +894,18 @@ weighed that and chosen to leave it untracked.
 | 0 | ~~H1, H2~~ | Both closed. H1: install repaired and verified. H2: the reconstruction lives in `stow/`, outside the directory the installer deletes, and stays untracked by decision. Nothing gates stage 1 |
 | 1 | `install.sh` hardening: `--check`, and refuse to delete **regular** files in the target | Cheap, independent, prevents a recurrence. Plan written and reviewed |
 | 2a | **Expand.** Generate unit READMEs *alongside* `modules/`. Retool drift, routing and the re-run paths (3.6) to recognise both shapes: the drift regex accepts either, routing rows may point at either | Every repo stays internally consistent at all times. Also manufactures the harvest test bed 3.4 says does not exist |
+| 2a-i | Discovery and the grammar artifacts: project-system discovery, the create/update gate, and generating `conventions.md`, `readme-template.md` and `navigate-unit`. No READMEs written | Planned. Prerequisite for the other two, and it builds the fixture repo every later stage tests against |
+| 2a-ii | README create and update, with the conform/fix/preserve semantics of 3.2 and the induction loop of 5.3 | Needs 2a-i's grammar to exist before it can write against it |
+| 2a-iii | Tooling and re-run paths: drift for both shapes, routing pointers, simulation access, token budgets, state reconstruction, `--update` semantics, the DR commit policy | Independent of 2a-ii once 2a-i lands |
 | 2b | **Contract.** Stop generating module skills, run the 3.4 harvest, remove the `modules/` contracts from 3.5 | The cutover, still atomic, but now half the review surface |
 | 3 | Items 2, 4, 12 (phase-4 Checks 13 and 14), items 3, 5, 16 (phase-1 questions) | Additive. Checks 13 and 14 append after the existing 12, so nothing renumbers and no other file is touched |
 | 4 | Items 6, 8, 17 | Independent of everything else |
 | 5 | The three added README sections from 5.1, with their own baseline test | Deliberately after the grammar is proven |
 | 6 | Regression run: first-run generation, then update-path against current `data-2` main | Needs everything above |
+
+**2a is planned as three sub-plans (2a-i, 2a-ii, 2a-iii).** 2a is a release boundary, not a unit of
+work: all three land before the expand stage is complete, but each produces something testable on
+its own, and 2a-i must come first because the other two write against the grammar it generates.
 
 **Why 2a and 2b rather than one block, and why not four stages.** An earlier draft had the retooling
 land two stages *after* the deletion, which left a window where a repo had module skills gone,
