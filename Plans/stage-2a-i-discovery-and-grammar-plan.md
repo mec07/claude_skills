@@ -39,6 +39,46 @@ different agent, finds the same repo in the same state.
 
 **To reset the fixture** at any point: `rm -rf "$FIXTURE" && sh "$REPO/tests/fixtures/make-fixture-repo.sh" "$FIXTURE"`
 
+### Run protocol
+
+Phase 0's pre-check (Step 0.0) skips the whole phase when
+`~/.claude/MEMORY/RepoSkills/fixture-repo/_triage.md` already exists, and a phase marked complete in
+`state.md` will not run again. Resetting only the fixture therefore produces a run that writes
+nothing. Every "run Phase N" instruction in this plan means exactly one of these two, and each task
+says which:
+
+**Fresh run** (default for any step that says "run Phase 0" or "run Phase 0 then Phase 2"):
+
+```bash
+rm -rf "$FIXTURE" "$HOME/.claude/MEMORY/RepoSkills/fixture-repo"
+sh "$REPO/tests/fixtures/make-fixture-repo.sh" "$FIXTURE"
+```
+
+Then dispatch one fresh agent per phase, in phase order, with this instruction:
+
+> You are the Phase N agent. Read `$REPO/stow/RepoSkills/orchestration.md`, then
+> `$REPO/stow/RepoSkills/phase-<N>-*.md`. Target repo: `$FIXTURE`. MEMORY directory:
+> `~/.claude/MEMORY/RepoSkills/fixture-repo/`. Execute Phase N only, updating `state.md` as its
+> checklist requires, then stop and report.
+
+For Phase 2 runs, run Phase 0 first, then dispatch Phase 2 directly. **Do not run Phase 1**: it is
+an interview and these runs are unattended, so induced patterns stay unconfirmed and the artifacts
+must carry placeholders, which is itself behaviour the grammar specifies (a headless run never
+hangs and never guesses).
+
+**Phase 2 re-run on existing Phase 0 state** (for a task that changes only Phase 2 behaviour and
+must keep the prior discovery): keep the MEMORY directory, then
+
+```bash
+rm -rf "$FIXTURE/.ai/skills"
+```
+
+and reset every Phase 2 checkbox in `$STATE` to `[ ]` before dispatching the Phase 2 agent.
+
+**Assertion-only steps** (a step that runs `assert-phase0.sh` or `assert-artifacts.sh` and nothing
+else) run against the artifacts of the most recent run. Do not reset anything for them: some
+baselines deliberately assert against a previous task's output.
+
 ## Global Constraints
 
 - **This is stage 2a, the expand half.** Nothing may remove, rename or stop generating `.ai/skills/modules/`. Every repo must stay internally consistent at all times. Removal is 2b's job.
@@ -60,8 +100,9 @@ different agent, finds the same repo in the same state.
 | `tests/fixtures/make-fixture-repo.sh` | Builds a deterministic repo exercising every boundary shape the gate must distinguish | 1 |
 | `tests/assert-phase0.sh` | Asserts on `state.md` after a Phase 0 run | 2, 3 |
 | `tests/assert-artifacts.sh` | Asserts on the three generated grammar artifacts | 4, 5, 6 |
-| `stow/RepoSkills/phase-0-discover.md` | Gains project-system discovery (Step 4.5) and gate recording | 2, 3 |
-| `stow/RepoSkills/orchestration.md` | `state.md` schema additions; the `:414` amendment | 2, 4 |
+| `stow/RepoSkills/phase-0-discover.md` | Gains project-system discovery (Step 4a) and the create/update gate (Step 4b), each tracked in the Phase 0 checklist | 2, 3 |
+| `stow/RepoSkills/orchestration.md` | `state.md` schema additions; the `:414` amendment; the Phase 9 skip-condition additions | 2, 3, 4 |
+| `stow/RepoSkills/phase-9-human-checkpoint.md` | Confirmation venue: two new skip-blocking conditions and the unit-and-pattern confirmation step | 4 |
 | `stow/RepoSkills/readme-grammar.md` | **New.** The section grammar, the include test, the induction loop | 5 |
 | `stow/RepoSkills/phase-2-map-generate.md` | Wiring only: a step that reads `readme-grammar.md` and emits the three artifacts | 4, 5, 6 |
 | `stow/RepoSkills/SKILL.md` | Output table and phase-file table | 7 |
@@ -118,12 +159,15 @@ cat > services/billing/README.md <<'EOF'
 Handles invoicing. Talks to the payments provider; retries are not idempotent.
 EOF
 
-# --- nested package INSIDE a deployable service: the nesting case ---
-mkdir -p services/orders/vendor/pricing
-cat > services/orders/vendor/pricing/package.json <<'EOF'
+# --- nested package INSIDE a deployable service: the nesting case.
+#     NOT under vendor/: that directory is on the never-browse exclusion lists
+#     (phase-0:60, orchestration:370), so a fixture there would be invisible
+#     to the pipeline by its own rules. ---
+mkdir -p services/orders/pricing
+cat > services/orders/pricing/package.json <<'EOF'
 { "name": "@fixture/pricing", "version": "1.0.0" }
 EOF
-printf 'module.exports = {};\n' > services/orders/vendor/pricing/index.js
+printf 'module.exports = {};\n' > services/orders/pricing/index.js
 
 # --- non-deployable library: Strong (manifest), no Dockerfile: slim skeleton ---
 mkdir -p packages/utils/src
@@ -132,12 +176,24 @@ cat > packages/utils/package.json <<'EOF'
 EOF
 printf 'export const noop = () => {};\n' > packages/utils/src/index.js
 
-# --- logical-only boundary: Medium (own types, clear API) + Medium (own tables).
-#     No manifest, no Dockerfile. MUST be gated behind confirmation. ---
+# --- Medium-only boundary: Domain (own types imported elsewhere + own tables,
+#     one signal TYPE) + Deployment (own CI workflow, a second TYPE).
+#     No manifest, no Dockerfile, no entry point: deliberately no barrel index.ts,
+#     which an agent could read as a Strong entry-point signal.
+#     MUST be gated behind confirmation. ---
 mkdir -p src/reporting
 printf 'export type Report = { id: string };\n' > src/reporting/types.ts
-printf 'export const build = () => ({ id: "1" });\n' > src/reporting/index.ts
 printf 'CREATE TABLE reports (id text primary key);\n' > src/reporting/schema.sql
+printf 'name: reporting\non: push\n' > .github/workflows/reporting.yml
+printf 'import type { Report } from "./reporting/types";\nexport const latest: Report = { id: "1" };\n' > src/app.ts
+
+# --- entry-point-only boundary: a Strong Service signal (own entry point with a
+#     port binding) but NO manifest and NO Dockerfile. Qualifies as a boundary,
+#     but README creation is still gated: an internal library or sub-app inside
+#     a single frontend has exactly this shape. ---
+mkdir -p src/ingest
+printf 'require("http").createServer(() => {}).listen(8081);\n' > src/ingest/main.js
+printf 'module.exports.parse = (x) => x;\n' > src/ingest/parse.js
 
 # --- miscased readme: the unit HAS a README and it must be renamed, not duplicated ---
 mkdir -p services/notifications/src
@@ -148,14 +204,33 @@ printf 'FROM node:20\n' > services/notifications/Dockerfile
 printf 'console.log("notify");\n' > services/notifications/src/index.js
 printf '# notifications\n\nSends email.\n' > services/notifications/readme.md
 
-# --- looks like a unit but is deliberately excluded from the workspace ---
+# --- looks like a unit but is deliberately excluded from the workspace.
+#     It HAS a README, which is the dominant excluded shape in the reference
+#     repo (the pnpm-workspace-excluded ingestion adapters all self-document),
+#     so the exclusion-beats-README precedence is actually exercised. ---
 mkdir -p experiments/spike/src
 cat > experiments/spike/package.json <<'EOF'
 { "name": "@fixture/spike", "version": "0.0.0" }
 EOF
 printf 'console.log("spike");\n' > experiments/spike/src/index.js
+printf '# spike\n\nExperimental. Deliberately outside the workspaces globs.\n' > experiments/spike/README.md
 
-# --- the workspace definition that excludes it ---
+# --- a second project system whose visible query is a silent subset: a Python
+#     project the npm workspaces globs cannot see, mirroring the real repo where
+#     pnpm-workspace.yaml membership silently excludes every Python project.
+#     This is the counterexample authoritative-source selection must record. ---
+mkdir -p analytics/pipeline/pipeline
+cat > analytics/pipeline/pyproject.toml <<'EOF'
+[project]
+name = "fixture-pipeline"
+version = "1.0.0"
+EOF
+printf 'print("pipeline")\n' > analytics/pipeline/pipeline/__init__.py
+printf 'name: pipeline\non: push\n' > .github/workflows/pipeline.yml
+
+# --- the workspace definition. It excludes experiments/spike and cannot
+#     express analytics/pipeline at all. The root itself has a Strong manifest
+#     and no README: the gate must still never mark the workspace root create. ---
 cat > package.json <<'EOF'
 { "name": "fixture-root", "private": true, "workspaces": ["services/*", "packages/*"] }
 EOF
@@ -188,19 +263,20 @@ tests/fixture-repo/
 chmod +x "$REPO/tests/fixtures/make-fixture-repo.sh"
 rm -rf "$FIXTURE"
 sh "$REPO/tests/fixtures/make-fixture-repo.sh" "$FIXTURE"
-find "$FIXTURE" -name package.json -not -path '*/node_modules/*' | sed "s|$FIXTURE|<FIXTURE>|" | sort
+find "$FIXTURE" \( -name package.json -o -name pyproject.toml \) -not -path '*/node_modules/*' | sed "s|$FIXTURE|<FIXTURE>|" | sort
 ```
 
-Expected, exactly seven manifests:
+Expected, exactly seven `package.json` manifests plus one `pyproject.toml`:
 
 ```
+<FIXTURE>/analytics/pipeline/pyproject.toml
 <FIXTURE>/experiments/spike/package.json
 <FIXTURE>/package.json
 <FIXTURE>/packages/utils/package.json
 <FIXTURE>/services/billing/package.json
 <FIXTURE>/services/notifications/package.json
 <FIXTURE>/services/orders/package.json
-<FIXTURE>/services/orders/vendor/pricing/package.json
+<FIXTURE>/services/orders/pricing/package.json
 ```
 
 Confirm it is ignored: `git status --short tests/` should print nothing.
@@ -218,13 +294,16 @@ adding the behaviour they test, and do not remove one without removing its asser
 
 | Path | Signals | Must be treated as |
 |---|---|---|
+| `.` (workspace root) | Strong manifest, no README | **Never a unit.** The workspace root is out of the gate's scope by rule, however strong its signals |
 | `services/orders` | Strong manifest, Strong Dockerfile, Medium CI | Unit. Deployable. Full skeleton. Create README |
 | `services/billing` | Strong manifest, Strong Dockerfile | Unit. Deployable. **Has a README**, so update, never create |
-| `services/notifications` | Strong manifest, Strong Dockerfile | Unit. **Has `readme.md`, miscased**, so rename and update, never author a second file |
-| `services/orders/vendor/pricing` | Strong manifest | Unit, **nested inside `services/orders`**. Both get a README. Parent freshness must subtract this path |
+| `services/notifications` | Strong manifest, Strong Dockerfile | Unit. **Has `readme.md`, miscased**: recorded as `exists-miscased`, `update`. The rename belongs to the writing phase |
+| `services/orders/pricing` | Strong manifest | Unit, **nested inside `services/orders`**. Both get a README. Parent freshness must subtract this path |
 | `packages/utils` | Strong manifest, no Dockerfile | Unit. Non-deployable. **Slim skeleton** |
-| `src/reporting` | Medium own types plus Medium own tables | Unit candidate, **Medium-only, so gated**: no README without human confirmation |
-| `experiments/spike` | Strong manifest, but excluded from `workspaces` | **Not a unit.** Excluded, and self-documents that it is |
+| `analytics/pipeline` | Strong manifest (`pyproject.toml`), Medium CI | Unit, invisible to the `workspaces` globs. **The counterexample** that proves the visible query is a subset |
+| `src/reporting` | Medium Domain (own imported types, own tables) plus Medium Deployment (own CI workflow): two Medium **types** | Unit candidate, **Medium-only, so gated**: no README without human confirmation |
+| `src/ingest` | Strong Service (own entry point, own port binding), no manifest, no Dockerfile | Boundary, but **gated**: an entry point alone never earns ungated creation |
+| `experiments/spike` | Strong manifest, but excluded from `workspaces`; has a README | **Not a unit.** Exclusion beats the README; the README is its self-documentation |
 | `node_modules/left-pad` | Manifest | **Never a unit.** Exclusion list |
 ```
 
@@ -245,13 +324,13 @@ does. Each shape in the fixture pins down exactly one behaviour of the gate."
 ### Task 2: Phase 0 discovers and records the project system
 
 **Files:**
-- Modify: `stow/RepoSkills/phase-0-discover.md` (new Step 4.5 after Step 4)
+- Modify: `stow/RepoSkills/phase-0-discover.md` (new Step 4a after Step 4, plus its checklist entry)
 - Modify: `stow/RepoSkills/orchestration.md` (`state.md` schema, after the `update-mode` line)
 - Create: `tests/assert-phase0.sh`
 
 **Interfaces:**
 - Consumes: `tests/fixtures/make-fixture-repo.sh` from Task 1.
-- Produces: a `## Project System` section in `state.md` with four keys, `enumeration-query`, `detail-query`, `deployability-predicate` and `exclusions`, read by Tasks 3, 4 and 5.
+- Produces: a `## Project System` section in `state.md` with five keys, `enumeration-query`, `detail-query`, `deployability-predicate`, `exclusions` and `authoritative-source`, read by Tasks 3, 4 and 5.
 
 - [ ] **Step 1: Write the assertion script**
 
@@ -288,6 +367,8 @@ need "enumeration query recorded"           "enumeration-query:"
 need "detail query recorded"                "detail-query:"
 need "deployability predicate recorded"     "deployability-predicate:"
 need "exclusions recorded"                  "exclusions:"
+need "authoritative source recorded"        "authoritative-source:"
+need "the plausible-subset counterexample is recorded on the authoritative-source line" "authoritative-source:.*analytics/pipeline"
 need "workspace globs identified as the enumeration source" "workspaces"
 need "the excluded spike is named as an exclusion" "experiments/spike"
 absent "node_modules never appears as a unit" "node_modules/left-pad"
@@ -302,11 +383,10 @@ This is the red phase, and per the Global Constraints it is not optional.
 
 ```bash
 chmod +x "$REPO/tests/assert-phase0.sh"
-rm -rf "$FIXTURE" && sh "$REPO/tests/fixtures/make-fixture-repo.sh" "$FIXTURE"
 ```
 
-Now run Phase 0 against `$FIXTURE`, following
-`$REPO/stow/RepoSkills/phase-0-discover.md` as it stands, then:
+Do a **fresh run** of Phase 0 per the Run protocol (delete both `$FIXTURE` and the
+`fixture-repo` MEMORY directory, recreate the fixture, dispatch the Phase 0 agent), then:
 
 ```bash
 sh "$REPO/tests/assert-phase0.sh" "$STATE"
@@ -316,7 +396,7 @@ If `$STATE` does not exist after the run, Phase 0 did not complete. Check
 `~/.claude/MEMORY/RepoSkills/` for the slug it actually used: it derives from the repo directory
 name, which is `fixture-repo`.
 
-Expected: FAIL on all five `need` assertions about the Project System section, because no such section exists in the schema. `node_modules` should already pass, since Step 4's exclusion list covers it. Record the actual output in the commit message: that is the baseline.
+Expected: FAIL on all seven `need` assertions about the Project System section, because no such section exists in the schema. `node_modules` should already pass, since Step 4's exclusion list covers it. Record the actual output in the commit message: that is the baseline.
 
 - [ ] **Step 3: Add the schema to orchestration.md**
 
@@ -336,13 +416,18 @@ exclusions: <paths that look like units but are deliberately outside the project
 authoritative-source: <which candidate query was confirmed, and the counterexample that ruled the others out>
 ```
 
-- [ ] **Step 4: Add Step 4.5 to phase-0-discover.md**
+- [ ] **Step 4: Add Step 4a to phase-0-discover.md**
 
-In `stow/RepoSkills/phase-0-discover.md`, after the `### Monorepo special handling` block and before
-its closing `Update state.md: mark step 0.4 complete.`, insert:
+**On numbering:** Step 0.5 (Detect Task Skills Warranted, `phase-0-discover.md:212`), 0.6
+(domain-context freshness, `:282`), 0.7 (`:303`) and 0.8 (`:405`) all exist already, so the new
+steps take letter-suffixed numbers, `0.4a` here and `0.4b` in Task 3, which keeps them
+collision-free and in execution order without renumbering any existing step.
+
+In `stow/RepoSkills/phase-0-discover.md`, after Step 4's closing
+`Update state.md: mark step 0.4 complete.` and before the `## Step 5` heading, insert:
 
 ```markdown
-## Step 4.5: Discover the Project System (Step 0.5)
+## Step 4a: Discover the Project System (Step 0.4a)
 
 Many repos have a tool that already knows what their projects are. Ask it rather than inferring.
 Where no such tool exists, Step 4's signals are the whole answer and this step records `none`.
@@ -377,20 +462,34 @@ Write all five keys into the `## Project System` section of `state.md`. Where th
 no project system, write `none` for the first three and still record `exclusions`, since directory
 based exclusions apply regardless.
 
-Update `state.md`: mark step 0.5 complete.
+Update `state.md`: mark step 0.4a complete.
 ```
+
+In the same edit, add the new step to the Phase 0 checklist at `phase-0-discover.md:14-21`, between
+the `0.4` and `0.5` lines:
+
+```markdown
+- [ ] 0.4a: Discover the project system
+```
+
+The checklist is what agents copy into `state.md` and what the recovery protocol resumes from. A
+step absent from it is untracked: a context loss after 0.4 would resume at 0.5 and silently skip
+this step.
 
 - [ ] **Step 5: Re-run the scenario and the assertions**
 
-Re-run Phase 0 against a fresh copy of the fixture, then:
+Do a **fresh run** of Phase 0 per the Run protocol, then:
 
 ```bash
 sh "$REPO/tests/assert-phase0.sh" "$STATE"
 ```
 
 Expected: `PASS`. In particular `enumeration-query` should name the root manifest's `workspaces`
-globs, and `experiments/spike` should appear under `exclusions`, because its manifest exists but no
-glob matches `experiments/*`.
+globs, `experiments/spike` should appear under `exclusions`, because its manifest exists but no
+glob matches `experiments/*`, and `authoritative-source` should record that the `workspaces` globs
+are a plausible subset covering the TypeScript side only, with `analytics/pipeline`, a Strong-signal
+candidate the globs cannot see, as the counterexample. That last is the fixture exercising this
+step's central rule rather than merely recording keys.
 
 - [ ] **Step 6: Commit**
 
@@ -414,87 +513,147 @@ looks like a project list and silently drops every Python project."
 ### Task 3: Gate the unit list on ownership signals
 
 **Files:**
-- Modify: `stow/RepoSkills/phase-0-discover.md` (the `### Recording boundary candidates` block, around line 195)
+- Modify: `stow/RepoSkills/phase-0-discover.md` (new Step 4b after Step 4a, plus its checklist entry)
+- Modify: `stow/RepoSkills/orchestration.md` (`## Unit List` in the `state.md` schema, after the `## Project System` section Task 2 added)
 - Modify: `tests/assert-phase0.sh`
 
 **Interfaces:**
 - Consumes: the `## Project System` section from Task 2.
-- Produces: a `## Unit List` section in `state.md` with one row per candidate carrying `path`, `signals`, `deployable`, `readme` (one of `exists`, `exists-miscased`, `absent`), `action` (one of `update`, `create`, `create-pending-confirmation`, `excluded`) and `nested-under`. Read by Tasks 5 and 6 and by every later plan.
+- Produces: a `## Unit List` section in `state.md` with one block per candidate carrying `path`, `signals`, `deployable`, `readme` (one of `exists`, `exists-miscased`, `absent`), `action` (one of `update`, `create`, `create-pending-confirmation`, `excluded`) and `nested-under`. Read by Tasks 5 and 6 and by every later plan.
 
 - [ ] **Step 1: Add the assertions**
+
+The Unit List is recorded as multi-line blocks, one per candidate, and `grep` is line-based, so a
+single-line pattern like `services/orders.*create` can never match a block whose `path:` and
+`action:` sit on different lines. The assertions therefore go through a block-aware awk helper that
+scopes each check to one candidate's block.
 
 Append to `tests/assert-phase0.sh`, before the summary `printf`:
 
 ```sh
-need "Unit List section exists"                      "^## Unit List"
-need "orders is a create, ungated"                   "services/orders.*create"
-need "billing is an update, because it has a README"  "services/billing.*update"
-need "notifications is flagged miscased"             "services/notifications.*miscased"
-need "utils is non-deployable"                       "packages/utils.*deployable: no"
-need "reporting is gated pending confirmation"       "src/reporting.*pending-confirmation"
-need "pricing records its parent"                    "pricing.*nested-under: services/orders"
-need "spike is excluded"                             "experiments/spike.*excluded"
+unit_has() {
+    # unit_has <description> <unit-path> <line-regex>
+    # Passes when the Unit List block whose "- path:" equals <unit-path>
+    # contains a line matching <line-regex>. Exact path match, so
+    # services/orders never swallows services/orders/pricing.
+    if awk -v p="$2" -v pat="$3" '
+        /^- path:/ { cur=$0; sub(/^- path:[ \t]*/, "", cur); sub(/[ \t]+$/, "", cur); inblock=(cur==p); next }
+        inblock && $0 ~ pat { found=1 }
+        END { exit found ? 0 : 1 }
+    ' "$STATE"; then
+        printf "  ok   %s\n" "$1"
+    else
+        printf "  FAIL %s\n       unit [%s] has no line matching [%s]\n" "$1" "$2" "$3"
+        FAILED=1
+    fi
+}
+
+need     "Unit List section exists"                       "^## Unit List"
+unit_has "the workspace root is excluded, never a create" "."                       "action:[ \t]*excluded"
+unit_has "orders is a create, ungated"                    "services/orders"         "action:[ \t]*create[ \t]*$"
+unit_has "billing is an update, because it has a README"  "services/billing"        "action:[ \t]*update"
+unit_has "notifications is flagged miscased"              "services/notifications"  "readme:[ \t]*exists-miscased"
+unit_has "notifications is still an update"               "services/notifications"  "action:[ \t]*update"
+unit_has "utils is non-deployable"                        "packages/utils"          "deployable:[ \t]*no"
+unit_has "the python project is discovered despite the workspaces globs" "analytics/pipeline" "action:[ \t]*create[ \t]*$"
+unit_has "reporting is gated pending confirmation"        "src/reporting"           "action:[ \t]*create-pending-confirmation"
+unit_has "an entry point alone never earns ungated creation" "src/ingest"           "action:[ \t]*create-pending-confirmation"
+unit_has "pricing records its parent"                     "services/orders/pricing" "nested-under:[ \t]*services/orders"
+unit_has "spike is excluded despite its Strong manifest"  "experiments/spike"       "action:[ \t]*excluded"
+unit_has "spike's README is recorded, not mistaken for an update" "experiments/spike" "readme:[ \t]*exists"
 ```
 
+The `create[ \t]*$` anchors matter: without them, `create` also matches
+`create-pending-confirmation` and the gate's central distinction is untested. The same line-based
+trap is why `assert-artifacts.sh` (Tasks 4 to 6) asserts only on single-line facts inside generated
+files, never on multi-line structures.
+
 - [ ] **Step 2: Run to verify the new assertions fail**
+
+This is an assertion-only step per the Run protocol: run against the `state.md` Task 2's run
+produced, with no reset, so the Task 2 assertions demonstrably still pass on the same artifact.
 
 ```bash
 sh "$REPO/tests/assert-phase0.sh" "$STATE"
 ```
 
-Expected: the eight new assertions FAIL (no `## Unit List` section exists), the Task 2 assertions still PASS.
+Expected: the thirteen new assertions FAIL (no `## Unit List` section exists), the Task 2 assertions still PASS.
 
-- [ ] **Step 3: Replace the recording block in phase-0-discover.md**
+- [ ] **Step 3: Add Step 4b to phase-0-discover.md**
 
-Replace the `### Recording boundary candidates` block with:
+The gate is a **new step, not an edit to Step 4**. Step 4's signal table and its recording block
+are what `modules/` generation reads, and this is the expand stage: changing them would change what
+`modules/` generates. The gate reads Step 4's output and Step 4a's project-system record, and
+answers a different, narrower question.
+
+In `stow/RepoSkills/phase-0-discover.md`, after Step 4a (added in Task 2) and before the `## Step 5`
+heading, insert:
 
 ```markdown
-### Recording boundary candidates
+## Step 4b: Decide Create, Update or Confirm per Candidate (Step 0.4b)
 
-For each candidate, record:
-- **Path:** directory path relative to repo root
-- **Signals detected:** which boundary types and their specific indicators
-- **Confidence:** `high` (multiple strong signals), `medium` (one strong or two medium), `low` (borderline, needs human confirmation)
-- **Suggested unit name:** the name the project system reports, or a concise name if it has none
-- **Key entry points:** main files that serve as entry points to the unit
+For each boundary candidate Step 4 recorded, plus each directory Step 4a's project system excludes,
+decide what the README phases may later do there. This step only records; no file in the target
+repo changes. Four questions, in this order.
 
-### Deciding what happens to each candidate (Step 0.6)
+**0. Is it the workspace root?** The workspace root is never a unit and its README is out of scope,
+however strong its signals: a root README is a repo-wide document with its own shape, not a unit
+README, and it must never be created or conformed by this pipeline. Record it as `- path: .` with
+`action: excluded` and the reason `workspace-root`.
 
-Two questions, in this order. The first is about the file, the second about the signals.
+**1. Does the project system exclude it?** `action: excluded`, and this wins even when a README
+exists there: an excluded directory's README is its self-documentation of the exclusion, not an
+invitation to conform it. Record `readme: exists` so the writing phase knows the self-documentation
+is already present, and record excluded candidates rather than dropping them, so a later phase can
+give the ones without a README one that says they are deliberately outside the system.
 
-**1. Does a README already exist?** Test against the version control file list
+**2. Does a README already exist?** Test against the version control file list
 (`git ls-files`), not the working tree, because the local filesystem hides a miscased
 `readme.md` that breaks CI elsewhere.
 
 | Found | `readme` | `action` |
 |---|---|---|
 | `README.md` | `exists` | `update` |
-| Any other casing | `exists-miscased` | `update`, and rename it first. Never author a second file beside it |
-| Nothing | `absent` | Continue to question 2 |
+| Any other casing | `exists-miscased` | `update`. The unit HAS a README; renaming it to `README.md` is the writing phase's first move there, recorded here as intent. This phase is read-only and renames nothing |
+| Nothing | `absent` | Continue to question 3 |
 
 An existing README is the strongest ownership signal available, stronger than anything this phase
 can infer, because it is a decision a human already made. Updating one is never gated.
 
-**2. What signals does it have?** Only for candidates with no README, since creating a file where a
+**3. What signals does it have?** Only for candidates with no README, since creating a file where a
 human never put one is the only action that can impose an unwanted artifact.
 
 | Signals detected | `action` |
 |---|---|
-| Any **Strong** signal (own package manifest, own Dockerfile or entry point) | `create` |
-| **Medium signals only** (any two of domain, deployment, logical) | `create-pending-confirmation` |
+| Own **package manifest** or own **Dockerfile** | `create` |
+| Anything else that qualified as a boundary (an entry point as the only Strong signal, or two Medium types) | `create-pending-confirmation` |
+
+**This table is deliberately narrower than Step 4's signal table, and the two answer different
+questions.** Step 4 decides what qualifies as a boundary, and an own entry point (`main.go`,
+`index.ts`, `app.py`) is a Strong signal there; that table is unchanged. This gate decides what
+earns README creation with no human in the loop, and an entry point alone does not: a shared
+library that deserves a README has its own manifest, because that is exactly what makes it a
+workspace member, while an internal library inside a single frontend app has an `index.ts` and no
+manifest, and one README per internal library is the unwanted-artifact failure this gate exists to
+prevent. The manifest is the discriminator between those two cases. A candidate can therefore
+qualify as a boundary on an entry point and still wait at `create-pending-confirmation` for its
+README.
 
 **Gate on the Signals detected field, not on Confidence.** Confidence records `medium` for both
 "one strong" and "two medium", so the two cases this gate must separate collapse into one value.
 
-**Deployment is a Medium signal.** A deployment-only directory never qualifies as a boundary at all,
-since qualifying requires one Strong or two Medium.
+**Two Medium signals means two Medium types.** Own data types and own database tables are both
+Domain-boundary indicators, one type, not two signals. Deployment is a Medium signal: a
+deployment-only directory never qualifies as a boundary at all, since qualifying requires one
+Strong or two Medium.
 
 ### Recording the unit list
 
 Write a `## Unit List` section to `state.md`, one block per candidate:
 
-```markdown
+```
 - path: services/orders
+  name: <the name the project system reports, or a concise name if it has none>
   signals: package-manifest(package.json), service(Dockerfile), deployment(.github/workflows/orders.yml)
   deployable: yes
   readme: absent
@@ -502,14 +661,30 @@ Write a `## Unit List` section to `state.md`, one block per candidate:
   nested-under: none
 ```
 
-`deployable` comes from the `deployability-predicate` recorded in Step 4.5. `nested-under` names the
+`deployable` comes from the `deployability-predicate` recorded in Step 4a. `nested-under` names the
 closest enclosing unit, or `none`. A nested unit is still a unit: nesting disqualifies neither it nor
 its parent.
 
-Candidates the project system excludes get `action: excluded` and are recorded rather than dropped,
-so a later phase can give them a README that says they are deliberately outside the system.
+Update `state.md`: mark step 0.4b complete.
+```
 
-Update `state.md`: mark steps 0.4 and 0.6 complete.
+In the same edit, add the new step to the Phase 0 checklist at `phase-0-discover.md:14-21`,
+immediately after the `0.4a` line Task 2 added:
+
+```markdown
+- [ ] 0.4b: Decide create, update or confirm per candidate
+```
+
+And in `stow/RepoSkills/orchestration.md`, add the `## Unit List` block format to the `state.md`
+schema, immediately after the `## Project System` section Task 2 added, so the schema and the phase
+that writes it agree:
+
+```markdown
+## Unit List
+
+Recorded by Phase 0 Step 4b: one block per boundary candidate, keys `path`, `name`, `signals`,
+`deployable` (yes/no), `readme` (exists | exists-miscased | absent), `action` (update | create |
+create-pending-confirmation | excluded) and `nested-under` (closest enclosing unit path, or none).
 ```
 
 - [ ] **Step 4: Re-run and verify**
