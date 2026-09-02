@@ -4,7 +4,7 @@
 
 **Goal:** Stop `install.sh` destroying files it did not create, and give it a `--check` mode that reports drift between `stow/` and the installed skills.
 
-**Architecture:** Two surgical changes to the existing `install.sh`, plus a dependency-free test harness. `remove_install()` gains a guard that refuses to proceed when the target directory holds regular files (which are never installer-created, since the installer only writes symlinks and directories), returning non-zero so one protected skill does not abandon the rest of the run. `--allow-destroy` sets such files aside in a temp directory rather than deleting them. A new `--check` mode walks the same source tree the installer walks and reports what is missing, stale, unmanaged, orphaned or foreign. A plain install also stops skipping a partially-linked skill and tops it up instead, since detecting the April failure without repairing it would be half a tool. `TARGET_DIR` becomes overridable so tests never touch the real `~/.claude/skills`.
+**Architecture:** Two surgical changes to the existing `install.sh`, plus a dependency-free test harness. `remove_install()` gains a guard that refuses to proceed when the target directory holds regular files (which are never installer-created, since the installer only writes symlinks and directories), returning non-zero so one protected skill does not abandon the rest of the run. `--allow-destroy` sets such files aside in a temp directory rather than deleting them. A new `--check` mode walks the same source tree the installer walks and reports what is missing, stale, unmanaged, orphaned or foreign. A plain install also stops skipping a partially-linked skill and tops it up instead, since detecting the April failure without repairing it would be half a tool. The top-up links only where the destination is absent or already a symlink, so it repairs installer drift without ever overwriting a user's file. `TARGET_DIR` becomes overridable so tests never touch the real `~/.claude/skills`.
 
 **Tech Stack:** POSIX `sh` (`install.sh` is `#!/bin/sh`), `find`, `shellcheck` (already installed at `/opt/homebrew/bin/shellcheck`). No bats, no new dependencies.
 
@@ -424,10 +424,16 @@ Expected: `0 failed`
 - [ ] **Step 5: Verify the real-world case by hand**
 
 ```bash
-CLAUDE_SKILLS_DIR="$(mktemp -d)/skills" sh install.sh RepoSkills
+CLAUDE_SKILLS_DIR="$(mktemp -d)/skills"
+export CLAUDE_SKILLS_DIR
+sh install.sh RepoSkills
 ```
 
-Then confirm the tracked `IMPROVEMENTS.md` arrives as a symlink, not a copy:
+The export is on its own line deliberately: a `VAR=value cmd` prefix scopes the variable to that
+one command, so the `ls` below would expand `$CLAUDE_SKILLS_DIR` to an empty string and look under
+`/RepoSkills/` instead.
+
+Then confirm `IMPROVEMENTS.md` arrives as a symlink, not a copy:
 
 ```bash
 ls -la "$CLAUDE_SKILLS_DIR/RepoSkills/IMPROVEMENTS.md"
@@ -463,8 +469,8 @@ opts back in."
 - Test: `tests/install.test.sh`
 
 **Interfaces:**
-- Consumes: `CLAUDE_SKILLS_DIR`, `assert_contains`, `assert_eq`, `setup_fixture` from Task 1.
-- Produces: `--check` flag, `CHECK=0|1`, and function `check_skill <skill_name>` which prints one line per drifted path and returns `0` when clean, `1` when drifted.
+- Consumes: `CLAUDE_SKILLS_DIR`, `assert_contains`, `assert_eq`, `setup_fixture` from Task 1; `RC` and the wrapped `remove_install ... || { ... }` call sites in `install_skill` from Task 2, one of which Step 6 quotes verbatim as its old text.
+- Produces: `--check` flag, `CHECK=0|1`, function `check_skill <skill_name>` which prints one line per drifted path and returns `0` when clean, `1` when drifted, and function `top_up_symlinks <source_dir> <target_dir>`, the guarded walker used by Step 6's no-force top-up.
 
 **Why this matters:** the RepoSkills install went four months with four missing files, including all three templates that Phase 2 reads. RepoSkills ships drift detection for the repos it documents and had none for itself.
 
@@ -519,10 +525,26 @@ test_check_detects_orphaned_symlink() {
     rm -rf "$home"
 }
 
+test_check_does_not_create_the_target_dir() {
+    home="$(mktemp -d)"
+    # No setup_fixture here: the point is that no skills directory exists.
+    # --check is read-only by contract, so it must not manufacture the
+    # directory it is inspecting the way an install does.
+    run_install "$home" --check Sleep >/dev/null || true
+    if [ -d "$home/.claude/skills" ]; then
+        fail "--check leaves a missing target dir missing" \
+             "it created $home/.claude/skills"
+    else
+        pass "--check leaves a missing target dir missing"
+    fi
+    rm -rf "$home"
+}
+
 test_check_passes_on_clean_install
 test_check_detects_missing_file
 test_check_reports_not_installed
 test_check_detects_orphaned_symlink
+test_check_does_not_create_the_target_dir
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
@@ -530,7 +552,7 @@ test_check_detects_orphaned_symlink
 Run: `sh tests/install.test.sh`
 
 Expected: red overall, but not uniformly, and the detail matters so you do not mistake a pass for a
-missing test. There are four tests here. `--check` is an unknown option, so `die` exits 1 in every
+missing test. There are five tests here. `--check` is an unknown option, so `die` exits 1 in every
 case. That means:
 
 - `--check exits 0 on a clean install` FAILS.
@@ -539,6 +561,10 @@ case. That means:
 - The two exit-code assertions (`--check exits 1 when a file is missing`, `--check exits 1 when the
   skill is absent`) **pass**, coincidentally: `die` also exits 1. A coincidental pass is not
   evidence of anything.
+- `--check leaves a missing target dir missing` also **passes**, coincidentally: `die` rejects the
+  unknown flag during argument parsing, before the `mkdir -p "$TARGET_DIR"` at install.sh:315 can
+  run. It earns its keep at Step 4: implement `--check` but leave that `mkdir -p` where it is, and
+  this goes red, because the mkdir sits above the dispatch block and runs on every invocation.
 
 - [ ] **Step 3: Write the minimal implementation**
 
@@ -553,6 +579,13 @@ Add `check_skill` next to `install_skill`:
 ```sh
 # Report drift between stow/<skill> and the installed copy.
 # Prints one line per problem. Returns 0 when clean, 1 when drifted.
+#
+# Two latent divergences from the installer's walk, recorded so a future
+# change does not trip over them: install_symlinks globs "$source_dir"/* and
+# so skips dotfiles, while these loops use find and include them, so a dotfile
+# added to stow/ would never install and would report MISSING forever; and a
+# symlink in stow/ would be installed but never checked. Neither exists in
+# stow/ today.
 check_skill() {
     local skill_name="$1"
     local source_dir="$STOW_DIR/$skill_name"
@@ -567,14 +600,22 @@ check_skill() {
 
     local drifted=0
     local rel
-    # Every file in stow/ must exist in the target.
+    # Every file in stow/ must exist in the target. Each drifted path gets
+    # exactly one report line, so this loop judges only symlinks and true
+    # absences: a dangling symlink is loop 3's ORPHANED (test -e follows
+    # links, so it looks absent here), and a regular file squatting on a stow
+    # path is loop 2's UNMANAGED. Reporting those MISSING or STALE as well
+    # would double-count them without changing the exit code.
+    # shellcheck disable=SC2044,SC2086  # skill paths contain no whitespace
     for src in $(cd "$source_dir" && find . -type f | sed 's|^\./||'); do
         rel="$src"
-        if [ ! -e "$skill_dir/$rel" ]; then
+        if [ -L "$skill_dir/$rel" ]; then
+            if [ -e "$skill_dir/$rel" ] && [ ! "$skill_dir/$rel" -ef "$source_dir/$rel" ]; then
+                printf "  %-20s STALE    %s\n" "$skill_name" "$rel"
+                drifted=1
+            fi
+        elif [ ! -e "$skill_dir/$rel" ]; then
             printf "  %-20s MISSING  %s\n" "$skill_name" "$rel"
-            drifted=1
-        elif [ ! "$skill_dir/$rel" -ef "$source_dir/$rel" ]; then
-            printf "  %-20s STALE    %s\n" "$skill_name" "$rel"
             drifted=1
         fi
     done
@@ -586,9 +627,10 @@ check_skill() {
         drifted=1
     done
 
-    # A file removed or renamed in stow/ leaves a dangling symlink here. Neither
-    # loop above sees it: the stow-side loop has nothing to iterate, and a broken
-    # symlink is not -type f. Without this, --check certifies a rotten install clean.
+    # A file removed or renamed in stow/ leaves a dangling symlink here.
+    # Neither loop above reports it: loop 1 deliberately leaves dangling links
+    # to this one, and a broken symlink is not -type f, so loop 2 skips it
+    # too. Without this, --check certifies a rotten install clean.
     # shellcheck disable=SC2044,SC2086
     for link in $(cd "$skill_dir" && find . -type l | sed 's|^\./||'); do
         if [ ! -e "$skill_dir/$link" ]; then
@@ -604,6 +646,22 @@ check_skill() {
     return "$drifted"
 }
 ```
+
+Move the unconditional `mkdir -p "$TARGET_DIR"` (install.sh:315) into the install branch. It sits
+above the dispatch block, so today it runs on every invocation, and a `--check` that manufactures
+the very directory it is inspecting is a mutation, however small; the read-only contract is what
+lets `--check` run safely anywhere, including CI. Uninstall does not need it either: an absent
+target just means every skill reports "not installed". Delete line 315 and add the mkdir inside
+the else branch, directly after its printf:
+
+```sh
+else
+    printf "Installing skills to %s\n" "$TARGET_DIR"
+    mkdir -p "$TARGET_DIR"
+```
+
+Under `set -e` a failing `mkdir -p` still aborts the run exactly as it does today; only the set of
+invocations that reach it shrinks.
 
 In the final dispatch block, handle `--check` before the install/uninstall branches:
 
@@ -646,13 +704,82 @@ ever calling `install_symlinks`. So a skill missing four of its files still look
 plain `sh install.sh RepoSkills` in April would have reported success and changed nothing. Only
 `--force` would have repaired it, by removing and relinking.
 
-- [ ] **Step 6: Make a plain install top up missing links**
+- [ ] **Step 6: Make a plain install top up missing links, without linking over user files**
 
 `--check` now detects the April failure, but the natural fix for it silently does nothing, which is
-half a tool. Because `install_symlinks` is `ln -sf` over a directory tree, running it on an
-already-correct install is idempotent and cheap, so the skip can simply become a top-up.
+half a tool. So the no-force skip becomes a top-up. What the top-up must NOT be is a bare
+`install_symlinks` call: that function is `ln -sf` over a directory tree (install.sh:96), and BSD
+`ln -sf` silently unlinks a regular file at the destination and replaces it with a symlink,
+verified on this machine. On the `--force` and fresh-install paths that is fine, because
+`remove_install` runs first and Task 2's guard has certified the directory free of user files. On
+this path `remove_install` never runs, so nothing has certified anything: a user who detached one
+symlink to keep an edited copy of their own (`rm` the link, `cp` the stow file into place, edit it)
+would have that copy destroyed by a plain, flagless `./install.sh`. That is the same incident class
+as the 2026-08-27 `IMPROVEMENTS.md` loss, reachable without `--force`, which Task 2 closes and an
+unguarded top-up would reopen. A user file sitting where `stow/` has a directory is worse still:
+`mkdir -p` fails on it, and since `install_skill` is called bare in the `for` loop
+(install.sh:335-337), `set -e` aborts the entire run mid-loop, abandoning every skill after it.
 
-In `install_skill`, replace the early return:
+So the top-up gets its own walker with the same predicate as Task 2's guard: a non-symlink at a
+stow path is human-authored, so it is reported and skipped, never overwritten. A separate function
+rather than a mode parameter on `install_symlinks` keeps the proven `--force` and fresh-install
+paths byte-identical, which the Global Constraints require, and spares the shared function a
+second responsibility it would carry on every call. Add it directly below `install_symlinks`:
+
+```sh
+# Top-up variant of install_symlinks for the no-force path on an existing
+# install, where remove_install has NOT cleared the target. Same predicate as
+# the remove_install guard: a non-symlink at a stow path is human-authored,
+# so it is reported and skipped, never overwritten. ln -sf runs only where
+# the destination is absent or already a symlink. Returns 0 when fully
+# linked, 1 when anything was protected or failed.
+top_up_symlinks() {
+    local source_dir="$1"
+    local target_dir="$2"
+    local topup_rc=0
+
+    for item in "$source_dir"/*; do
+        [ -e "$item" ] || continue
+        local name
+        name="$(basename "$item")"
+
+        if [ -d "$item" ]; then
+            # Anything here that is not a real directory is protected: a
+            # regular file would make mkdir -p fail, and a symlink (which the
+            # installer never creates at directory positions) would let the
+            # recursion plant links inside whatever it points at.
+            if [ -L "$target_dir/$name" ] || { [ -e "$target_dir/$name" ] && [ ! -d "$target_dir/$name" ]; }; then
+                printf "    protected: %s is not a directory, not linking under it\n" "$target_dir/$name" >&2
+                topup_rc=1
+                continue
+            fi
+            mkdir -p "$target_dir/$name" || return 1
+            top_up_symlinks "$item" "$target_dir/$name" || topup_rc=1
+        else
+            if [ -e "$target_dir/$name" ] && [ ! -L "$target_dir/$name" ]; then
+                printf "    protected: %s was not written by the installer, not overwriting\n" "$target_dir/$name" >&2
+                topup_rc=1
+                continue
+            fi
+            ln -sf "$item" "$target_dir/$name" || return 1
+        fi
+    done
+    return "$topup_rc"
+}
+```
+
+The file-position guard passes symlinks through on purpose: a dangling or stale symlink is
+installer debris, and relinking it is the whole point of the top-up. Trace the failure paths
+through `set -e` before trusting them: this function is only ever invoked as an `if` condition,
+which POSIX-suppresses `set -e` for the entire body, the same rule Task 2 documents for
+`remove_install`. That suppression is why `mkdir -p` and `ln -sf` carry explicit `|| return 1`;
+unchecked, an unexpected failure (permissions, disk full) would be silently swallowed. The
+`return 1` lands in the caller's else branch below, which records `RC=1` and returns, so the `for`
+loop moves on to the next skill instead of aborting the run.
+
+Then, in `install_skill`, replace the early return. The old text below is the post-Task-2 form:
+Task 2 Step 3 wrapped this `remove_install` call site along with the other two in `install_skill`,
+so match against this, not against the two-line `uninstall_skill` form.
 
 ```sh
     if is_current_install "$skill_name"; then
@@ -660,7 +787,11 @@ In `install_skill`, replace the early return:
             printf "  %-20s already installed — skipping\n" "$skill_name"
             return
         fi
-        remove_install "$skill_name" || { RC=1; return 0; }
+        remove_install "$skill_name" || {
+            printf "  %-20s skipped (protected files present)\n" "$skill_name"
+            RC=1
+            return 0
+        }
     elif
 ```
 
@@ -669,18 +800,33 @@ with:
 ```sh
     if is_current_install "$skill_name"; then
         if [ "$FORCE" = 0 ]; then
-            # SKILL.md matching does not mean every file is linked: that is exactly
-            # how four RepoSkills files went missing for four months. ln -sf is
-            # idempotent, so top up rather than skipping.
-            install_symlinks "$source_dir" "$skill_dir"
-            printf "  %-20s up to date\n" "$skill_name"
-            return
+            # SKILL.md matching does not mean every file is linked: that is
+            # exactly how four RepoSkills files went missing for four months.
+            # Top up rather than skipping, but never via raw install_symlinks:
+            # remove_install has not cleared this directory, so a user file
+            # can sit at a stow path and ln -sf would destroy it.
+            if top_up_symlinks "$source_dir" "$skill_dir"; then
+                printf "  %-20s up to date\n" "$skill_name"
+            else
+                printf "  %-20s topped up (protected files left in place)\n" "$skill_name"
+                RC=1
+            fi
+            return 0
         fi
-        remove_install "$skill_name" || { RC=1; return 0; }
+        remove_install "$skill_name" || {
+            printf "  %-20s skipped (protected files present)\n" "$skill_name"
+            RC=1
+            return 0
+        }
     elif
 ```
 
-Add a test for it:
+`RC=1` here surfaces through the `exit "$RC"` Task 2 added, so a flagless install that had to skip
+a protected file exits non-zero, consistent with the `--force` skip.
+
+Add three tests. Append to `tests/install.test.sh`, before the summary line, and note the
+invocation lines at the end of the block: a defined but never-called test runs nothing and turns
+the `0 failed` gate vacuous.
 
 ```sh
 test_plain_install_tops_up_missing_files() {
@@ -698,11 +844,74 @@ test_plain_install_tops_up_missing_files() {
     fi
     rm -rf "$home"
 }
+
+test_plain_install_never_overwrites_a_user_file() {
+    target="$(setup_fixture)"; home="$(dirname "$(dirname "$target")")"
+    run_install "$home" Sleep >/dev/null
+    # A user detaches one link to keep an edited copy of their own. SKILL.md
+    # stays linked, so is_current_install still passes and the top-up runs.
+    victim="$(cd "$target/Sleep" && find . -type l ! -name 'SKILL.md' | sed 's|^\./||' | head -1)"
+    rm -f "$target/Sleep/$victim"
+    printf "my precious edits\n" > "$target/Sleep/$victim"
+
+    run_install "$home" Sleep >/dev/null || true
+
+    if [ ! -L "$target/Sleep/$victim" ] && \
+       [ "$(cat "$target/Sleep/$victim")" = "my precious edits" ]; then
+        pass "flagless install leaves a detached user copy intact"
+    else
+        fail "flagless install leaves a detached user copy intact" \
+             "$victim was linked over by the top-up"
+    fi
+    rm -rf "$home"
+}
+
+test_topup_collision_does_not_abort_the_run() {
+    target="$(setup_fixture)"; home="$(dirname "$(dirname "$target")")"
+    run_install "$home" Sleep RepoSkills >/dev/null
+    # A user file where stow/Sleep has the Tools directory. Unguarded, the
+    # top-up's mkdir -p fails on it and set -e kills the whole run mid-loop,
+    # abandoning RepoSkills, whose missing link must still be restored.
+    rm -rf "$target/Sleep/Tools"
+    printf "user file\n" > "$target/Sleep/Tools"
+    victim="$(cd "$target/RepoSkills" && find . -type l ! -name 'SKILL.md' | sed 's|^\./||' | head -1)"
+    rm -f "$target/RepoSkills/$victim"
+
+    run_install "$home" Sleep RepoSkills >/dev/null || true
+
+    if [ -e "$target/RepoSkills/$victim" ]; then
+        pass "a top-up collision does not abort later skills"
+    else
+        fail "a top-up collision does not abort later skills" \
+             "RepoSkills was never topped up, so the run died on Sleep"
+    fi
+    if [ -f "$target/Sleep/Tools" ] && [ ! -L "$target/Sleep/Tools" ]; then
+        pass "the colliding user file survives"
+    else
+        fail "the colliding user file survives" "Sleep/Tools was replaced"
+    fi
+    rm -rf "$home"
+}
+
+test_plain_install_tops_up_missing_files
+test_plain_install_never_overwrites_a_user_file
+test_topup_collision_does_not_abort_the_run
 ```
 
-Run it before the change to confirm it fails ("already installed, skipping" leaves the gap), then
-after to confirm it passes. Note this changes the "already installed" message to "up to date",
-which the earlier tests do not assert on.
+The collision test hardcodes `Tools` where the others discover their victim, because it needs a
+path that is a directory in `stow/`, and `stow/Sleep/Tools` is the only one Sleep has; a discovered
+path could silently stop being a directory in a future stow layout and the test would prove
+nothing.
+
+Run all three before the change. The two restore assertions fail red: "already installed,
+skipping" leaves both gaps unrepaired. The three protection assertions (the detached copy, the
+colliding file, and test 2 as a whole) pass against the pre-change file, coincidentally, because a
+skip touches nothing; they exist to pin the guard against the naive form of this step, which no
+earlier test catches. To watch them bite, substitute a bare `install_symlinks "$source_dir"
+"$skill_dir"` for the guarded call and rerun: the user file dies and the collision aborts the run
+mid-loop, taking the second restore assertion with it. Then implement the guarded form above and
+confirm `0 failed`. Note this changes the "already installed" message to "up to date", which the
+earlier tests do not assert on.
 
 - [ ] **Step 7: Lint**
 
@@ -725,7 +934,10 @@ exits 1 on drift, so it works as a CI or pre-commit gate.
 
 Detection alone was half a fix: is_current_install only tests SKILL.md, so a
 plain install reported success and changed nothing on a skill missing files.
-It now tops up via idempotent ln -sf instead of skipping."
+It now tops up instead of skipping. The top-up never links over a non-symlink:
+remove_install has not cleared the directory on that path, so a regular file
+there is human-authored, exactly the class of file the previous commit
+protects. Protected paths are reported, skipped, and the run exits non-zero."
 ```
 
 ---
@@ -763,7 +975,8 @@ Immediately after the closing fence, add two short paragraphs. These earn their 
 `--check` exists because `install.sh` symlinks per file rather than linking the skill
 directory as a whole. A skill that gains a file after its last install silently lacks that
 file until the installer runs again, with nothing to signal it. `--check` reports `MISSING`,
-`STALE` and `UNMANAGED` per file and exits non-zero, so it works as a CI or pre-commit gate.
+`STALE`, `UNMANAGED`, `ORPHANED` and `FOREIGN` per file and exits non-zero, so it works as a CI
+or pre-commit gate.
 
 `--allow-destroy` is the opt-in for removing files in the target that did not come from
 `stow/`. The installer only ever writes symlinks and directories, so any regular file inside
@@ -786,13 +999,32 @@ git commit -m "document install.sh --check and --allow-destroy"
 
 ---
 
+## Review amendments
+
+An independent review of this plan (2026-09-02, every finding verified against the file and against
+`sh` behaviour on this machine before being acted on) was applied in place. In the style of the
+spec's section 11:
+
+| Finding | Resolution |
+|---|---|
+| **C1 (critical).** Task 3's top-up called `install_symlinks` unguarded on the no-force path, where `remove_install` never runs. BSD `ln -sf` silently replaces a regular file, so a flagless install would destroy a user's detached edited copy: the same incident class Task 2 closes, reopened without even `--force`. A user file where `stow/` has a directory was worse: `mkdir -p` fails and `set -e` aborts the whole run mid-loop | Step 6 now adds `top_up_symlinks`, which links only where the destination is absent or already a symlink, reports protected paths, sets `RC=1` and continues. The `--force` and fresh-install paths keep raw `install_symlinks`, correct there because `remove_install` has certified the directory. Two tests pin it: a detached user copy survives a flagless install, and a directory collision does not abort later skills |
+| **M1 (major).** Step 6's replace-this snippet showed the two-line `uninstall_skill` form of the `remove_install` call, but Task 2 Step 3 leaves the four-line form at every `install_skill` call site, so an exact-match executor would find nothing and stall or improvise | Step 6's old text now quotes the post-Task-2 four-line form, with a note naming which task shaped it |
+| **M2 (major).** `--check` mutated: the unconditional `mkdir -p "$TARGET_DIR"` at install.sh:315 sits above the dispatch block, so a read-only check created `~/.claude/skills` on a machine without one | Task 3 Step 3 moves the mkdir into the install branch, the only branch that needs it. A test asserts `--check` against a non-existent target leaves it non-existent |
+| **m1 (minor).** Task 2 Step 5 prefixed `CLAUDE_SKILLS_DIR` to a single command, scoping it to that command, so the `ls` on the next line expanded it to nothing and looked under `/RepoSkills/` | The variable is now exported on its own line, with the reason stated. "the tracked `IMPROVEMENTS.md`" in the same step also lost the word "tracked", since the paragraph goes on to say tracked-ness is irrelevant |
+| **m2 (minor).** Task 4's README prose said `--check` reports three categories; the implementation and Task 3's commit message have five | The prose now lists all five |
+| **m3 (minor).** Two double-reports in `check_skill`: a dangling symlink at a stow path was both MISSING (loop 1) and ORPHANED (loop 3); a user file at a stow path was both STALE and UNMANAGED. Exit codes unaffected, but log noise | Loop 1 now judges only symlinks and true absences: dangling links are left to ORPHANED, non-symlinks to UNMANAGED, so each drifted path gets one line. A header comment also records two latent divergences from the installer's walk (dotfiles and stow-side symlinks), neither present in `stow/` today |
+| **m7 (minor).** Task 3's Consumes line omitted Task 2's `RC` and the wrapped `remove_install` call sites, which its own Step 6 old text depends on | The Interfaces block now declares both, and Produces gains `top_up_symlinks` |
+| **Found during amendment.** Step 6's test block defined its test but never invoked it, and gave no append location, unlike every other test block in this plan. A defined but never-called test runs nothing, so the "run it before the change" instruction would silently do nothing and the `0 failed` gate would pass vacuously | The block now ends with the three invocation lines and states where to append, and the step says why the invocations matter |
+
+---
+
 ## Self-Review
 
 **Spec coverage.** This plan implements section 7 (Housekeeping) and stage 1 of section 8. Both recommendations in section 7 are covered: `--check` in Task 3, and the refusal to delete regular files in Task 2. Sections 3, 4, 5, 6 and 9 of the spec are out of scope for this plan and belong to the sibling plans listed below.
 
 **Placeholder scan.** No TBD, TODO, or "add error handling". Every code step carries the actual code. The one place a value is not given literally is the `victim` in Task 3, selected at test time via `find . -type l | head -1` so the test does not hardcode a filename that may change, and so it can never pick a directory.
 
-**Type consistency.** `ALLOW_DESTROY` and `RC` are introduced in Task 2; `RC` is also read by `uninstall_skill` and by the final `exit`. `CHECK` and `check_skill` are introduced in Task 3 and read only there. `CLAUDE_SKILLS_DIR`, `setup_fixture` and `run_install` are introduced in Task 1 and used by every later test, and every test invokes the installer through `run_install` so `HOME` is always sandboxed. `assert_eq`, `assert_contains`, `pass` and `fail` are defined in Task 1 and used unchanged.
+**Type consistency.** `ALLOW_DESTROY` and `RC` are introduced in Task 2; `RC` is also read by `uninstall_skill` and by the final `exit`. `CHECK`, `check_skill` and `top_up_symlinks` are introduced in Task 3 and read only there; the top-up caller in `install_skill` also writes `RC`, which Task 2 introduced and the final `exit` reads. `CLAUDE_SKILLS_DIR`, `setup_fixture` and `run_install` are introduced in Task 1 and used by every later test, and every test invokes the installer through `run_install` so `HOME` is always sandboxed. `assert_eq`, `assert_contains`, `pass` and `fail` are defined in Task 1 and used unchanged.
 
 **No test-count gates.** Every step gates on `0 failed` rather than a total, because the runner counts assertions and the total shifts whenever an assert is added or split.
 
