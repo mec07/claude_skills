@@ -23,9 +23,9 @@ The 18-item backlog is then resolved against that new shape: five items get rewr
 vocabulary, two are obviated, one has a working reference implementation to cite, and ten remain
 as genuine gaps to fix in place.
 
-Section 3.5 inventories every existing contract that references `modules/`, of which there are 143
-across 12 files, and names its replacement. Section 11 records the independent review that forced
-this revision and what each finding changed.
+Section 3.5 inventories every existing contract that references `modules/` and names its
+replacement; it deliberately quotes no total, for the reason it states. Section 11 records the
+independent reviews that forced successive revisions and what each finding changed.
 
 ### 1.1 Non-goals
 
@@ -47,9 +47,11 @@ this revision and what each finding changed.
 
 ## 2. Prior art and how it was used
 
-The PowerX `data` monorepo (`~/src/github.com/powerxai/data-2`) completed a
-modules-to-READMEs migration in June 2026 and has been running the result since. It is the only
-place this design has been tested at scale, so it is the reference throughout.
+The PowerX `data` monorepo (`~/src/github.com/powerxai/data-2`, a second clone of the same
+`powerxai/data` repository that later sections cite as `data`) cut over from modules to READMEs in
+June 2026 and has been running the result since. The migration is still in progress at scale (see
+section 9), and it is the only place this design has been tested at scale, so it is the reference
+throughout.
 
 **It is reference only.** Its documents are saturated with repo-specific mechanisms that must not
 enter RepoSkills:
@@ -124,22 +126,45 @@ In any repo mature enough to be worth documenting, **most boundaries already hav
 `data-2` main carries 197. That matters twice over. An existing README is the strongest ownership
 signal available, stronger than anything Step 4 can infer, because it is a decision a human already
 made rather than a property the pipeline guessed. And updating one is the safe operation: it is the
-human-territory verify-and-patch path of 3.2, which fixes wrong claims and leaves everything it
-cannot verify alone.
+human-territory verify-and-patch path of 3.2, which conforms structure, maintains the generated
+territory, reports wrong claims in the owner's prose rather than rewording them, and leaves
+everything it cannot verify alone.
 
 The only action that can impose an unwanted artifact is **creating** a README where a human never
-put one. So that is the only action gated:
+put one. So that is the only action gated. Two shapes are out of scope before the gate is even
+consulted. The **workspace root** is never a unit and its README is never created or conformed by
+this pipeline, however strong the root's signals: a root README is a repo-wide document with its
+own shape, not a unit README, and the reference's `update-readme.md` excludes it explicitly. And a
+directory the **project system deliberately excludes** is recorded as excluded even when a README
+exists there, because an excluded directory's README is its self-documentation of the exclusion,
+not an invitation to conform it. That second rule matters more than it looks: excluded-with-README
+is the reference repo's dominant excluded shape, since its workspace-excluded ingestion adapters
+all self-document.
 
 | Situation | Action | Confirmation |
 |---|---|---|
 | A README already exists, in any letter case | Update it | None. The human already decided this directory deserves one |
-| No README, and any **Strong** signal: own package manifest, own Dockerfile or entry point | Create it | None. A directory that builds or ships on its own has owners |
-| No README, **Medium signals only**: any two of domain, deployment or logical | Create it | **Yes.** Confirm the list first |
+| No README, and an own **package manifest** or an own **Dockerfile** | Create it | None. A directory that builds or ships on its own has owners |
+| No README, and anything else that qualified as a boundary: an **entry point** as the only Strong signal, or two Medium types | Create it | **Yes.** Confirm the list first |
 
 `phase-0` Step 4 qualifies a candidate on one Strong signal *or two Medium ones*, so a Medium-only
 candidate can be a directory nobody considers a unit. Writing a README into it would reproduce the
 very thing this spec removes, an unowned document nobody maintains, relocated from a parallel tree
-into the source tree.
+into the source tree. Count Medium signals as Medium **types**: own data types and own database
+tables are both Domain-boundary indicators, one type, not two signals.
+
+**An entry point alone does not earn ungated creation, and the gate is deliberately narrower than
+Step 4's signal table.** The two tables answer different questions, and stating that is part of the
+design, because read side by side they appear to disagree. Step 4 decides what qualifies as a
+*boundary*, and an own entry point (`main.go`, `index.ts`, `app.py`) is a Strong Service-boundary
+signal there (`phase-0-discover.md:175`); that table governs the existing `modules/` tree, this is
+the expand stage, and it does not change. This gate decides what earns a *README* with no human in
+the loop, and there the manifest is the discriminator: a shared library deserves a README, and a
+shared library has its own manifest, because the manifest is exactly what makes it a workspace
+member. An internal library inside a single frontend app has an `index.ts` and no manifest, and one
+README per internal library is precisely the unwanted-artifact failure this gate exists to prevent.
+So a directory can qualify as a boundary on an entry point and still wait at the confirmation list
+for its README. That is a stated property, not a contradiction between two tables.
 
 **Gate on the "Signals detected" field, not on Confidence.** Step 4 records both
 (`phase-0-discover.md:199-200`), and Confidence cannot express this gate: it is defined as `medium`
@@ -156,11 +181,18 @@ Medium signals, and Step 4's signal table needs no change.
 *patterns* live; the confirmation outcome needs the same treatment for the same reason. Kept only in
 `state.md`, anyone who clones the repo is re-asked and a boundary the owner deliberately declined is
 re-proposed on every machine forever, which is the single-machine defect 3.6 exists to remove.
-Confirmed units and declined candidates both go into `.ai/skills/conventions.md`, so a decline is
-durable and a later human can reverse it deliberately.
+What goes into `.ai/skills/conventions.md` is the **decisions**: declined candidates, Medium-only
+candidates a human confirmed, and deployability exceptions, so a decline is durable and a later
+human can reverse it deliberately. It is not a per-unit inventory. The reference already settled
+that question: `data/docs/project-conventions.md:46` states "The authoritative list is whatever Nx
+currently resolves" and says not to hand-maintain a separate one, because a copied inventory is a
+second source of truth that goes stale the day a unit is added, while a decision is exactly the
+thing the project system cannot answer. An earlier draft said "confirmed units and declined
+candidates both go" into the document; this is a tightening of that, not a reversal, and it is
+consistent with what section 11 records, which is that *declines* needed a repo home.
 
 **Ungated does not mean invisible.** On a first run against a repo with no existing READMEs, the
-Strong-signal path would otherwise write dozens of files into someone's source tree with nobody
+ungated create path would otherwise write dozens of files into someone's source tree with nobody
 having seen the list. Ungated means no per-unit interrogation, not no visibility: the **full** create
 list, Strong candidates included, is presented at the checkpoint before anything is written.
 
@@ -178,9 +210,9 @@ by *importance*, giving the top 10 full skills, the next 15-20 summaries and the
 mention (`orchestration.md:509-515`). Importance is a judgement the pipeline makes badly and cannot
 verify. Whether a boundary builds, ships or deploys is a fact the repo answers, and whether it
 already has a README is a fact the git index answers. So ranking by importance is removed and those
-two facts take its place. Accept the consequence honestly: a Tier C repo with 40 Strong-signal
-boundaries ends up with 40 READMEs, and that is correct, because each of those directories builds or
-deploys on its own and already has owners. In practice most of the 40 will already exist, so the run
+two facts take its place. Accept the consequence honestly: a Tier C repo with 40 boundaries carrying
+their own manifest or Dockerfile ends up with 40 READMEs, and that is correct, because each of those
+directories builds or ships on its own and already has owners. In practice most of the 40 will already exist, so the run
 is mostly updates.
 
 **Unconfirmed Medium boundaries are not silently dropped.** They keep exactly what Tier 3 gave them:
@@ -294,7 +326,7 @@ The territories differ in how aggressive a fix may be, not in whether the update
 |---|---|---|---|
 | `.ai/skills/**`, code-derived | RepoSkills | Fix it | **Remove it.** RepoSkills wrote it from code, so unverifiable means stale |
 | `.ai/skills/**`, human-taught | The human who taught it | Fix only with evidence | **Keep it.** Flag, never remove |
-| `<unit-root>/README.md` | The humans who own that unit | Fix it, citing `<file:line>` | **Flag it, never remove it.** A human may know something the code does not show |
+| `<unit-root>/README.md` | The humans who own that unit | In marked-generated territory, fix it citing `<file:line>`; in human-written prose, **report it, never patch it** (see the write boundary below) | **Flag it, never remove it.** A human may know something the code does not show |
 | Root platform-glue files | Generated from a canonical source (6.3) | Regenerate below the split marker | Preamble above the marker is preserved verbatim |
 
 **The human-taught carve-out is essential and an earlier draft omitted it.** `domain-context.md`
@@ -345,7 +377,7 @@ So the three permitted operations, in order of decreasing licence:
 | Operation | Permitted | Bounded by |
 |---|---|---|
 | **Conform structure** | Add a missing section from the unit's skeleton; move content sitting in the wrong section | Never reorder correct content. Never delete a section the skeleton does not name |
-| **Fix facts** | Correct a claim the code has outgrown | Cite `<file:line>`. Flag the unverifiable rather than guessing or deleting |
+| **Fix facts** | Correct a claim the code has outgrown | Cite `<file:line>`. Flag the unverifiable rather than guessing or deleting. **Inline only in generated territory**: in human-written prose a verified-wrong claim is reported, never patched. See the write boundary below |
 | **Rewrite prose** | **No.** Prose inside a section that is already correct is left exactly as written | The owner's words are the point |
 
 And unchanged from before:
@@ -357,6 +389,90 @@ And unchanged from before:
 - Make corrections silently. Never leave a meta-note about what the old README said, which reads as
   noise to the owner.
 
+#### The write boundary inside a unit README
+
+Running the reference design for real on `data` surfaced a cost this spec had not recorded, and it
+is the strongest argument for bounding what RepoSkills writes. **Putting generated content into
+human-reviewed READMEs created more review backpressure than keeping the files hidden in
+`.ai/skills/` ever did.** A file under `.ai/skills/` spent nobody's review attention; every inline
+edit inside a unit README spends the attention of that unit's owners, who must read the diff to
+accept it. That attention is the scarce resource the whole design competes for, and it is also the
+design's premise: READMEs in the source tree stay maintained precisely because humans review them.
+The premise and the cost are the same fact. The owner's resulting position, adopted here: READMEs
+in the repo are the right shape, **and** RepoSkills' licence inside one is bounded. It maintains
+the territory it generated, and in the human-written body it points out blatant errors rather than
+fixing them inline.
+
+**The boundary is the provenance marker, not a position in the file.** This section already settled
+the rule for `.ai/skills/**`: mark what is generated, treat everything unmarked as taught. Unit
+READMEs get the same rule rather than a second one. A positional boundary ("the top section") was
+considered and rejected: it breaks the moment a human inserts a section of their own among the
+generated ones, and "top" is not something a generating agent can test where a marker is. Two
+granularities of the existing `<!-- repo-skills: ... -->` convention:
+
+- **Section-level.** A `provenance=generated` comment directly under a heading marks the whole
+  section, ending at the next heading of the same level.
+- **Block-level.** The same comment, paired with a closing comment, marks one block inside an
+  unmarked section, for the sections that are mixed by design.
+
+Where each section of the 5.1 skeletons falls:
+
+| Section | Territory | Why |
+|---|---|---|
+| Title and conventions info-box | Generated, section-level | Deterministic from the manifest and the template |
+| Overview | Human, never marked | Already settled above: human-authored on any existing README, blank is a valid state |
+| Observability (or the repo's own name for it, per 5.1) | Generated, section-level | Computed from the 5.3-confirmed link pattern, so it is regenerable by construction |
+| Running and testing locally | Mixed | The commands block the generator emits is block-marked; anything a human adds beside it is unmarked and untouchable |
+| Conditional sections | Human | An `Endpoints` list a human curated is prose. Unmarked unless the generator authored the section whole, and see the from-nothing rule below |
+| Agent Notes | Human, plus marked blocks | The one section whose value is human knowledge. RepoSkills writes here only as flagged, block-marked appends: see the harvest exception below |
+
+**On a README authored from nothing, the generator marks only what it can recompute**: the
+deterministic sections and blocks. Prose it wrote once, the Overview, Agent Notes, an Endpoints
+list, is deliberately left unmarked, ceding it to the unit's owners on the day it is written,
+exactly as the Overview boundary already works.
+
+**Inside marked territory the full three-operation licence applies**, inline fact-fixing and
+regeneration from the confirmed pattern included. **Outside it, a verified-wrong fact is reported,
+never patched**: the run report names the file, the line, the claim and the evidence, and the
+unit's owners fix it or decline to. That converts an inline edit an owner must audit into a cited
+finding an owner can act on, which is the cheaper spend of the same attention.
+
+**Conform structure survives file-wide, and that is deliberate rather than a loophole.** Adding a
+missing skeleton section inserts marked-generated content or a skeleton placeholder; it rewrites no
+human sentence. Moving misplaced content relocates the owner's words verbatim. Both stay permitted
+everywhere because two things depend on them: 5.1's per-skeleton sections cannot be present in
+every README if updates never add one, and the reference repo now carries CI
+(`ci/cli/scripts/check-readme-conformance.py`) that fails a README whose sections sit in the wrong
+order, so a run that refuses to conform structure leaves the repo failing its own checks. What is
+narrowed is the one operation that spends review attention worst: silently reworded facts inside
+prose a human wrote.
+
+**The harvest is the permitted exception, and it stays one.** 3.4 appends module-skill gotchas to
+Agent Notes, which is unmarked territory. That stays permitted because it is a one-time migration
+whose entire purpose is to move irreplaceable content into human view; every appended block is
+already flagged for review (3.4 step 3), and each block also carries a block-level marker, so it is
+identifiable generated content sitting inside a human section rather than words masquerading as the
+owner's. The same treatment covers section 8's interim routing of change-impact content to Agent
+Notes between 2b and stage 5: appended as flagged, block-marked content. The marker earns its keep
+again at stage 5, when *Contracts owned* lands and those blocks can be relocated mechanically
+because they are machine-identifiable.
+
+**This is not fix-only returning under another name.** Section 11 records fix-only being rejected
+for three specific failures, and the territorial bound reintroduces none of them. The common case,
+an existing README, still gains structure conformance and fully maintained generated sections,
+which is where most of an update's value sat, so it is not made the least valuable case again.
+5.1's per-skeleton sections still land, because conform-structure still adds them. And 3.4's
+harvest still has its destination, as the exception above. Fix-only restricted the *operations*
+everywhere; this bounds one operation's *territory*. One cost is accepted with eyes open rather
+than papered over: a blatantly wrong claim in human prose now outlives the run that found it,
+standing until a human acts on the report. "Stale or wrong information is worse than none" still
+holds; the owner's judgement is that a silent unreviewed patch spends the trust this design runs
+on, and a cited finding is the same fix routed through the person entitled to make it.
+
+The bound also compounds with 5.1's adopt-and-align rule: a run that adopts the repo's existing
+section names and writes only in marked territory produces a small, predictable, reviewable diff,
+which attacks the backpressure problem from both ends.
+
 #### Consequence for drift
 
 READMEs replace module skills, so they must inherit the self-maintenance module skills had. That is
@@ -366,7 +482,9 @@ two mechanisms at different price points, not one:
   presence, and freshness measured by **last commit touching the README versus last commit touching
   filtered non-test code in its unit**. Not mtime: see item 10 in section 6.1.
 - **Expensive repair, on demand:** `phase-drift-resolve` claim-verifies README content and patches
-  it, exactly as it does for any other generated artifact.
+  it, exactly as it does for any other generated artifact, honouring the write boundary above:
+  patches land inline in marked-generated territory, and a wrong claim in human-written prose goes
+  into the drift report as a cited finding.
 
 Item 18's "presence plus freshness, not content-diff" describes the cheap signal only. Reading it as
 the whole story would leave READMEs with weaker self-maintenance than the module skills they
@@ -400,7 +518,9 @@ and has an unambiguous destination:
 2. **Append** the extracted text to the target unit's README under `Agent Notes`, the one section
    that exists in every README and has no ordering constraints. Append, never restructure.
 3. **Flag** every appended block for human review rather than presenting it as verified. It came
-   from a document nobody has fact-checked.
+   from a document nobody has fact-checked. Each block carries a block-level provenance marker,
+   which is what licenses writing into Agent Notes at all: it is otherwise human territory under
+   3.2's write boundary, and the harvest is that boundary's one stated exception.
 4. **Report** everything not harvested: which module skill it came from, which units it mapped to,
    and why it was dropped.
 5. **Delete** `modules/` only after the report is written and the appends are in place.
@@ -551,9 +671,15 @@ The targeted-update path says "regenerate the skill file", and diff-update maps 
 module skills through `_boundaries.md`. For a README, "regenerate" is not the same operation under a
 new name: it would overwrite a human-owned file, which 3.2 forbids.
 
-**Rule.** Every re-run path, `--update` included, verifies and patches a README that exists. Only
-`--fresh`, or a unit that has no README at all, produces one whole. `SKILL.md`'s documented
+**Rule.** Every re-run path, `--update` included, verifies and patches a README that exists, within
+3.2's write boundary. Only `--fresh`, or a unit that has no README at all, produces one whole, and
+even `--fresh` regenerates only marked-generated territory in a README that carries human prose. `SKILL.md`'s documented
 `--update <name>` contract must say so, since it currently promises regeneration.
+
+This leaves no flag that rebuilds a README from nothing, which is deliberate rather than an
+oversight. The escape hatch is the absent-README path above: delete the file and re-run, and the
+next run generates it whole. Deleting a file is an unmistakably explicit act by someone who can see
+what they are discarding, where a flag that quietly overwrites a unit owner's prose is not.
 
 #### RepoSkills never commits into unit directories
 
@@ -620,6 +746,28 @@ repo, not something to copy. Its companion conventions document is `docs/project
 
 ### 5.1 Sections
 
+**Adopt and align: an existing repo convention outranks the grammar's names.** Where the target
+repo already has a README template, a conventions document, or CI enforcing section names, the
+generated `readme-template.md` adopts **that repo's section names and section set** rather than
+imposing RepoSkills' own. The names below are the fallback for a repo with no existing convention,
+not a standard to hold an existing one to. Four facts from the reference repo, each verified on
+`data` main on 2026-09-02, show the rule is load-bearing rather than a courtesy:
+
+- `## Monitoring` appears 68 times across tracked READMEs and `## Observability` zero, while this
+  grammar names the section Observability. Under 3.2's conform-structure semantics, a run without
+  this rule would restructure all 68.
+- The repo's own template names its conditional sections `Endpoints`, `Environment Variables` and
+  `Runbook` (`docs/readme-template.md:136-137`), where the grammar's slot is named `Configuration`.
+- `## Build and packaging` appears 26 times in real READMEs and has no slot anywhere in the
+  grammar. An adopted section set keeps it; an imposed one has nowhere to put it.
+- `data` main now carries CI enforcing its template
+  (`ci/cli/scripts/check-readme-conformance.py`, updated 2026-09-01). Without this rule, a run
+  against `data` emits a second template with different section names beside a checker enforcing
+  the first, and the stage-6 regression cannot pass by construction.
+
+Discovering the existing convention is Phase 0's job and the mechanics live with the grammar; what
+is settled here is the precedence: **repo convention first, grammar names as the fallback.**
+
 **Two skeletons, chosen by deployability**, which is the model C1 adopts and which an earlier draft
 of this section failed to encode. A unit is deployable when the repo's deployability predicate
 (section 4) says it ships; otherwise it is a library or other non-deployable project, nothing runs,
@@ -648,8 +796,9 @@ Running and testing locally and before Agent Notes:
 | Runbook | The unit has operational failure modes with known responses |
 | A unit-specific topic | Something genuinely particular to this unit, named for what it is |
 
-All four are present in the reference template's optional-section list, so they are proven and land
-with the grammar in stage 2.
+All four have counterparts in the reference template's optional-section list
+(`docs/readme-template.md:136-137`, where the Configuration slot goes by the name
+`Environment Variables`), so they are proven and land with the grammar in stage 2.
 
 Section order is fixed, and Agent Notes is always last.
 
@@ -795,13 +944,27 @@ the full content, while removing the maintenance burden item 14 was created to m
 
 | # | Item | Disposition |
 |---|---|---|
-| 7 | Wire drift tooling into CI by default | **Weaker than it looks.** `data-2/.github/workflows/skills-drift.yml` runs only `sync-agent-context.sh --check`, which is glue-file sync (the 6.3 pattern), **not** skill or README drift. A reference for CI wiring shape only. |
+| 7 | Wire drift tooling into CI by default | **Weaker than it looked in August, stronger now.** `data-2/.github/workflows/skills-drift.yml` runs only `sync-agent-context.sh --check`, which is glue-file sync (the 6.3 pattern), **not** skill or README drift. Since then `data` main has grown real README checks in CI: see below. |
 
-**No reference implementation exists for README drift.** The June removal commit promised drift
-detection "rewritten for READMEs" in a stacked PR, and no such script exists in `data-2` main today:
-`.ai/skills/scripts/` holds only `sync-agent-context.sh`. Item 10's presence-and-freshness signal is
-therefore **greenfield**, and the one deployment that ever ran RepoSkills' drift tooling deleted it.
-Plan that work as new, not as a port.
+**A README-drift reference implementation now exists, and this section's earlier claim is stale.**
+An earlier revision said no such implementation existed anywhere and that item 10 was greenfield,
+because the June removal commit promised drift detection "rewritten for READMEs" in a stacked PR
+that never landed. That was true of `data-2` when checked in August and is not true of `data` main
+now. Verified 2026-09-02:
+
+- `ci/cli/scripts/check-nx-project-readmes.sh` fails a PR whose affected Nx projects lack a root
+  `README.md`, with `--all` for the whole-repo state. Presence only, by design.
+- `ci/cli/scripts/check-readme-conformance.py` (updated 2026-09-01, with
+  `check-readme-conformance.sh` as its CI entry point) checks a README that exists against the
+  template's structure: exact filename case, H1 form, info-box text, section order, skeleton
+  selection by deployability, surviving placeholders and the Monitoring rows. It ships good and bad
+  fixtures under `ci/cli/scripts/tests/fixtures/readme-conformance/`, including a miscased-filename
+  case exercised through the tracked-file list, precisely because a case-insensitive checkout
+  cannot hold both spellings on disk, which is the same trap item 10 records.
+
+**The presence and structure halves of item 10 are therefore a port, not a build.** The freshness
+half, last commit touching the README versus last commit touching filtered non-test code in its
+unit, exists nowhere in that repo and remains new work.
 
 **Generated tooling must target bash 3.2.** The shipped `templates/skill-drift.sh` requires bash 4+
 while macOS stock is 3.2 (`phase-2-map-generate.md:958`). `data-2`'s replacement deliberately targets
@@ -929,8 +1092,9 @@ the dependency and change-impact content, are deleted in 2b. *Contracts owned*, 
 says items 11 and 15 "become", does not arrive until stage 5. Between 2b and stage 5 the pipeline
 would stop emitting its highest-value content with nowhere to put it. So 2b must state that
 change-impact and dependency content goes into *Agent Notes* until *Contracts owned* lands, which is
-where the reference implementation keeps it anyway. Without that line the stage-6 regression will
-report a regression this spec caused.
+where the reference implementation keeps it anyway, appended as flagged, block-marked content per
+3.2's write boundary, since Agent Notes is otherwise human territory. Without that line the stage-6
+regression will report a regression this spec caused.
 
 ## 9. Verification
 
@@ -962,8 +1126,17 @@ migration branches must use that query on both sides or it is measuring noise.
 
 More usefully, **the migration is already merged into main by some route other than those branches**
 (`repo-skills-to-readmes` is not an ancestor of HEAD, yet main carries 145 READMEs and has no
-`.ai/skills/modules/`). Main is therefore the live, merged, still-maintained expression of this
-design, and the branches are historical snapshots of how it got there.
+`.ai/skills/modules/`). Main is therefore the live, still-maintained expression of this design, and
+the branches are historical snapshots of how it got there.
+
+**Merged does not mean finished.** The owner reports the migration on `data` as a large change
+still in progress, and the repo's own CI corroborates that: the presence check swept "the last 15"
+projects only on 2026-09-01, the conformance check landed the same day, and both run against
+*affected* projects per PR, so the whole-repo state has never had to be green. Main is a
+**partial** migration. Two consequences for this section: a README count on main is not a
+completion measure, and the pass criterion below binds per README the run touched. It must not
+assume every unit on main is already conformant, and a unit that was nonconformant before the run
+is a pre-existing condition, not a regression.
 
 Use current main as the reference and the regression target. Preserved pipeline state remains at
 `~/.claude/MEMORY/RepoSkills/data-2/state.md`, but note it describes the June run, not main.
@@ -973,11 +1146,14 @@ the query defined above: it may be the deliberate scope decision item 18 records
 reality", or it may be READMEs that were dropped on the way to main.
 
 **Pass criterion for an existing README.** Under conform-structure semantics (3.2) the regression
-has a testable criterion, which fix-only never had: after a run, every unit README carries its
-skeleton's sections in the fixed order; no prose inside a previously-correct section has changed; no
-Overview has been touched; and every factual correction carries a `<file:line>` citation in the
-report. A run that adds a missing section is correct behaviour, not a regression, which is why the
-semantics had to be settled before this criterion could exist.
+has a testable criterion, which fix-only never had: after a run, every unit README **the run
+touched** carries its skeleton's sections, under the repo's own section names per 5.1, in the fixed
+order; no prose inside an unmarked section has changed, beyond verbatim relocation where conforming
+required it; no Overview has been touched; every inline factual correction sits in marked-generated
+territory and carries a `<file:line>` citation in the report; and every verified-wrong claim found
+in human prose appears in the report as a finding rather than as an edit. A run that adds a missing
+section is correct behaviour, not a regression, which is why the semantics had to be settled before
+this criterion could exist.
 
 **The regression needs a first-run target, not only an update target.** Regressing against
 already-migrated `data-2` main exercises the update path exclusively. It never tests generating
@@ -1099,10 +1275,16 @@ all accurate, which is worth recording given three of the quantitative claims we
 | Ungated creation had no visibility step on a first run | Full create list presented at the checkpoint before writing |
 | Install plan: the documented remedy for `MISSING` drift did nothing, because `is_current_install` tests only `SKILL.md` | Plain install now tops up via idempotent `ln -sf`, with a failing-first test |
 
-**One audit finding rejected after checking.** It reported Endpoints, Configuration and Runbook as
-absent from the reference and recommended deferring all six non-reference sections. They are present,
-named as optional sections at `data-2/docs/readme-template.md:136-137`, so they are proven and land
-with the grammar. Only the three genuinely absent sections are deferred.
+**One audit finding rejected after checking, and this entry's own evidence later corrected.** The
+audit reported the conditional sections as absent from the reference and recommended deferring all
+six non-reference sections. Optional sections are named at the cited lines, so the rejection stands
+and the conditional sections land with the grammar; only the three genuinely absent sections are
+deferred. But as first recorded this entry misquoted the evidence: `docs/readme-template.md:136-137`
+names `Endpoints`, `Environment Variables` and `Runbook`, not "Endpoints, Configuration and
+Runbook". `Configuration` is the grammar's slot name, not the reference's, a mismatch 5.1's
+adopt-and-align rule now absorbs by design. The fourth pass below records the correction; it is the
+third time this history has caught a misrecorded quantitative or citation claim, which is the
+pattern backlog item 2 names.
 
 Its remaining suggestion, deferring the nested-freshness rule until nesting first occurs, is
 declined: the rule is three lines and the failure it prevents (a parent flagging stale on every child
@@ -1113,6 +1295,33 @@ reconstruction was at risk from `install.sh`. It is not, and never was once it m
 installer deletes `$TARGET_DIR/<skill>`, where the file exists only as a symlink. Section 7's H2 is
 corrected and the stage-0 gate it created is removed. The lesson is the one item 2 of the backlog
 already states: a claim repeated confidently is not a claim verified.
+
+**Fourth pass, 2026-09-02, execution review.** Two sources this time: a review of the 2a-i
+implementation plan against this spec and the skill source before execution, and the owner's report
+from operating the reference design on `data` for real. Three owner decisions and every finding of
+the round, with what each changed. Every file-and-line claim below was re-verified against `data`
+main and the skill source on 2026-09-02.
+
+| Finding | Resolution |
+|---|---|
+| **Owner decision: an entry point alone must not earn ungated creation.** A shared library deserves a README and has its own manifest, because the manifest is what makes it a workspace member; an internal library inside a single frontend app has an `index.ts` and no manifest, and one README per internal library is the unwanted-artifact failure the gate exists to prevent. The entry point cannot be the discriminator; the manifest is | Section 3's gate: ungated `create` requires an own manifest or own Dockerfile; an entry point as the only Strong signal joins the confirmation list. Stated explicitly as deliberately narrower than `phase-0` Step 4's boundary table, which is unchanged, since it governs the `modules/` tree and this is the expand stage |
+| **Owner finding: generated content inside human-reviewed READMEs created more review backpressure than the hidden `.ai/skills/` files ever did.** Every inline edit in a unit README spends that unit owner's review attention, and that attention is both the design's premise and its cost | Recorded in 3.2 as its own finding, with the write boundary as the response |
+| **Owner decision: bound RepoSkills' write territory inside a unit README.** READMEs in the repo are the right shape, and RepoSkills maintains only the territory it generated; in human-written prose it reports blatant errors rather than fixing them inline | 3.2's write boundary: marker-based on `provenance=generated`, chosen over a positional "top section" rule because a marker survives a human inserting sections and is testable. Fix-facts bounded to marked territory; conform-structure survives file-wide because it rewrites no human sentence and the reference's own CI enforces section order; the harvest and 2b's interim Agent Notes routing become flagged, block-marked appends. Shown not to reintroduce fix-only's three recorded failures; the accepted cost, a wrong claim in human prose outliving the run that found it, is stated rather than hidden |
+| **Owner decision: adopt and align.** A repo with an existing README template, conventions document or CI enforcing section names gets those names and that section set; the grammar's names are the fallback for a repo with none | 5.1, with verified evidence: `## Monitoring` 68, `## Observability` 0, `## Build and packaging` 26 with no grammar slot, and a conformance checker on `data` main that a second template could never pass beside |
+| The migration on `data` is not finished: presence swept "the last 15" on 2026-09-01, conformance landed the same day, and both check affected projects per PR, so the whole-repo state has never had to be green | Section 9: main is a partial migration, a README count on main is not a completion measure, and the pass criterion binds per README the run touched |
+| Correction to the third pass's rejected-finding entry: `readme-template.md:136-137` names `Endpoints`, `Environment Variables` and `Runbook`, not "Endpoints, Configuration and Runbook" | The entry is corrected in place and the decision it records stands. Third misrecorded quantitative or citation claim this history has caught, the pattern item 2 names |
+| 6.4 was stale: it said no README-drift reference implementation existed and item 10 was greenfield, which was true of `data-2` in August and untrue of `data` main now | 6.4 rewritten: presence and structure conformance both exist in CI with fixtures, miscased-filename case included, so those halves of item 10 are a port. The freshness half remains new work |
+| Section 3's "confirmed units go into `conventions.md`" read as a per-unit inventory, which `data/docs/project-conventions.md:46` explicitly warns against hand-maintaining | Section 3 tightened: the document records decisions (declines, Medium-only confirmations, deployability exceptions), never an inventory. Consistent with the second pass's finding that *declines* needed a repo home |
+| Plan: every Task 3 assertion was a single-line grep against the multi-line block format the same task defined, so the suite was permanently red, or an agent flattens the schema to satisfy it | Fixed in the plan: assertions go through a block-aware awk helper scoped to one candidate's block, with exact path matching |
+| Plan: the gate fixture did not hold `src/reporting` back, because `index.ts` is a Strong signal by the letter, and its claimed "two Medium signals" were two indicators of one signal type (Domain), so it might not have qualified as a candidate at all | Fixture rebuilt: `src/reporting` carries two genuine Medium types (Domain and Deployment) and no entry point; a separate `src/ingest` shape pins the entry-point-only case. The two-Medium-types rule is now stated in section 3 and in the gate step |
+| Plan: the nested-unit fixture sat under `vendor/`, excluded in five places, so Phase 0 could reach it only by disobeying its own rules | Fixture moved: the nested package lives at `services/orders/pricing`, inside a real unit |
+| Plan: steps numbered 0.5 and 0.6 collided with existing Phase 0 steps of those numbers, and the checklist agents copy into `state.md` was never amended, so a context loss would silently skip the new steps | Renumbered to letter-suffixed 4a and 4b with checklist entries added. Same bug class as the phase-4 Check 10/11 collision this history records the first pass fixing |
+| Plan: Phase 0 skips entirely when `_triage.md` exists, so every "re-run Phase 0" step would have written nothing | The plan now defines a run protocol: a fresh run deletes both the fixture and its MEMORY directory before dispatching |
+| Plan: the workspace root fell through the gate as an ungated `create`, though the reference explicitly excludes it | The gate's first question: the root is never a unit, recorded as excluded. Now also stated in section 3 |
+| Plan: excluded-with-README was ambiguous, and it is the reference repo's dominant excluded shape, since the workspace-excluded ingestion adapters all self-document | Exclusion beats the README: recorded as excluded with `readme: exists`, the README being the exclusion's self-documentation. Now also stated in section 3 |
+| Plan: the deferred-sections assertion was a no-op, wrong file, wrong pattern, and no `absent` helper existed | Replaced by a manual read check that the generated template does not mention *Contracts owned* |
+| Plan: the fixture never exercised the authoritative-source rule Step 4a calls the one that matters most | A Python project (`analytics/pipeline`) invisible to the workspace globs is the counterexample, asserted by name on the `authoritative-source` line |
+| Plan: the confirmation venue for `create-pending-confirmation` was claimed covered but wired nowhere | Routed to the Phase 9 checkpoint alongside pattern confirmation, as the two new skip-blocking conditions |
 
 ---
 
