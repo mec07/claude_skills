@@ -86,5 +86,110 @@ test_install_lands_under_sandboxed_home() {
 test_target_dir_is_overridable
 test_install_lands_under_sandboxed_home
 
+# Every test below uses run_install, so HOME and CLAUDE_SKILLS_DIR are both
+# sandboxed and stdin is closed. Never call sh "$INSTALL" directly here.
+
+test_refuses_to_destroy_real_files() {
+    target="$(setup_fixture)"; home="$(dirname "$(dirname "$target")")"
+    run_install "$home" Sleep >/dev/null
+    printf "precious\n" > "$target/Sleep/NOTES.md"
+
+    out="$(run_install "$home" --force Sleep)" || true
+
+    if [ -f "$target/Sleep/NOTES.md" ]; then
+        pass "human file survives --force"
+    else
+        fail "human file survives --force" "NOTES.md was destroyed"
+    fi
+    assert_contains "error names the file at risk" "NOTES.md" "$out"
+    rm -rf "$home"
+}
+
+test_refuses_to_destroy_nested_file() {
+    target="$(setup_fixture)"; home="$(dirname "$(dirname "$target")")"
+    run_install "$home" RepoSkills >/dev/null
+    mkdir -p "$target/RepoSkills/templates"
+    printf "nested\n" > "$target/RepoSkills/templates/MINE.md"
+
+    run_install "$home" --force RepoSkills >/dev/null || true
+
+    if [ -f "$target/RepoSkills/templates/MINE.md" ]; then
+        pass "nested human file survives --force"
+    else
+        fail "nested human file survives --force" "templates/MINE.md was destroyed"
+    fi
+    rm -rf "$home"
+}
+
+test_uninstall_also_refuses() {
+    target="$(setup_fixture)"; home="$(dirname "$(dirname "$target")")"
+    run_install "$home" Sleep >/dev/null
+    printf "precious\n" > "$target/Sleep/NOTES.md"
+
+    run_install "$home" --uninstall Sleep >/dev/null || true
+
+    if [ -f "$target/Sleep/NOTES.md" ]; then
+        pass "human file survives --uninstall"
+    else
+        fail "human file survives --uninstall" "NOTES.md was destroyed by uninstall"
+    fi
+    rm -rf "$home"
+}
+
+test_one_protected_skill_does_not_abort_the_run() {
+    target="$(setup_fixture)"; home="$(dirname "$(dirname "$target")")"
+    run_install "$home" Sleep RepoSkills >/dev/null
+    printf "precious\n" > "$target/Sleep/NOTES.md"
+    rm -f "$target/RepoSkills/SKILL.md"
+
+    run_install "$home" --force Sleep RepoSkills >/dev/null || true
+
+    if [ -e "$target/RepoSkills/SKILL.md" ]; then
+        pass "a protected skill does not abort later skills"
+    else
+        fail "a protected skill does not abort later skills" \
+             "RepoSkills was never reinstalled, so the loop exited early"
+    fi
+    rm -rf "$home"
+}
+
+test_allow_destroy_sets_aside_rather_than_deleting() {
+    target="$(setup_fixture)"; home="$(dirname "$(dirname "$target")")"
+    run_install "$home" Sleep >/dev/null
+    printf "disposable\n" > "$target/Sleep/NOTES.md"
+
+    out="$(run_install "$home" --force --allow-destroy Sleep)"
+
+    if [ -f "$target/Sleep/NOTES.md" ]; then
+        fail "--allow-destroy clears the install dir" "NOTES.md still in place"
+    else
+        pass "--allow-destroy clears the install dir"
+    fi
+    assert_contains "--allow-destroy reports where files went" "set aside" "$out"
+
+    backup="$(printf "%s" "$out" | sed -n 's/.*set aside human files in \(.*\)$/\1/p' | head -1)"
+    if [ -n "$backup" ] && [ -f "$backup/NOTES.md" ]; then
+        pass "--allow-destroy preserves the file contents"
+    else
+        fail "--allow-destroy preserves the file contents" "not found under [$backup]"
+    fi
+    rm -rf "$home" "$backup"
+}
+
+test_force_still_works_on_symlinks_only() {
+    target="$(setup_fixture)"; home="$(dirname "$(dirname "$target")")"
+    run_install "$home" Sleep >/dev/null
+    out="$(run_install "$home" --force Sleep)"
+    assert_contains "clean --force still reports installed" "installed" "$out"
+    rm -rf "$home"
+}
+
+test_refuses_to_destroy_real_files
+test_refuses_to_destroy_nested_file
+test_uninstall_also_refuses
+test_one_protected_skill_does_not_abort_the_run
+test_allow_destroy_sets_aside_rather_than_deleting
+test_force_still_works_on_symlinks_only
+
 printf "\n%s run, %s failed\n" "$TESTS_RUN" "$TESTS_FAILED"
 [ "$TESTS_FAILED" -eq 0 ]
