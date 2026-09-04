@@ -191,5 +191,140 @@ test_one_protected_skill_does_not_abort_the_run
 test_allow_destroy_sets_aside_rather_than_deleting
 test_force_still_works_on_symlinks_only
 
+test_check_passes_on_clean_install() {
+    target="$(setup_fixture)"; home="$(dirname "$(dirname "$target")")"
+    run_install "$home" Sleep >/dev/null
+    if run_install "$home" --check Sleep >/dev/null; then
+        pass "--check exits 0 on a clean install"
+    else
+        fail "--check exits 0 on a clean install" "non-zero exit"
+    fi
+    rm -rf "$home"
+}
+
+test_check_detects_missing_file() {
+    target="$(setup_fixture)"; home="$(dirname "$(dirname "$target")")"
+    run_install "$home" Sleep >/dev/null
+    # Simulate the April failure: a file exists in stow but was never linked.
+    victim="$(cd "$target/Sleep" && find . -type l | sed 's|^\./||' | head -1)"
+    rm -f "$target/Sleep/$victim"
+
+    out="$(run_install "$home" --check Sleep)" && rc=0 || rc=1
+
+    assert_eq "--check exits 1 when a file is missing" "1" "$rc"
+    assert_contains "--check names the missing file" "$victim" "$out"
+    rm -rf "$home"
+}
+
+test_check_reports_not_installed() {
+    target="$(setup_fixture)"; home="$(dirname "$(dirname "$target")")"
+    out="$(run_install "$home" --check Sleep)" && rc=0 || rc=1
+    assert_eq "--check exits 1 when the skill is absent" "1" "$rc"
+    assert_contains "--check says not installed" "not installed" "$out"
+    rm -rf "$home"
+}
+
+test_check_detects_orphaned_symlink() {
+    target="$(setup_fixture)"; home="$(dirname "$(dirname "$target")")"
+    run_install "$home" Sleep >/dev/null
+    # Simulate a file renamed in stow/: the target keeps a link to nothing.
+    ln -sf "$REPO_ROOT/stow/Sleep/GONE.md" "$target/Sleep/GONE.md"
+
+    out="$(run_install "$home" --check Sleep)" && rc=0 || rc=1
+
+    assert_eq "--check exits 1 on a dangling symlink" "1" "$rc"
+    assert_contains "--check reports it as ORPHANED" "ORPHANED" "$out"
+    rm -rf "$home"
+}
+
+test_check_does_not_create_the_target_dir() {
+    home="$(mktemp -d)"
+    # No setup_fixture here: the point is that no skills directory exists.
+    # --check is read-only by contract, so it must not manufacture the
+    # directory it is inspecting the way an install does.
+    run_install "$home" --check Sleep >/dev/null || true
+    if [ -d "$home/.claude/skills" ]; then
+        fail "--check leaves a missing target dir missing" \
+             "it created $home/.claude/skills"
+    else
+        pass "--check leaves a missing target dir missing"
+    fi
+    rm -rf "$home"
+}
+
+test_check_passes_on_clean_install
+test_check_detects_missing_file
+test_check_reports_not_installed
+test_check_detects_orphaned_symlink
+test_check_does_not_create_the_target_dir
+
+test_plain_install_tops_up_missing_files() {
+    target="$(setup_fixture)"; home="$(dirname "$(dirname "$target")")"
+    run_install "$home" RepoSkills >/dev/null
+    victim="$(cd "$target/RepoSkills" && find . -type l ! -name 'SKILL.md' | sed 's|^\./||' | head -1)"
+    rm -f "$target/RepoSkills/$victim"
+
+    run_install "$home" RepoSkills >/dev/null
+
+    if [ -e "$target/RepoSkills/$victim" ]; then
+        pass "plain install restores a missing link"
+    else
+        fail "plain install restores a missing link" "$victim still absent after reinstall"
+    fi
+    rm -rf "$home"
+}
+
+test_plain_install_never_overwrites_a_user_file() {
+    target="$(setup_fixture)"; home="$(dirname "$(dirname "$target")")"
+    run_install "$home" Sleep >/dev/null
+    # A user detaches one link to keep an edited copy of their own. SKILL.md
+    # stays linked, so is_current_install still passes and the top-up runs.
+    victim="$(cd "$target/Sleep" && find . -type l ! -name 'SKILL.md' | sed 's|^\./||' | head -1)"
+    rm -f "$target/Sleep/$victim"
+    printf "my precious edits\n" > "$target/Sleep/$victim"
+
+    run_install "$home" Sleep >/dev/null || true
+
+    if [ ! -L "$target/Sleep/$victim" ] && \
+       [ "$(cat "$target/Sleep/$victim")" = "my precious edits" ]; then
+        pass "flagless install leaves a detached user copy intact"
+    else
+        fail "flagless install leaves a detached user copy intact" \
+             "$victim was linked over by the top-up"
+    fi
+    rm -rf "$home"
+}
+
+test_topup_collision_does_not_abort_the_run() {
+    target="$(setup_fixture)"; home="$(dirname "$(dirname "$target")")"
+    run_install "$home" Sleep RepoSkills >/dev/null
+    # A user file where stow/Sleep has the Tools directory. Unguarded, the
+    # top-up's mkdir -p fails on it and set -e kills the whole run mid-loop,
+    # abandoning RepoSkills, whose missing link must still be restored.
+    rm -rf "$target/Sleep/Tools"
+    printf "user file\n" > "$target/Sleep/Tools"
+    victim="$(cd "$target/RepoSkills" && find . -type l ! -name 'SKILL.md' | sed 's|^\./||' | head -1)"
+    rm -f "$target/RepoSkills/$victim"
+
+    run_install "$home" Sleep RepoSkills >/dev/null || true
+
+    if [ -e "$target/RepoSkills/$victim" ]; then
+        pass "a top-up collision does not abort later skills"
+    else
+        fail "a top-up collision does not abort later skills" \
+             "RepoSkills was never topped up, so the run died on Sleep"
+    fi
+    if [ -f "$target/Sleep/Tools" ] && [ ! -L "$target/Sleep/Tools" ]; then
+        pass "the colliding user file survives"
+    else
+        fail "the colliding user file survives" "Sleep/Tools was replaced"
+    fi
+    rm -rf "$home"
+}
+
+test_plain_install_tops_up_missing_files
+test_plain_install_never_overwrites_a_user_file
+test_topup_collision_does_not_abort_the_run
+
 printf "\n%s run, %s failed\n" "$TESTS_RUN" "$TESTS_FAILED"
 [ "$TESTS_FAILED" -eq 0 ]
