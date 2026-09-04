@@ -287,7 +287,10 @@ install_skill() {
             }
         else
             printf "%s exists but was not installed from this source. Overwrite? [y/N] " "$skill_dir"
-            read -r answer
+            # A closed or exhausted stdin makes read return non-zero, which under
+            # set -e would kill the run mid-loop and abandon every later skill.
+            # Treat it as a decline, the same answer an unattended run deserves.
+            read -r answer || answer=n
             case "$answer" in
                 [yY]|[yY][eE][sS])
                     remove_install "$skill_name" || {

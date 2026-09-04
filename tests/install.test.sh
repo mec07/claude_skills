@@ -337,7 +337,33 @@ test_force_exits_nonzero_when_protected() {
     rm -rf "$home"
 }
 
+test_declined_prompt_does_not_abort_the_run() {
+    target="$(setup_fixture)"; home="$(dirname "$(dirname "$target")")"
+    # A foreign directory at Sleep, so the overwrite prompt is reached. run_install
+    # closes stdin, so read hits EOF; unguarded that returns non-zero and set -e
+    # kills the run before RepoSkills is ever reached.
+    mkdir -p "$target/Sleep"
+    printf "not ours\n" > "$target/Sleep/foreign.md"
+
+    out="$(run_install "$home" Sleep RepoSkills)" || true
+
+    if [ -e "$target/RepoSkills/SKILL.md" ]; then
+        pass "a declined prompt does not abort later skills"
+    else
+        fail "a declined prompt does not abort later skills" \
+             "RepoSkills was never installed, so read at EOF killed the loop"
+    fi
+    assert_contains "EOF on the prompt counts as a decline" "user declined" "$out"
+    if [ -f "$target/Sleep/foreign.md" ]; then
+        pass "declining leaves the foreign directory alone"
+    else
+        fail "declining leaves the foreign directory alone" "foreign.md was removed"
+    fi
+    rm -rf "$home"
+}
+
 test_force_exits_nonzero_when_protected
+test_declined_prompt_does_not_abort_the_run
 
 printf "\n%s run, %s failed\n" "$TESTS_RUN" "$TESTS_FAILED"
 [ "$TESTS_FAILED" -eq 0 ]
