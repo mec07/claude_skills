@@ -412,7 +412,7 @@ paths. `--check` exits earlier through its own accumulator by design.
 Add to the usage heredoc, under `Options:`:
 
 ```
-  --allow-destroy  Permit removal of files in the target that did not come from stow/
+  --allow-destroy  Move files in the target that did not come from stow/ to a temp dir (path printed)
 ```
 
 - [ ] **Step 4: Run the tests to verify they pass**
@@ -964,7 +964,7 @@ Append these two lines inside the existing fenced block, after the `--uninstall 
 
 ```
 ./install.sh --check                # Report drift between stow/ and installed skills
-./install.sh --force --allow-destroy # Overwrite, permitting deletion of non-stow files
+./install.sh --force --allow-destroy # Overwrite, setting non-stow files aside, not deleting
 ```
 
 - [ ] **Step 3: Add the explanatory prose below the block**
@@ -978,10 +978,13 @@ file until the installer runs again, with nothing to signal it. `--check` report
 `STALE`, `UNMANAGED`, `ORPHANED` and `FOREIGN` per file and exits non-zero, so it works as a CI
 or pre-commit gate.
 
-`--allow-destroy` is the opt-in for removing files in the target that did not come from
-`stow/`. The installer only ever writes symlinks and directories, so any regular file inside
-an installed skill was written by a human and cannot be regenerated. Without this flag the
-installer aborts and names those files rather than deleting them.
+`--allow-destroy` is the opt-in for setting aside, rather than deleting, files in the
+target that did not come from `stow/`: it moves them to a temporary directory and prints
+the path, which is worth saving if the files matter. The installer only ever writes
+symlinks and directories, so any other regular file inside an installed skill (aside from
+`.DS_Store`) was written by a human and cannot be regenerated. Without this flag the
+installer refuses to delete them: it names the files, skips that skill, carries on with
+the rest, and exits non-zero at the end.
 ```
 
 - [ ] **Step 4: Verify the rendered result**
@@ -1015,6 +1018,11 @@ spec's section 11:
 | **m3 (minor).** Two double-reports in `check_skill`: a dangling symlink at a stow path was both MISSING (loop 1) and ORPHANED (loop 3); a user file at a stow path was both STALE and UNMANAGED. Exit codes unaffected, but log noise | Loop 1 now judges only symlinks and true absences: dangling links are left to ORPHANED, non-symlinks to UNMANAGED, so each drifted path gets one line. A header comment also records two latent divergences from the installer's walk (dotfiles and stow-side symlinks), neither present in `stow/` today |
 | **m7 (minor).** Task 3's Consumes line omitted Task 2's `RC` and the wrapped `remove_install` call sites, which its own Step 6 old text depends on | The Interfaces block now declares both, and Produces gains `top_up_symlinks` |
 | **Found during amendment.** Step 6's test block defined its test but never invoked it, and gave no append location, unlike every other test block in this plan. A defined but never-called test runs nothing, so the "run it before the change" instruction would silently do nothing and the `0 failed` gate would pass vacuously | The block now ends with the three invocation lines and states where to append, and the step says why the invocations matter |
+| **Found during execution.** Task 4 Step 3's prose said the installer "aborts" when it meets a protected file. It does not: `install_skill` prints the skip, sets `RC=1` and returns 0, the loop carries on with every remaining skill, and the script exits non-zero only at the end through `exit "$RC"`. A reader would expect one protected file to halt the whole install | Task 4 Step 3's paragraph now describes the real behaviour. The shipped README was corrected first, in its own commit |
+| **Found during execution.** Task 2 Step 3's usage line and Task 4 Step 2's example comment both described `--allow-destroy` as deleting. It does not delete: it moves the files to a `mktemp -d` and prints the path. Documenting a recovery affordance as destruction defeats it, since a user who missed the scrollback is told the file is gone when it is still sitting under `$TMPDIR` | Both lines and Task 4 Step 3's paragraph now say the files are moved aside and the path is printed. The paragraph also notes the `.DS_Store` exclusion the guard makes |
+| **Found during execution.** `check_skill`'s first loop walked `stow/` with `find . -type f`, which includes dotfiles, while `install_symlinks` globs and skips them. A Finder-dropped `.DS_Store` was therefore reported `MISSING` on every `--check` with no invocation able to clear it, which would make the CI gate this plan advertises a permanent red | The first loop now carries `! -name '.DS_Store'`, matching the two exclusions the file already had, and the header comment describes only the divergence that remains |
+| **Found during execution.** Nothing asserted the install-path exit code, so the whole `RC` accumulator this plan introduced was untested while the README promised a refusing run exits non-zero | A test now runs `--force` against a protected skill and asserts the process exit code is 1 |
+| **Found during execution.** `read -r answer` at the overwrite prompt returns non-zero at EOF, so under `set -e` a non-interactive run died mid-loop and abandoned every skill after the one that prompted. Pre-existing, but it holed the loop-continuation property this plan otherwise guarantees, on exactly the non-interactive path the new `--check` invites | `read -r answer \|\| answer=n` treats EOF as a decline. A test asserts a second skill still installs after a declined prompt |
 
 ---
 
