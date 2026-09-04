@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-TARGET_DIR="$HOME/.claude/skills"
+TARGET_DIR="${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}"
 
 # Resolve the directory this script lives in (portable, no readlink -f)
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
