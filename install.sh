@@ -9,7 +9,7 @@ STOW_DIR="$SCRIPT_DIR/stow"
 
 usage() {
     cat <<EOF
-Usage: $(basename "$0") [--force] [--uninstall] [--help] [SKILL ...]
+Usage: $(basename "$0") [--force] [--uninstall] [--allow-destroy] [--check] [--help] [SKILL ...]
 
 Install Claude Code skills into ~/.claude/skills/
 
@@ -19,7 +19,7 @@ With SKILL arguments, installs only the named skills.
 Options:
   --force          Overwrite existing installations without prompting
   --uninstall      Remove installed skills
-  --allow-destroy  Permit removal of files in the target that did not come from stow/
+  --allow-destroy  Move files in the target that did not come from stow/ to a temp dir (path printed)
   --check          Report drift between stow/ and the installed skills; exit 1 if any
   --help           Show this message
 
@@ -185,10 +185,10 @@ top_up_symlinks() {
 #
 # Two latent divergences from the installer's walk, recorded so a future
 # change does not trip over them: install_symlinks globs "$source_dir"/* and
-# so skips dotfiles, while these loops use find and include them, so a dotfile
-# added to stow/ would never install and would report MISSING forever; and a
-# symlink in stow/ would be installed but never checked. Neither exists in
-# stow/ today.
+# so skips dotfiles, while these loops use find and include them (.DS_Store
+# aside, which is excluded below), so a dotfile added to stow/ would never
+# install and would report MISSING forever; and a symlink in stow/ would be
+# installed but never checked.
 check_skill() {
     local skill_name="$1"
     local source_dir="$STOW_DIR/$skill_name"
@@ -210,7 +210,7 @@ check_skill() {
     # path is loop 2's UNMANAGED. Reporting those MISSING or STALE as well
     # would double-count them without changing the exit code.
     # shellcheck disable=SC2044,SC2086  # skill paths contain no whitespace
-    for src in $(cd "$source_dir" && find . -type f | sed 's|^\./||'); do
+    for src in $(cd "$source_dir" && find . -type f ! -name '.DS_Store' | sed 's|^\./||'); do
         rel="$src"
         if [ -L "$skill_dir/$rel" ]; then
             if [ -e "$skill_dir/$rel" ] && [ ! "$skill_dir/$rel" -ef "$source_dir/$rel" ]; then

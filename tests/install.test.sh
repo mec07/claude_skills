@@ -326,5 +326,18 @@ test_plain_install_tops_up_missing_files
 test_plain_install_never_overwrites_a_user_file
 test_topup_collision_does_not_abort_the_run
 
+test_force_exits_nonzero_when_protected() {
+    target="$(setup_fixture)"; home="$(dirname "$(dirname "$target")")"
+    run_install "$home" Sleep >/dev/null
+    printf "precious\n" > "$target/Sleep/NOTES.md"
+
+    run_install "$home" --force Sleep >/dev/null && rc=0 || rc=1
+
+    assert_eq "--force exits 1 when a skill is protected" "1" "$rc"
+    rm -rf "$home"
+}
+
+test_force_exits_nonzero_when_protected
+
 printf "\n%s run, %s failed\n" "$TESTS_RUN" "$TESTS_FAILED"
 [ "$TESTS_FAILED" -eq 0 ]
