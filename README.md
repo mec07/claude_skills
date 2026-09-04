@@ -63,7 +63,8 @@ or pre-commit gate.
 `--allow-destroy` is the opt-in for removing files in the target that did not come from
 `stow/`. The installer only ever writes symlinks and directories, so any regular file inside
 an installed skill was written by a human and cannot be regenerated. Without this flag the
-installer aborts and names those files rather than deleting them.
+installer refuses to delete them: it names the files, skips that skill, carries on with
+the rest, and exits non-zero at the end.
 
 ### Dependencies
 
