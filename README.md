@@ -50,7 +50,23 @@ This symlinks all skills into `~/.claude/skills/`. When the JIRA skill is includ
 ./install.sh --force                # Overwrite existing installations
 ./install.sh --uninstall            # Uninstall all skills
 ./install.sh --uninstall llm-docs   # Uninstall a specific skill
+./install.sh --check                # Report drift between stow/ and installed skills
+./install.sh --force --allow-destroy # Overwrite, setting non-stow files aside, not deleting
 ```
+
+`--check` exists because `install.sh` symlinks per file rather than linking the skill
+directory as a whole. A skill that gains a file after its last install silently lacks that
+file until the installer runs again, with nothing to signal it. `--check` reports `MISSING`,
+`STALE`, `UNMANAGED`, `ORPHANED` and `FOREIGN` per file and exits non-zero, so it works as a CI
+or pre-commit gate.
+
+`--allow-destroy` is the opt-in for setting aside, rather than deleting, files in the
+target that did not come from `stow/`: it moves them to a temporary directory and prints
+the path, which is worth saving if the files matter. The installer only ever writes
+symlinks and directories, so any other regular file inside an installed skill (aside from
+`.DS_Store`) was written by a human and cannot be regenerated. Without this flag the
+installer refuses to delete them: it names the files, skips that skill, carries on with
+the rest, and exits non-zero at the end.
 
 ### Dependencies
 
