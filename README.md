@@ -51,7 +51,7 @@ This symlinks all skills into `~/.claude/skills/`. When the JIRA skill is includ
 ./install.sh --uninstall            # Uninstall all skills
 ./install.sh --uninstall llm-docs   # Uninstall a specific skill
 ./install.sh --check                # Report drift between stow/ and installed skills
-./install.sh --force --allow-destroy # Overwrite, permitting deletion of non-stow files
+./install.sh --force --allow-destroy # Overwrite, setting non-stow files aside, not deleting
 ```
 
 `--check` exists because `install.sh` symlinks per file rather than linking the skill
