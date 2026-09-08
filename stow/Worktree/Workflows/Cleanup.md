@@ -35,7 +35,7 @@ For each ticket, find the branch name:
 2. Glob `~/dev/worktrees/powerx/DEV-XXXX*` — match by ticket prefix
 3. If worktree already removed, check local branches: `git -C "$REPO" branch | grep DEV-XXXX`
 4. If still not found, check remote: `git -C "$REPO" branch -r | grep DEV-XXXX`
-5. Ask Fred if ambiguous
+5. Ask the user if ambiguous
 
 ---
 
@@ -49,7 +49,7 @@ gh pr list \
   --json number,title,mergedAt
 ```
 
-If NOT merged: warn Fred before removing.
+If NOT merged: warn the user before removing.
 ```
 ⚠️  Branch DEV-6182-... has an OPEN PR (not merged yet).
     Remove worktree anyway? (branch stays on remote)
@@ -155,7 +155,7 @@ git -C "$REPO" checkout "${BRANCH}"
   When done: /Worktree cleanup DEV-XXXX  (removes local branch after merge)
 ```
 
-If stash was created, remind Fred:
+If stash was created, remind the user:
 ```
   💡 Your previous changes were stashed. Run `git stash pop` to restore them when finished.
 ```

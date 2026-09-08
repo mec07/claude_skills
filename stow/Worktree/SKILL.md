@@ -5,7 +5,7 @@ description: Git worktree manager with Jira integration. USE WHEN /Worktree, wor
 
 # Worktree
 
-Spin up isolated git worktrees for Jira tickets or generic tasks. Greg works in the worktree, pushes a branch, creates a draft PR, and reports back — Fred's main checkout is never touched.
+Spin up isolated git worktrees for Jira tickets or generic tasks. The agent works in the worktree, pushes a branch, creates a draft PR, and reports back — your main checkout is never touched.
 
 ## Configuration
 
@@ -112,10 +112,10 @@ gwtls [powerx]                # List active worktrees
 
 ## Decision Rule
 
-**Default: Greg works in `~/dev/powerx/data/` (local, normal)**
+**Default: the agent works in the current checkout (local, normal)**
 
 Only switch to worktree mode when:
-- Fred explicitly invokes `/Worktree`
+- You explicitly invoke `/Worktree`
 - Or explicitly says "work in a worktree / isolated branch"
 
-Greg NEVER creates worktrees unilaterally.
+The agent NEVER creates worktrees unilaterally.

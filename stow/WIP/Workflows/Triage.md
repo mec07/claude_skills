@@ -12,8 +12,8 @@ anything to ask about.
 Read `~/.claude/wip/deferrals.json`. Format and failure handling:
 `Reference/Deferrals.md`.
 
-**Delete nothing here.** Entries are never removed as a side effect of time
-passing or of a PR closing. Mark their state and move on:
+**No decision is discarded here, and no PR is touched.** An expired snooze is
+not permission to act on anything — it only means the PR may be raised again:
 
 1. A `snooze` whose `until` has passed becomes askable again. The entry stays,
    carrying its `snooze_count`, which sets how long the next snooze lasts —
@@ -22,8 +22,9 @@ passing or of a PR closing. Mark their state and move on:
    asking every week.
 2. A `waiting` entry whose PR has a newer `updatedAt` than `seen_activity_at`
    becomes askable again — the thing being waited on has happened.
-3. An entry whose URL is not in the current open-PR set gets
-   `pr_state: closed`. It is not asked about and it is not removed.
+3. An entry whose URL is not in the current open-PR set is removed — its PR is
+   closed or merged, so there is nothing left to suppress. This is the only
+   automatic removal.
 
 Write the file back with the updated states.
 
@@ -128,15 +129,8 @@ Snoozed to {date} (2)
 Waiting (1)
 - acme/api#6919 — on review from the platform team, since {date}
 
-Deferral file: {n} entries ({k} for PRs now closed)
+Deferral file: {n} entries ({k} dropped — their PRs are closed)
 ```
 
-Always print the deferral-file line — it is what keeps the file's size in view.
-When `k` is more than a handful, offer to remove those entries, and remove them
-only on an explicit yes:
-
-```
-14 of the 31 entries are for PRs that are now closed or merged. Remove those 14?
-```
-
-Nothing is removed without that answer.
+Always print the deferral-file line. The count should track the number of PRs
+being deliberately parked; if it climbs past that, something is wrong.
