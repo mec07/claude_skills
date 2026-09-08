@@ -18,7 +18,6 @@ scheme.
     "until": "2026-09-15",
     "snooze_count": 4,
     "decided": "2026-09-08",
-    "pr_state": "open",
     "note": ""
   },
   "https://dev.azure.com/acme/web/_git/site/pullrequest/88": {
@@ -39,22 +38,28 @@ scheme.
 | `seen_activity_at` | waiting | PR's `updatedAt` when the decision was made |
 | `decided` | both | When the decision was last made |
 | `snooze_count` | snooze | How many times this PR has been snoozed |
-| `pr_state` | both | `open`, or `closed` once the PR is no longer open |
 | `note` | both | Free text from the "something else" option |
 
-## Nothing is ever deleted automatically
+## What is kept, and what goes
 
-Entries are not removed as a side effect of time passing, of a PR closing, or of
-anything else the skill notices on its own. A decision is a record of something
-the user said, and the skill does not get to throw those away. Expiry changes an
-entry's *state*, never its existence.
+The file exists to suppress asking. An entry earns its place only while the PR
+it refers to is still open — once the PR is closed or merged there is nothing
+left to ask about, so the entry goes with it.
 
 | Event | What happens |
 |-------|--------------|
-| A snooze's `until` passes | Entry stays. It becomes askable again |
-| A waiting PR gets new activity | Entry stays. It becomes askable again, with the wait's outcome noted |
-| The PR is merged or closed | Entry stays, marked `pr_state: closed`. Never removed |
+| The PR is merged or closed | Entry removed. It has nothing left to suppress |
+| A snooze's `until` passes | Entry stays, and becomes askable again |
+| A waiting PR gets new activity | Entry stays, and becomes askable again |
 | The user says to remove it | Removed |
+
+That first row is the only automatic removal, and it is bookkeeping rather than a
+decision being thrown away: the PR is gone, so the record of parking it is spent.
+
+**Nothing else is removed on its own, and no pull request is ever closed without
+being asked about.** An expired snooze is not a licence to act — it only means
+the PR may be raised again. Closing is a separate, explicit answer, confirmed
+against a named list of URLs. See `Workflows/Triage.md`.
 
 **Snoozing repeats, and backs off.** A PR can be snoozed as many times as the
 user likes — something more important is usually the reason, and that is a
@@ -72,30 +77,18 @@ each re-snooze of the same PR lasts longer than the last:
 | 4 | 90 days |
 | 5+ | 180 days |
 
-The option is still labelled "ignore for a week" the first time and names the
-actual interval after that — "ignore for 30 days (snoozed 3 times)". The count is
-shown so the pattern is visible, not to make a point of it. A PR being parked
+The option is labelled "ignore for a week" the first time and names the actual
+interval after that — "ignore for 30 days (snoozed 3 times)". The count is shown
+so the pattern is visible, not to make a point of it. A PR being parked
 repeatedly is information: it usually means close it, or it is genuinely blocked
 and belongs in `waiting` instead. Offer that reading once, at count 3, and then
 leave it alone.
 
-## Keeping it small without deleting anything
+## Size
 
-The file grows only when the user triages a PR they have not triaged before, so
-it grows at the speed of their own decisions — slow. At roughly 200 bytes an
-entry, a thousand triaged PRs is about 200 KB.
-
-To stop it drifting upward forever, **report, do not act**. When entries
-reference PRs that are no longer open, say so at the end of triage and offer to
-remove them:
-
-```
-31 entries, 14 of them for PRs that are now closed or merged. Remove those 14?
-```
-
-If the user says yes, remove exactly those. If they say nothing, the entries
-stay. The count in the report is what keeps the file's size in view; the user's
-answer is the only thing that shrinks it.
+Bounded by the number of PRs currently open, because entries leave when their PRs
+do. At roughly 200 bytes an entry, even a hundred parked PRs is 20 KB. Print the
+entry count at the end of triage so the number stays in view.
 
 ## Failure handling
 
