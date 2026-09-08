@@ -2,6 +2,21 @@
 
 Execute a single ticket or description in an isolated git worktree.
 
+## Context
+
+Resolve these first. Every path and remote below is derived from them.
+
+```bash
+REPO=$(git rev-parse --show-toplevel) || { echo "Not inside a git repository."; exit 1; }
+REPO_NAME=$(basename "$REPO")
+REPO_SLUG=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)
+DEFAULT_BRANCH=$(git -C "$REPO" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')
+DEFAULT_BRANCH=${DEFAULT_BRANCH:-$(git -C "$REPO" rev-parse --verify -q main >/dev/null && echo main || echo master)}
+WT_BASE="${WORKTREE_BASE:-$HOME/dev/worktrees}/$REPO_NAME"
+```
+
+See the skill's Context section for what each one means.
+
 ## Voice
 
 ```bash
@@ -19,20 +34,20 @@ Running **Single** workflow in **Worktree** skill...
 
 Determine if input is a Jira ticket number or free-form description:
 
-- `DEV-6182` → Jira ticket flow
+- `ABC-123` → Jira ticket flow
 - `add dark mode to dashboard` → non-ticket flow (branch: `ai/add-dark-mode-to-dashboard`)
 
-**Ticket number regex:** `DEV-\d+`
+**Ticket key regex:** `[A-Z][A-Z0-9]+-[0-9]+` — any Jira project, no fixed prefix
 
 ---
 
-## Step 2 — Fetch Jira Ticket (if DEV-XXX)
+## Step 2 — Fetch Jira Ticket (if the input is a ticket key)
 
 ```bash
 JIRA_API_TOKEN=$(sed -n 's/^JIRA_API_TOKEN=//p' ~/.claude/.env)
 JIRA_EMAIL=$(sed -n 's/^JIRA_EMAIL=//p' ~/.claude/.env)
 curl -s -u "${JIRA_EMAIL}:${JIRA_API_TOKEN}" \
-  "https://powerx.atlassian.net/rest/api/3/issue/DEV-XXXX?fields=summary,description,acceptance-criteria,subtasks,status,assignee"
+  # use the JIRA skill to fetch {TICKET}: summary, description, acceptance criteria, subtasks, status, assignee
 ```
 
 Parse the response: extract `summary`, `description` body (ADF → plain text), `subtasks`.
@@ -44,21 +59,21 @@ Parse the response: extract `summary`, `description` body (ADF → plain text), 
 **Priority order:**
 
 1. **Scratch file `branch:` line** (highest priority):
-   - Search for `DEV-XXXX*.scratch.md` in:
-     - `~/dev/powerx/data/` (all subdirs, 2 levels deep)
+   - Search for `{KEY}*.scratch.md` in:
+     - `$REPO/` (all subdirs, 2 levels deep)
      - `~/.claude/`
    - If found, read first line matching `branch: <name>` → use exactly
 
 2. **Slugify Jira title** (if no scratch file or no `branch:` line):
    ```
    "Travel backend: add missing user fields for depot location"
-   → DEV-6182-travel-backend-add-missing-user-fields-for-depot-location
+   → ABC-123-travel-backend-add-missing-user-fields-for-depot-location
    ```
    Rules: lowercase, spaces→hyphens, strip special chars, keep ticket prefix
 
 3. **Fallback** (if no Jira title):
    ```
-   DEV-6182-task
+   ABC-123-task
    ```
 
 **Non-ticket:** `ai/` + slugified description
@@ -70,10 +85,10 @@ Parse the response: extract `summary`, `description` body (ADF → plain text), 
 
 ## Step 4 — Find and Load Scratch File
 
-Search for `DEV-XXXX*.scratch.md` in:
-- `~/dev/powerx/data/` (recursive, max 2 levels)
-- `~/dev/powerx/data/auth-api/`
-- `~/dev/powerx/data/apps/`
+Search for `{KEY}*.scratch.md` in:
+- `$REPO/` (recursive, max 2 levels)
+- `$REPO/auth-api/`
+- `$REPO/apps/`
 - `~/.claude/`
 
 If found: read entire file — this is additional context/requirements for the agent.
@@ -87,8 +102,7 @@ The main checkout may be on any branch. Always fetch first, then specify `origin
 
 ```bash
 BRANCH=<determined-in-step-3>
-WT_PATH="${HOME}/dev/worktrees/powerx/${BRANCH}"
-REPO="${HOME}/dev/powerx/data"
+WT_PATH="${WT_BASE}/${BRANCH}"
 
 # Always fetch first, then branch explicitly from origin/main
 git -C "$REPO" fetch origin main
@@ -113,7 +127,7 @@ rsync -a \
   --exclude='dataSources.local.xml' \
   --exclude='dataSources/' \
   --exclude='shelf/' \
-  ~/dev/powerx/data/.idea/ \
+  $REPO/.idea/ \
   "${WT_PATH}/.idea/"
 ```
 
@@ -153,7 +167,7 @@ Spawn an Engineer agent with this prompt:
 ```
 CONTEXT:
 You are working on a git worktree at: {WT_PATH}
-Main repo is at: ~/dev/powerx/data/
+Main repo is at: $REPO/
 Branch: {BRANCH}
 
 JIRA TICKET: {TICKET_NUMBER}
@@ -169,7 +183,7 @@ ADDITIONAL CONTEXT (from planning scratch file):
 TASK:
 Implement the work described in the Jira ticket above.
 Work entirely within the worktree directory: {WT_PATH}
-Do NOT touch ~/dev/powerx/data/ or any other directory.
+Do NOT touch $REPO/ or any other directory.
 
 Read the .aiassistant file in the repo root for code style guidelines.
 
@@ -180,9 +194,9 @@ CRITICAL STEPS:
 When done:
 1. Commit changes in GRANULAR commits — one logical unit per commit, not one big commit.
    Good examples:
-   - Commit 1: "DEV-XXXX: add DB migration for ..."
-   - Commit 2: "DEV-XXXX: update Hasura metadata for ..."
-   - Commit 3: "DEV-XXXX: add API endpoint for ..."
+   - Commit 1: "{KEY}: add DB migration for ..."
+   - Commit 2: "{KEY}: update Hasura metadata for ..."
+   - Commit 3: "{KEY}: add API endpoint for ..."
    Each commit should be independently understandable and safely revertable.
 2. Do NOT push — the Worktree skill will handle push and PR creation
 
@@ -195,7 +209,7 @@ OUTPUT: At the end of your report, include a PR_BODY block formatted exactly lik
 {2-3 sentences summarising what was implemented and why}
 
 ## 🔗 Related Issues / Tickets
-- Jira: [{TICKET_NUMBER}](https://powerx.atlassian.net/browse/{TICKET_NUMBER})
+- Jira: [{TICKET_NUMBER}]({JIRA_SITE}/browse/{TICKET_NUMBER})  ← site from the JIRA skill
 
 ## 🛠️ Changes / Implementation Details
 {Bullet list of key changes — files modified, what each does}
@@ -234,14 +248,14 @@ After agent completes:
 
 ```bash
 # Push branch
-git -C "${HOME}/dev/worktrees/powerx/${BRANCH}" push -u origin "${BRANCH}"
+git -C "${WT_BASE}/${BRANCH}" push -u origin "${BRANCH}"
 
 # Create draft PR with pre-filled body
 # PR_TYPE must be one of: feat, fix, docs, test, ci, refactor, perf, chore, revert
 gh pr create \
-  --repo powerxai/data \
+  -R "${REPO_SLUG}" \
   --head "${BRANCH}" \
-  --base main \
+  --base "${DEFAULT_BRANCH}" \
   --title "${PR_TYPE}: ${TICKET_NUMBER}: ${TICKET_SUMMARY}" \
   --draft \
   --body "${PR_BODY}"
@@ -274,7 +288,7 @@ If no scratch file existed, note the branch in your response only.
 ## Step 9 — Report back
 
 ```
-✓ Worktree: ~/dev/worktrees/powerx/{BRANCH}/
+✓ Worktree: $WT_BASE/{BRANCH}/
 ✓ Branch pushed: {BRANCH}
 ✓ Draft PR: {PR_URL}
 
