@@ -216,7 +216,7 @@ After agent completes:
 
 1. **Extract PR body** from Engineer's output — parse everything between `---PR_BODY_START---` and `---PR_BODY_END---`.
 
-2. **Append remaining template sections** (Testing, Screenshots, Deployment, Checklist) from `.github/PULL_REQUEST_TEMPLATE.md` — read the repo template and append the sections below the agent's content, so Fred can fill them in.
+2. **Append remaining template sections** (Testing, Screenshots, Deployment, Checklist) from `.github/PULL_REQUEST_TEMPLATE.md` — read the repo template and append the sections below the agent's content, so the user can fill them in.
 
 3. **Determine PR type prefix** — must be one of: `feat`, `fix`, `docs`, `test`, `ci`, `refactor`, `perf`, `chore`, `revert`.
    Infer from the ticket summary and work done:
@@ -271,7 +271,7 @@ If no scratch file existed, note the branch in your response only.
 
 ---
 
-## Step 9 — Report to Fred
+## Step 9 — Report back
 
 ```
 ✓ Worktree: ~/dev/worktrees/powerx/{BRANCH}/
@@ -291,6 +291,6 @@ To clean up after merge: /Worktree cleanup {TICKET_NUMBER}
 | Situation | Action |
 |-----------|--------|
 | Jira API fails | Proceed with branch name from title/fallback, note missing context |
-| Branch already exists locally | Append `-2` suffix or ask Fred |
-| No `gh` CLI | Push only, provide `gh pr create` command for Fred to run |
+| Branch already exists locally | Append `-2` suffix or ask the user |
+| No `gh` CLI | Push only, provide `gh pr create` command for the user to run |
 | Agent fails | Report failure, leave worktree intact for manual work |
