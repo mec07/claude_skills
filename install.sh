@@ -289,8 +289,11 @@ install_skill() {
             printf "%s exists but was not installed from this source. Overwrite? [y/N] " "$skill_dir"
             # A closed or exhausted stdin makes read return non-zero, which under
             # set -e would kill the run mid-loop and abandon every later skill.
-            # Treat it as a decline, the same answer an unattended run deserves.
-            read -r answer || answer=n
+            # Treat it as a decline, the same answer an unattended run deserves,
+            # but record it: a human typing n made a choice, whereas an
+            # unattended decline leaves drift in place that nobody chose, and
+            # the run must not report success for that.
+            read -r answer || { answer=n; RC=1; }
             case "$answer" in
                 [yY]|[yY][eE][sS])
                     remove_install "$skill_name" || {
@@ -435,7 +438,8 @@ configure_jira_credentials() {
         found_in_env=1
         printf "  Found JIRA_API_TOKEN and JIRA_EMAIL in your environment.\n"
         printf "  Write them to %s? [Y/n] " "$ENV_FILE"
-        read -r answer
+        # EOF is a decline, not a fatal error. See the overwrite prompt above.
+        read -r answer || answer=n
         case "$answer" in
             [nN]|[nN][oO]) found_in_env="" ;;
         esac
@@ -456,7 +460,7 @@ configure_jira_credentials() {
     fi
 
     printf "  Enter credentials now? [Y/n] "
-    read -r answer
+    read -r answer || answer=n
     case "$answer" in
         [nN]|[nN][oO])
             printf "  Skipped — add JIRA_API_TOKEN and JIRA_EMAIL to %s later.\n" "$ENV_FILE"
@@ -467,7 +471,7 @@ configure_jira_credentials() {
     for var in JIRA_API_TOKEN JIRA_EMAIL; do
         if ! env_file_has_var "$var"; then
             printf "  %s: " "$var"
-            read -r val
+            read -r val || val=""
             if [ -n "$val" ]; then
                 printf "%s=%s\n" "$var" "$val" >> "$ENV_FILE"
             fi

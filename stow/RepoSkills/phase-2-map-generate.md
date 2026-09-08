@@ -639,10 +639,10 @@ Domain context: `.ai/skills/domain-context.md`
    scoped the doc work out, and scope added at commit time is scope that gets dropped.
 
 ## Before Committing
-1. Did this change make anything the docs claim false? Fix it in this change, not later.
-2. `.ai/skills/Tools/skill-drift.sh` reports what looks stale from git history.
+Did this change make anything the docs claim false? Fix it in this change, not later.
 
-See Skill & Routing Maintenance below for what to update and the accuracy rule.
+See Skill & Routing Maintenance below for what to update, the drift command that finds
+candidates, and the accuracy rule.
 
 ## Skill & Routing Maintenance
 These skills are LIVING — they evolve with the codebase.
@@ -652,7 +652,8 @@ nothing about it announces itself. Ask whether the change made a claim in the do
 that area false. Not whether an update would be nice: whether something is now wrong.
 Leaving a claim you have just falsified is not a deferral, it is a defect you introduced,
 and an agent trusts what it reads, so a false claim costs the next agent more than a
-missing one.
+missing one. `skill-drift.sh` finds candidates but is a signal, not an oracle: it compares
+commit dates, so it cannot see a claim that went false without the file changing.
 
 When a skill is wrong, fix it.
 When routing doesn't direct you right, add or fix the entry. When you hit a gotcha a skill
@@ -779,10 +780,10 @@ USE WHEN format: backtick-wrapped directory paths with trailing slash (e.g., `` 
    scoped the doc work out, and scope added at commit time is scope that gets dropped.
 
 ## Before Committing
-1. Did this change make anything the docs claim false? Fix it in this change, not later.
-2. `.ai/skills/Tools/skill-drift.sh` reports what looks stale from git history.
+Did this change make anything the docs claim false? Fix it in this change, not later.
 
-See Skill & Routing Maintenance below for what to update and the accuracy rule.
+See Skill & Routing Maintenance below for what to update, the drift command that finds
+candidates, and the accuracy rule.
 
 ## Skill & Routing Maintenance
 
@@ -1060,7 +1061,10 @@ Run through this checklist before marking Phase 2 complete. Do not skip this ste
 - [ ] Every module skill is under ~1.5k tokens
 - [ ] Every task skill is under ~1.5k tokens
 - [ ] AGENTS.md is under ~4k tokens (32KB hard limit)
-- [ ] CLAUDE.md is under ~3-4k tokens (self-sufficient — must NOT redirect to other root files)
+- [ ] CLAUDE.md is under ~3-4k tokens (self-sufficient — must NOT redirect to other root files).
+      If the budget binds, condense prose within sections. Never omit a required section:
+      the section set is the behavioural framework, and a missing one is a silent regression,
+      whereas a terser one is only terser.
 
 ### 5-Second Grep Test
 - [ ] No skill contains a list of files in a directory

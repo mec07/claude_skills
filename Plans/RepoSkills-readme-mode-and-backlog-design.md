@@ -545,6 +545,15 @@ every contract has a row, not how many times each is mentioned. Section 6.5 rout
 the file this change breaks most. Each row below is a contract that must be migrated, not discovered
 during implementation.
 
+**Line numbers in this chapter are hints, not identifiers.** Two consecutive commits falsified them:
+one added 47 lines to `phase-2-map-generate.md` and shifted five rows, and the commit that fixed
+those five shifted them again by editing the same file. Both were caught in review rather than by
+the spec, because a stale line number reads exactly like a fresh one. The rule going forward is
+5.2's own, applied to this spec: a line number is a fact the file already declares, so quote a
+distinctive string from the target and let the number be the hint that speeds up the search. When
+you do edit an anchored file, re-derive every row that points into it **after** your last edit to
+it, not before, or you will correct the numbers into a second wrong set.
+
 #### `orchestration.md` (16 references, never previously named as a target)
 
 | Contract | Line | Replacement |
@@ -569,13 +578,13 @@ during implementation.
 | Contract | Location | Replacement |
 |---|---|---|
 | Phase 3's core loop, "For each module skill in `.ai/skills/modules/`" | `phase-3-refine.md:83` | Iterate unit READMEs |
-| "Re-read every module skill... confirm it answers all 14 questions" | `phase-3-refine.md:304` | Re-express the 14-question quality bar against the README grammar |
-| Module Routing table in all four root files | `phase-2:587, 721, 877` | Rows point at `<unit-root>/README.md` |
-| Per-module platform routing files embed module skill content verbatim | `phase-2:282, 920` | **Must stop embedding.** See below |
-| Per-module routing file paths per platform | `phase-2:912-915` | Unchanged in shape, keyed on unit |
+| "Re-read every module skill... confirm it answers all 14 questions" | `phase-3-refine.md:305` | Re-express the 14-question quality bar against the README grammar |
+| Module Routing table in all four root files | `phase-2:587, 740`, plus the required-sections row at `phase-2:917` | Rows point at `<unit-root>/README.md` |
+| Per-module platform routing files embed module skill content verbatim | `phase-2:282, 961` | **Must stop embedding.** See below |
+| Per-module routing file paths per platform | `phase-2:953-957` | Unchanged in shape, keyed on unit |
 | Drift script skill-path regex | `templates/skill-drift.sh:132` | Extend to unit README paths |
-| Drift script builds directory-to-skill map from the routing tables | `phase-2:960-965` | Mechanism unchanged, targets change |
-| `Skill & Routing Maintenance`, the create-a-new-skill trigger, sends the agent to `.ai/skills/modules/` | `phase-2`, both template copies | Point at the unit's README for unit-shaped knowledge, keeping `tasks/` for the overflow case 3.5 already allows. Found uninventoried while adding the maintenance-section triggers; it is the one contract that instructs a *future* agent to write into `modules/`, so leaving it would keep recreating the tree after 2b removes it |
+| Drift script builds directory-to-skill map from the routing tables | `phase-2:1001-1004` | Mechanism unchanged, targets change |
+| `Skill & Routing Maintenance`, the create-a-new-skill trigger, sends the agent to `.ai/skills/modules/` | `phase-2:828`, the CLAUDE.md template only. The AGENTS.md copy says "create one" with no destination, which is a separate pre-existing gap | Point at the unit's README for unit-shaped knowledge, keeping `tasks/` for the overflow case 3.5 already allows. Found uninventoried while adding the maintenance-section triggers; it is the one contract that instructs a *future* agent to write into `modules/`, so leaving it would keep recreating the tree after 2b removes it |
 | Remaining mechanical references | `phase-4` ×8, `phase-9` ×3, `phase-drift-resolve` ×3, `phase-6/7/8` ×1 each, `SKILL.md` ×1 | Retarget |
 
 #### Three contracts that need a real decision, not a rename
@@ -996,7 +1005,7 @@ while macOS stock is 3.2 (`phase-2-map-generate.md:958`). `data-2`'s replacement
 |---|---|---|---|
 | 2 | Negative results need 3 independent search strategies | `phase-4-validate.md` | Rule applied across Checks 1-9 |
 | 3 | Ask about historical context and in-house tools | `phase-1-domain-interview.md` | `Domain Knowledge Questionnaire`, line 175 |
-| 4 | Encoding and format claims are a verification category | `phase-4-validate.md` | **New Check 13.** Checks 1 to 12 already exist; `Check 12: Domain context verification` is at line 296 |
+| 4 | Encoding and format claims are a verification category | `phase-4-validate.md` | **New Check 13.** Checks 1 to 12 already exist; `Check 12: Domain context verification` is at line 297 |
 | 5 | Prompt for adjacent repos by relationship type | `phase-0-discover.md` + `phase-1-domain-interview.md` | Boundary detection; Questionnaire |
 | 6 | Language servers as a first-class tool | `phase-2-map-generate.md` | Orientation generation |
 | 8 | Wire in surfaced tools proactively, do not just log | `phase-1-domain-interview.md` + `phase-9-human-checkpoint.md` | Provenance question; default to act |
@@ -1386,7 +1395,7 @@ weaknesses in it, the fourth raised by the owner after the first three were agre
 
 | Weakness | Resolution |
 |---|---|
-| All seven triggers fire when the agent *notices something about the docs*: an unwarned gotcha, a wrong skill, misrouting, a rename, a refactor, a user-taught practice, an undocumented area. None fires on the ordinary case, where code changed and a claim went false with nothing to announce it | A new leading trigger, "when you changed code", stated as the ordinary case and the one that gets skipped, in the prohibition form this spec reserves for discipline failures: leaving a claim you have just falsified is a defect you introduced, not a deferral |
+| All seven triggers fire when the agent *notices something about the docs*: an unwarned gotcha, a wrong skill, misrouting, a rename, a refactor, a user-taught practice, an undocumented area. None fires on the ordinary case, where code changed and a claim went false with nothing to announce it | A new leading trigger, "when you changed code", stated as the ordinary case and the one that gets skipped, framed as a definitional reframe rather than a soft arrow: leaving a claim you have just falsified is a defect you introduced, not a deferral. Deliberately not a literal prohibition, which 5.2 reserves for items 2 and 11; the classification is still a discipline failure, and the reframe is the firmer form without spending that reservation |
 | `Before Modifying Code` had no counterpart, so the framework made an agent read the docs going in and said nothing going out | New required section `Before Committing`, taking the count from 12 to 13. It points at the maintenance section rather than repeating it, and earns its own heading on position alone: a bullet buried in a long section is not read at the moment it applies |
 | The strictness was spent on the wrong failure type. "I knew the rule and skipped it under task pressure" is a discipline failure, the class this spec deliberately gives prohibition form (item 2), yet the wording was entirely soft arrows | Prohibition form for the new trigger only. The existing seven keep their form, being reactive prompts rather than discipline failures |
 | **Owner's fourth.** Specs and plans do not account for documentation, so the doc change arrives as unfunded scope at commit time, which is when task pressure is highest and scope gets dropped | `Before Modifying Code` gains a step: when writing a spec or a plan, the documentation change belongs in it, named as work alongside the code. This is upstream of the commit-time trigger and the stronger of the two, because it funds the work before there is pressure to drop it |
@@ -1394,6 +1403,27 @@ weaknesses in it, the fourth raised by the owner after the first three were agre
 The wording is deliberately shape-agnostic, saying "the docs for that area" rather than naming
 module skills or READMEs. It therefore reads correctly both before and after the 2b cutover and
 needs no second edit, which is one fewer row for 3.5 to carry.
+
+**Independent review of the PR, 2026-09-08.** A reviewer with no prior involvement was given the
+branch with a brief to find problems, and told which parts had already been reviewed so it could
+weight the three unreviewed doc commits. Verdict: not ready to merge, no Critical. Acted on:
+
+| Finding | Resolution |
+|---|---|
+| **Important.** The doc-currency commit falsified seven line anchors in this chapter, in a commit whose whole subject was doc currency. `phase-2:721` became a blank line and `phase-2:920` became the `Before Committing` row that commit added, so an implementer following 3.5 would land on wrong content rather than on nothing | All seven re-derived, and the note above added, because correcting the numbers once produced a second wrong set. The reviewer's own table was already stale by the time the fix landed, for the same reason |
+| **Important.** A flagless install exited 0 after an unattended decline, leaving drift unrepaired. The EOF-as-decline fix had converted a loud crash into a silent success, and `--check` on the identical state exited 1 reporting three drifts. This is the residual half of the property the plan exists to establish, reachable with no flags | EOF now sets `RC=1` while a human's `n` still exits 0: an unattended decline leaves drift nobody chose, whereas a person declining made a choice. One assertion added, verified to fail without the change |
+| **Important.** Three more unguarded `read` calls in the Jira credentials path, the same defect as the overwrite prompt, reachable on every argument-less run because `stow/JIRA` exists. Under `set -e` the script died at the prompt, so `exit "$RC"` never ran and the whole accumulator was bypassed on the commonest invocation | All three guarded. This was raised earlier and deliberately deferred on the reasoning that an abort there costs only the credential prompt; that reasoning was wrong about the consequence, which the reviewer established by running it |
+| **Minor.** `Before Committing` both pointed at the maintenance section and repeated it, so the shipped template failed `phase-2`'s own "each fact lives in exactly one canonical location" self-review check | The duplicated item dropped from both template copies. The pointer now names what it points at, and the claim in this history is true rather than aspirational |
+| **Minor.** The 3.5 row said the create-a-new-skill path appears in "both template copies"; only the CLAUDE.md copy carries it. The AGENTS.md copy says "create one" with no destination | Row corrected to name the one copy, and the missing destination in the other recorded as a separate pre-existing gap |
+| **Minor.** The drift-script caveat was in the CLAUDE.md copy only, and `.cursorrules` is specified as "same content as AGENTS.md", so two of four root files told the reader the script reports staleness and never that a clean run proves nothing | Caveat propagated to the AGENTS.md copy |
+| **Minor.** A 13th required section landed without the `~3-4k` token budget being revisited anywhere | The budget check now says what to do when it binds: condense prose within sections, never omit one, because a missing section is a silent regression and a terser one is only terser |
+| **Minor.** `--allow-destroy` is inert on the flagless top-up path, which never clears a directory, and neither the README nor the usage line said so | README now scopes the flag to the paths that clear a directory |
+| **Minor.** This history claimed prohibition form for wording that contains no prohibition, and 5.2 still reserves that form for items 2 and 11 | The row now describes what was actually written, a definitional reframe, and says why that was preferred to spending the reservation |
+
+Two findings were left: Check 15's noise scoping is asserted rather than established, which is
+stage-3 work and needs the definition of *declares* that the check's own row leaves open; and 3.5's
+"every contract has a row" was already an overstatement before this branch, which 2b should not be
+planned against as if it were complete.
 
 **CI stays advisory,** per item 9's default. Wording is the weakest of the three available layers
 and the owner's instances survived because the freshness signal did not block, but item 10's

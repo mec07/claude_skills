@@ -362,8 +362,25 @@ test_declined_prompt_does_not_abort_the_run() {
     rm -rf "$home"
 }
 
+test_unattended_decline_exits_nonzero() {
+    target="$(setup_fixture)"; home="$(dirname "$(dirname "$target")")"
+    # Same setup as above, but the assertion is the exit code. An unattended
+    # decline leaves drift nobody chose, so the run must not report success:
+    # --check on this very state exits 1, and a flagless install that exits 0
+    # here is the "reported success and changed nothing" failure this whole
+    # suite exists to close, reachable with no flags at all.
+    mkdir -p "$target/Sleep"
+    printf "not ours\n" > "$target/Sleep/SKILL.md"
+
+    run_install "$home" Sleep >/dev/null && rc=0 || rc=1
+
+    assert_eq "an unattended decline exits 1" "1" "$rc"
+    rm -rf "$home"
+}
+
 test_force_exits_nonzero_when_protected
 test_declined_prompt_does_not_abort_the_run
+test_unattended_decline_exits_nonzero
 
 printf "\n%s run, %s failed\n" "$TESTS_RUN" "$TESTS_FAILED"
 [ "$TESTS_FAILED" -eq 0 ]
