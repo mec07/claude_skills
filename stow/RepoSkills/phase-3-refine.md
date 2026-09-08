@@ -166,6 +166,7 @@ Check ALL of the following:
 - [ ] Task Routing (table mapping intents to skill combinations, with USE WHEN keywords)
 - [ ] Context Window Discipline
 - [ ] Before Modifying Code
+- [ ] Before Committing
 - [ ] Skill & Routing Maintenance
 - [ ] Documentation (pointers to skill layer)
 - [ ] Coding Standards
@@ -243,7 +244,7 @@ If a module skill doesn't answer all fourteen after your edits, it's not done. (
 - A fact lives in one place. Decide where and link everywhere else.
 - Module-specific details live in the module skill.
 - Cross-cutting information lives in the orientation skill or a task skill.
-- **All root platform files (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md) MUST contain ALL 12 required sections** (Tech Stack, Architecture, Key Commands, Key Rules, Module Routing, Task Routing, Context Window Discipline, Before Modifying Code, Skill & Routing Maintenance, Documentation, Coding Standards, New to This Repo?). These are the behavioural framework, NOT duplication.
+- **All root platform files (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md) MUST contain ALL 13 required sections** (Tech Stack, Architecture, Key Commands, Key Rules, Module Routing, Task Routing, Context Window Discipline, Before Modifying Code, Before Committing, Skill & Routing Maintenance, Documentation, Coding Standards, New to This Repo?). These are the behavioural framework, NOT duplication.
 - **Every root file is self-sufficient.** CLAUDE.md, AGENTS.md, .cursorrules, and copilot-instructions.md each contain ALL required sections independently. They overlap by design — each platform may only load one of these files, and any of them could be the only context surviving compaction. No root file redirects to another.
 - Beyond the required sections, root platform files should NOT duplicate module skill content. Module-specific details live in module skills, not in root files.
 - If a module or task skill changes, update the routing tables in ALL root platform files to stay in sync.
