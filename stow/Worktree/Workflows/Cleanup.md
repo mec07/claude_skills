@@ -3,6 +3,21 @@
 Remove a worktree and its local branch after the PR has been merged.
 Optionally checks out the branch in the main project folder for local testing.
 
+## Context
+
+Resolve these first. Every path and remote below is derived from them.
+
+```bash
+REPO=$(git rev-parse --show-toplevel) || { echo "Not inside a git repository."; exit 1; }
+REPO_NAME=$(basename "$REPO")
+REPO_SLUG=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)
+DEFAULT_BRANCH=$(git -C "$REPO" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')
+DEFAULT_BRANCH=${DEFAULT_BRANCH:-$(git -C "$REPO" rev-parse --verify -q main >/dev/null && echo main || echo master)}
+WT_BASE="${WORKTREE_BASE:-$HOME/dev/worktrees}/$REPO_NAME"
+```
+
+See the skill's Context section for what each one means.
+
 ## Voice
 
 ```bash
@@ -19,9 +34,9 @@ Running **Cleanup** workflow in **Worktree** skill...
 ## When This Runs
 
 ```
-/Worktree cleanup DEV-6182                    ← remove worktree only
-/Worktree cleanup DEV-189 DEV-201             ← multiple at once
-/Worktree cleanup checkout DEV-6183           ← remove worktree + checkout branch in main repo
+/Worktree cleanup ABC-123                    ← remove worktree only
+/Worktree cleanup ABC-1 ABC-2             ← multiple at once
+/Worktree cleanup checkout ABC-124           ← remove worktree + checkout branch in main repo
 ```
 
 The `checkout` keyword between `cleanup` and the ticket number activates checkout mode.
@@ -32,9 +47,9 @@ The `checkout` keyword between `cleanup` and the ticket number activates checkou
 
 For each ticket, find the branch name:
 1. Check scratch file `branch:` line (same lookup as Single workflow)
-2. Glob `~/dev/worktrees/powerx/DEV-XXXX*` — match by ticket prefix
-3. If worktree already removed, check local branches: `git -C "$REPO" branch | grep DEV-XXXX`
-4. If still not found, check remote: `git -C "$REPO" branch -r | grep DEV-XXXX`
+2. Glob `$WT_BASE/{KEY}*` — match by ticket prefix
+3. If worktree already removed, check local branches: `git -C "$REPO" branch | grep {KEY}`
+4. If still not found, check remote: `git -C "$REPO" branch -r | grep {KEY}`
 5. Ask the user if ambiguous
 
 ---
@@ -43,7 +58,7 @@ For each ticket, find the branch name:
 
 ```bash
 gh pr list \
-  --repo powerxai/data \
+  -R "${REPO_SLUG}" \
   --head "${BRANCH}" \
   --state merged \
   --json number,title,mergedAt
@@ -51,7 +66,7 @@ gh pr list \
 
 If NOT merged: warn the user before removing.
 ```
-⚠️  Branch DEV-6182-... has an OPEN PR (not merged yet).
+⚠️  Branch ABC-123-... has an OPEN PR (not merged yet).
     Remove worktree anyway? (branch stays on remote)
 ```
 
@@ -72,11 +87,11 @@ If output is **empty** → main repo is clean, proceed directly to Step 4.
 If output is **non-empty** → use AskUserQuestion with these options:
 
 ```
-Question: "~/dev/powerx/data/ has uncommitted changes. What should we do before checking out {BRANCH}?"
+Question: "$REPO/ has uncommitted changes. What should we do before checking out {BRANCH}?"
 
 Options:
   A) Stash changes    — git stash push -m "WIP before checkout {BRANCH}"
-  B) Commit changes   — commit all staged+unstaged with an auto message "WIP: stashing before DEV-XXXX checkout"
+  B) Commit changes   — commit all staged+unstaged with an auto message "WIP: stashing before {KEY} checkout"
   C) Abort checkout   — remove worktree only, skip the checkout step
 ```
 
@@ -100,8 +115,7 @@ git -C "$REPO" commit -m "WIP: before checking out ${BRANCH}"
 ## Step 4 — Remove Worktree
 
 ```bash
-REPO="${HOME}/dev/powerx/data"
-WT_PATH="${HOME}/dev/worktrees/powerx/${BRANCH}"
+WT_PATH="${WT_BASE}/${BRANCH}"
 
 git -C "$REPO" worktree remove "$WT_PATH" --force
 ```
@@ -142,17 +156,17 @@ git -C "$REPO" checkout "${BRANCH}"
 
 **Standard cleanup:**
 ```
-✓ Worktree removed: ~/dev/worktrees/powerx/{BRANCH}/
+✓ Worktree removed: $WT_BASE/{BRANCH}/
 ✓ Local branch deleted: {BRANCH}
   (Remote branch still exists on origin — GitHub auto-deletes on merge if configured)
 ```
 
 **Checkout mode:**
 ```
-✓ Worktree removed: ~/dev/worktrees/powerx/{BRANCH}/
-✓ Checked out: {BRANCH} in ~/dev/powerx/data/
+✓ Worktree removed: $WT_BASE/{BRANCH}/
+✓ Checked out: {BRANCH} in $REPO/
   Branch is ready — make your changes or run the app to verify.
-  When done: /Worktree cleanup DEV-XXXX  (removes local branch after merge)
+  When done: /Worktree cleanup {KEY}  (removes local branch after merge)
 ```
 
 If stash was created, remind the user:
@@ -164,7 +178,7 @@ If stash was created, remind the user:
 
 ## Multiple Cleanup
 
-For `/Worktree cleanup DEV-189 DEV-201`:
+For `/Worktree cleanup ABC-1 ABC-2`:
 - Run Steps 1-5 for each ticket sequentially (cleanup is fast, no need for parallelism)
 - `checkout` mode only supported for a single ticket (can't checkout two branches at once)
 - Report all at end

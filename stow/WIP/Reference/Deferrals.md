@@ -42,9 +42,10 @@ scheme.
 
 ## What is kept, and what goes
 
-The file exists to suppress asking. An entry earns its place only while the PR
-it refers to is still open — once the PR is closed or merged there is nothing
-left to ask about, so the entry goes with it.
+**Invariant: every entry refers to a currently-open PR.** The file exists to
+suppress asking, and a PR that is merged, closed or abandoned will never be asked
+about again, so its entry has nothing left to do. Reconciling against the live
+open-PR list at the start of every triage is what maintains this.
 
 | Event | What happens |
 |-------|--------------|
