@@ -92,7 +92,7 @@ Phase 9: Human Checkpoint      → Reverse Glossary + unresolvable questions
 | `.github/copilot-instructions.md` | GitHub Copilot |
 | `.cursorrules` | Cursor |
 
-Each root file is **self-sufficient** — it contains all 12 required sections (routing, rules, commands, etc.) and does not redirect to other root files. Any single file must be enough for an agent to navigate the codebase after context compaction.
+Each root file is **self-sufficient** — it contains all 13 required sections (routing, rules, commands, etc.) and does not redirect to other root files. Any single file must be enough for an agent to navigate the codebase after context compaction.
 
 Conditional per-module routing files (e.g., `.cursor/rules/<module>.mdc`, `.claude/rules/<module>.md`) are generated when those platforms are detected.
 

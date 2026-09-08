@@ -634,9 +634,27 @@ Domain context: `.ai/skills/domain-context.md`
 1. Read the relevant module skill from the routing table above
 2. Check the Change Impact checklist in the module skill
 3. Read `.ai/skills/orientation.md` for system-wide context if needed
+4. If you are writing a spec or a plan, the documentation change belongs in it, named
+   as work alongside the code. A plan that ships code and leaves the docs for later has
+   scoped the doc work out, and scope added at commit time is scope that gets dropped.
+
+## Before Committing
+1. Did this change make anything the docs claim false? Fix it in this change, not later.
+2. `.ai/skills/Tools/skill-drift.sh` reports what looks stale from git history.
+
+See Skill & Routing Maintenance below for what to update and the accuracy rule.
 
 ## Skill & Routing Maintenance
-These skills are LIVING — they evolve with the codebase. When a skill is wrong, fix it.
+These skills are LIVING — they evolve with the codebase.
+
+**When you changed code.** The ordinary case, and the one that gets skipped, because
+nothing about it announces itself. Ask whether the change made a claim in the docs for
+that area false. Not whether an update would be nice: whether something is now wrong.
+Leaving a claim you have just falsified is not a deferral, it is a defect you introduced,
+and an agent trusts what it reads, so a false claim costs the next agent more than a
+missing one.
+
+When a skill is wrong, fix it.
 When routing doesn't direct you right, add or fix the entry. When you hit a gotcha a skill
 should have warned about, add it to the module skill. When the user teaches you a practice
 or principle about this project, add it to the relevant skill — it's repo-wide knowledge,
@@ -756,10 +774,31 @@ USE WHEN format: backtick-wrapped directory paths with trailing slash (e.g., `` 
 1. Read the relevant module skill from the routing table above
 2. Check the Change Impact checklist in that skill
 3. Read `.ai/skills/orientation.md` for system-wide context if needed
+4. If you are writing a spec or a plan, the documentation change belongs in it, named
+   as work alongside the code. A plan that ships code and leaves the docs for later has
+   scoped the doc work out, and scope added at commit time is scope that gets dropped.
+
+## Before Committing
+1. Did this change make anything the docs claim false? Fix it in this change, not later.
+2. `.ai/skills/Tools/skill-drift.sh` reports what looks stale from git history.
+
+See Skill & Routing Maintenance below for what to update and the accuracy rule.
 
 ## Skill & Routing Maintenance
 
 These skills are LIVING — they evolve with the codebase.
+
+**When you changed code, which is the ordinary case and the one that gets skipped:**
+→ Ask whether the change made a claim in the docs for that area false. Not whether an
+update would be nice: whether something is now wrong. If it is, fixing it is part of
+this change.
+→ `.ai/skills/Tools/skill-drift.sh` reports what looks stale from git history. It is a
+signal, not an oracle: it compares commit dates, so it cannot see a claim that went
+false without the file changing.
+
+Leaving a claim you have just falsified is not a deferral, it is a defect you
+introduced. An agent trusts what it reads, so a false claim costs the next agent more
+than a missing one.
 
 **When you encounter a problem a skill should have warned you about:**
 → Add the gotcha to the relevant module skill's Gotchas section.
@@ -877,7 +916,8 @@ Every root file (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md) MU
 | **Module Routing** | Table mapping work areas to module skills — the primary discovery mechanism |
 | **Task Routing** | Table mapping agent intents to skill combinations |
 | **Context Window Discipline** | Directories to never browse, generated file guidance |
-| **Before Modifying Code** | Read module skill → check Change Impact → read orientation |
+| **Before Modifying Code** | Read module skill → check Change Impact → read orientation → plan the doc change with the code |
+| **Before Committing** | Fix what this change falsified, and the drift command that finds it |
 | **Skill & Routing Maintenance** | Living docs guidance — when and how to update skills during use |
 | **Documentation** | Pointers to the full skill layer (orientation, modules, tasks, domain context) |
 | **Coding Standards** | DRY, follow patterns, maintain quality, no stubs |
@@ -1063,7 +1103,8 @@ All four root files (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md
 - [ ] Module Routing (table with USE WHEN keywords)
 - [ ] Task Routing (table mapping intents to skill combinations, with USE WHEN keywords)
 - [ ] Context Window Discipline (directories to never browse, generated file guidance)
-- [ ] Before Modifying Code (read module skill, check Change Impact, read orientation)
+- [ ] Before Modifying Code (read module skill, check Change Impact, read orientation, plan the doc change)
+- [ ] Before Committing (fix what the change falsified, drift command)
 - [ ] Skill & Routing Maintenance (living docs guidance, refactoring updates)
 - [ ] Documentation (pointers to skill layer: orientation, modules, tasks, domain context)
 - [ ] Coding Standards (DRY, follow patterns, maintain quality)

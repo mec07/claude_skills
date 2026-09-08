@@ -575,6 +575,7 @@ during implementation.
 | Per-module routing file paths per platform | `phase-2:912-915` | Unchanged in shape, keyed on unit |
 | Drift script skill-path regex | `templates/skill-drift.sh:132` | Extend to unit README paths |
 | Drift script builds directory-to-skill map from the routing tables | `phase-2:960-965` | Mechanism unchanged, targets change |
+| `Skill & Routing Maintenance`, the create-a-new-skill trigger, sends the agent to `.ai/skills/modules/` | `phase-2`, both template copies | Point at the unit's README for unit-shaped knowledge, keeping `tasks/` for the overflow case 3.5 already allows. Found uninventoried while adding the maintenance-section triggers; it is the one contract that instructs a *future* agent to write into `modules/`, so leaving it would keep recreating the tree after 2b removes it |
 | Remaining mechanical references | `phase-4` ×8, `phase-9` ×3, `phase-drift-resolve` ×3, `phase-6/7/8` ×1 each, `SKILL.md` ×1 | Retarget |
 
 #### Three contracts that need a real decision, not a rename
@@ -1377,6 +1378,28 @@ that let it fail in practice rather than restating it:
 5.2's existing Form note is the reason enforcement was the load-bearing gap rather than wording: it
 already records, from item 18, that agents under-applied this rule even after it was stated, which
 is why the fix is a check rather than a firmer sentence.
+
+**Owner decision, 2026-09-08: make the root files stricter about doc currency.** A follow-on ask,
+and the section it needed already existed: `Skill & Routing Maintenance` is one of the required
+sections in every root file, checked by `phase-3-refine.md` and `phase-4-validate.md`. Four
+weaknesses in it, the fourth raised by the owner after the first three were agreed:
+
+| Weakness | Resolution |
+|---|---|
+| All seven triggers fire when the agent *notices something about the docs*: an unwarned gotcha, a wrong skill, misrouting, a rename, a refactor, a user-taught practice, an undocumented area. None fires on the ordinary case, where code changed and a claim went false with nothing to announce it | A new leading trigger, "when you changed code", stated as the ordinary case and the one that gets skipped, in the prohibition form this spec reserves for discipline failures: leaving a claim you have just falsified is a defect you introduced, not a deferral |
+| `Before Modifying Code` had no counterpart, so the framework made an agent read the docs going in and said nothing going out | New required section `Before Committing`, taking the count from 12 to 13. It points at the maintenance section rather than repeating it, and earns its own heading on position alone: a bullet buried in a long section is not read at the moment it applies |
+| The strictness was spent on the wrong failure type. "I knew the rule and skipped it under task pressure" is a discipline failure, the class this spec deliberately gives prohibition form (item 2), yet the wording was entirely soft arrows | Prohibition form for the new trigger only. The existing seven keep their form, being reactive prompts rather than discipline failures |
+| **Owner's fourth.** Specs and plans do not account for documentation, so the doc change arrives as unfunded scope at commit time, which is when task pressure is highest and scope gets dropped | `Before Modifying Code` gains a step: when writing a spec or a plan, the documentation change belongs in it, named as work alongside the code. This is upstream of the commit-time trigger and the stronger of the two, because it funds the work before there is pressure to drop it |
+
+The wording is deliberately shape-agnostic, saying "the docs for that area" rather than naming
+module skills or READMEs. It therefore reads correctly both before and after the 2b cutover and
+needs no second edit, which is one fewer row for 3.5 to carry.
+
+**CI stays advisory,** per item 9's default. Wording is the weakest of the three available layers
+and the owner's instances survived because the freshness signal did not block, but item 10's
+warning governs: a freshness gate whose commit filter is wrong fires on every commit to an active
+unit and stays permanently red, which trains the reader to dismiss it. The filter gets proven
+against a real repo in stage 6 before blocking is worth revisiting.
 
 ---
 
