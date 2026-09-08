@@ -89,12 +89,15 @@ The installer itself only needs `git` and a POSIX shell. Individual skills have 
 Some skills need credentials in `~/.claude/.env`:
 
 ```bash
-JIRA_API_TOKEN=...    # JIRA issue linking fallback, TechDebt
-JIRA_EMAIL=...        # JIRA issue linking fallback, TechDebt
+JIRA_SITE=https://your-site.atlassian.net   # JIRA issue linking fallback
+JIRA_API_TOKEN=...                          # JIRA issue linking fallback
+JIRA_EMAIL=...                              # JIRA issue linking fallback
 CLOCKIFY_API_KEY=...  # STANDUP (optional)
 ```
 
-Most Jira operations now use the Atlassian MCP Server (OAuth 2.1 — no API tokens needed). The env vars above are only required for the issue linking CLI fallback and the TechDebt skill's direct API calls. The installer will prompt for missing credentials when installing the JIRA skill.
+Most Jira operations use the Atlassian MCP Server (OAuth 2.1 — no API tokens needed), including everything TechDebt does. The env vars above are required only by the issue linking CLI fallback, which the MCP does not yet cover. `JIRA_SITE` has no default: no Jira instance is compiled into any skill here. The installer prompts for whatever is missing when installing the JIRA skill.
+
+TechDebt additionally needs to know which project, board and epic tech debt belongs in. That is a property of your team's Jira rather than a credential, so it lives in `~/.claude/techdebt/config.json` — the skill asks on first run and writes it for you. See `stow/TechDebt/Reference/Setup.md`.
 
 ## Adding a new skill
 

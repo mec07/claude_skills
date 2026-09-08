@@ -9,11 +9,14 @@
  * createIssueLink or equivalent tool. Track:
  * https://community.atlassian.com/forums/Rovo-questions/MCP-Server-create-edit-work-item-links/qaq-p/3109569
  *
- * Reads credentials from ~/.claude/.env internally.
+ * Reads JIRA_SITE, JIRA_EMAIL and JIRA_API_TOKEN from ~/.claude/.env.
+ * Nothing about any particular Jira instance is compiled in.
+ *
+ *   JIRA_SITE=https://your-site.atlassian.net
  *
  * Usage:
- *   bun ~/.claude/skills/JIRA/Tools/Jira.ts link DEV-5230 blocked_by DEV-6345
- *   bun ~/.claude/skills/JIRA/Tools/Jira.ts link DEV-6345 blocks DEV-5230
+ *   bun ~/.claude/skills/JIRA/Tools/Jira.ts link ABC-1 blocked_by ABC-2
+ *   bun ~/.claude/skills/JIRA/Tools/Jira.ts link ABC-2 blocks ABC-1
  *
  * Relationship enum:
  *   blocks | blocked_by | duplicates | duplicated_by | relates_to | tests | tested_by | split_to | split_from
@@ -22,7 +25,7 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 
-const REST = "https://powerx.atlassian.net/rest/api/3";
+
 
 // ─── Env ────────────────────────────────────────────────────────────────────
 
@@ -44,6 +47,18 @@ function authHeader(): string {
   const email = env.JIRA_EMAIL;
   if (!token || !email) throw new Error("JIRA_API_TOKEN or JIRA_EMAIL missing from ~/.claude/.env");
   return "Basic " + Buffer.from(`${email}:${token}`).toString("base64");
+}
+
+/** REST base for the configured site. No instance is hardcoded. */
+function restBase(): string {
+  const site = loadEnv().JIRA_SITE;
+  if (!site) {
+    throw new Error(
+      "JIRA_SITE missing from ~/.claude/.env — set it to your Jira base URL, " +
+        "e.g. JIRA_SITE=https://your-site.atlassian.net",
+    );
+  }
+  return `${site.replace(/\/+$/, "")}/rest/api/3`;
 }
 
 // ─── HTTP ────────────────────────────────────────────────────────────────────
@@ -95,7 +110,7 @@ async function cmdLink(ticketA: string, relationship: string, ticketB: string): 
     outwardIssue: { key: rel.aIsOutward ? ticketA : ticketB },
     inwardIssue:  { key: rel.aIsOutward ? ticketB : ticketA },
   };
-  await jiraFetch(`${REST}/issueLink`, { method: "POST", body: JSON.stringify(body) });
+  await jiraFetch(`${restBase()}/issueLink`, { method: "POST", body: JSON.stringify(body) });
   const direction = rel.aIsOutward
     ? `${ticketA} -> ${rel.typeName} -> ${ticketB}`
     : `${ticketB} -> ${rel.typeName} -> ${ticketA}`;

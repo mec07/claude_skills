@@ -403,8 +403,10 @@ configure_atlassian_mcp() {
 
 # --- Jira Link Fallback Credentials ---
 #
-# The Jira.ts CLI tool (issue linking only) requires API credentials in
-# ~/.claude/.env because the Atlassian MCP does not yet support issue linking.
+# The Jira.ts CLI tool (issue linking only) requires API credentials and the
+# site URL in ~/.claude/.env because the Atlassian MCP does not yet support
+# issue linking. Nothing about any particular Jira instance is compiled into
+# the tool, so JIRA_SITE is required rather than defaulted.
 
 ENV_FILE="$HOME/.claude/.env"
 
@@ -414,7 +416,7 @@ env_file_has_var() {
 
 configure_jira_credentials() {
     local missing=""
-    for var in JIRA_API_TOKEN JIRA_EMAIL; do
+    for var in JIRA_API_TOKEN JIRA_EMAIL JIRA_SITE; do
         if ! env_file_has_var "$var"; then
             missing="$missing $var"
         fi
@@ -425,7 +427,7 @@ configure_jira_credentials() {
         return 0
     fi
 
-    printf "\n  The Jira issue link CLI needs API credentials in %s.\n" "$ENV_FILE"
+    printf "\n  The Jira issue link CLI needs credentials and a site URL in %s.\n" "$ENV_FILE"
     printf "  (Only needed for issue linking — all other Jira ops use MCP OAuth.)\n"
     printf "  Missing:%s\n\n" "$missing"
 
@@ -452,21 +454,29 @@ configure_jira_credentials() {
             fi
         done
         printf "  %-20s credentials written to %s\n" "Jira link CLI" "$ENV_FILE"
-        return 0
+        # JIRA_SITE is not a credential and is rarely exported, so it is asked
+        # for separately rather than returning here with it still missing.
+        if env_file_has_var JIRA_SITE; then
+            return 0
+        fi
     fi
 
-    printf "  Enter credentials now? [Y/n] "
+    printf "  Enter the remaining values now? [Y/n] "
     read -r answer
     case "$answer" in
         [nN]|[nN][oO])
-            printf "  Skipped — add JIRA_API_TOKEN and JIRA_EMAIL to %s later.\n" "$ENV_FILE"
+            printf "  Skipped — add JIRA_API_TOKEN, JIRA_EMAIL and JIRA_SITE to %s later.\n" "$ENV_FILE"
             return 0
             ;;
     esac
 
-    for var in JIRA_API_TOKEN JIRA_EMAIL; do
+    for var in JIRA_API_TOKEN JIRA_EMAIL JIRA_SITE; do
         if ! env_file_has_var "$var"; then
-            printf "  %s: " "$var"
+            if [ "$var" = JIRA_SITE ]; then
+                printf "  %s (e.g. https://your-site.atlassian.net): " "$var"
+            else
+                printf "  %s: " "$var"
+            fi
             read -r val
             if [ -n "$val" ]; then
                 printf "%s=%s\n" "$var" "$val" >> "$ENV_FILE"
