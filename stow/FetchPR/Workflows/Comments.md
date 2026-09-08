@@ -51,7 +51,7 @@ The script pulls all three.
 
 When the principal asks you to fetch PR comments — whether they say it explicitly or just "look at the comments / coderabbit feedback / review feedback" — assume they want the following workflow unless they say otherwise:
 
-1. **Pull JIRA context first.** Scan the PR title, body, branch name, and commit messages for any pattern matching `[A-Z]+-\d+` (e.g. `NFW-313`, `DATA-1234`, `DEV-2`). For each reference, invoke the **JIRA skill** to fetch ticket details — summary, description, acceptance criteria, comments. If the ticket has an epic, fetch that too. Use this to scope what is and isn't relevant before reading the review comments. The principal has more context about scope than you do; the ticket helps close that gap.
+1. **Pull JIRA context first.** Scan the PR title, body, branch name, and commit messages for any pattern matching `[A-Z]+-\d+` (e.g. `ABC-313`, `ABC-1234`, `ABC-2`). For each reference, invoke the **JIRA skill** to fetch ticket details — summary, description, acceptance criteria, comments. If the ticket has an epic, fetch that too. Use this to scope what is and isn't relevant before reading the review comments. The principal has more context about scope than you do; the ticket helps close that gap.
 2. **Fetch unresolved threads** with the script (default `--all` is OFF, so unresolved-only is the default).
 3. **Filter to "new" comments** — threads where the principal (= the PR author) has NOT yet replied. A thread the author has already replied to is considered handled; skip it unless the principal asks for resolved/handled threads. The fetch JSON includes the comment chain per thread; check comment authors to determine whether the principal has already engaged.
 4. **For each new+unresolved comment, present in order:**
@@ -188,13 +188,13 @@ If the reply defers a concern to a follow-up ticket, a separate PR, or "later", 
 
 State the action plainly. Link the ticket. That's enough.
 
-  Good: ``I've created a backlog ticket for this: NFW-337.``
+  Good: ``I've created a backlog ticket for this: ABC-337.``
 
-  Good: ``Opened a follow-up ticket so we can size this properly: NFW-337.``
+  Good: ``Opened a follow-up ticket so we can size this properly: ABC-337.``
 
-  Bad: ``I've created a backlog ticket to flag this so it can be triaged on its own merits: NFW-337.`` (the "on its own merits" reads as defending the deferral)
-  Bad: ``This is out of scope for this PR but I've logged NFW-337 to capture it.`` ("out of scope" is reviewer-as-overstepping)
-  Bad: ``Tracked in NFW-337 for future consideration.`` ("future consideration" is corporate dismissal)
+  Bad: ``I've created a backlog ticket to flag this so it can be triaged on its own merits: ABC-337.`` (the "on its own merits" reads as defending the deferral)
+  Bad: ``This is out of scope for this PR but I've logged ABC-337 to capture it.`` ("out of scope" is reviewer-as-overstepping)
+  Bad: ``Tracked in ABC-337 for future consideration.`` ("future consideration" is corporate dismissal)
 
 The principal does not need to defend their scoping decisions to the reviewer. A short sentence and a link respects both their time and the reviewer's.
 
