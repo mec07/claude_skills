@@ -4,6 +4,34 @@ Log a tech debt ticket without breaking flow. Checks for duplicates, expands the
 
 ---
 
+## Step 0 — Load config and resolve the site
+
+```
+Read ~/.claude/techdebt/config.json  →  PROJECT, BOARD_ID, PARENT_EPIC,
+                                        ISSUE_TYPE, PRIORITY
+```
+
+If the file does not exist, run the first-run flow in `Reference/Setup.md`: ask
+which project, epic and board, then write it. Do not guess a project and do not
+fail — a missing config is a normal first use.
+
+`BOARD_ID` and `PARENT_EPIC` are both optional. Without a board, duplicate
+detection searches the project by JQL. Without an epic, the `parent` and Epic
+Link fields are omitted from creation rather than sent empty.
+
+Then resolve, via the Atlassian MCP:
+
+| Value | Call |
+|-------|------|
+| `JIRA_SITE`, `cloudId` | `getAccessibleAtlassianResources` |
+| Assignee account id | `atlassianUserInfo` |
+| Issue type id for `ISSUE_TYPE` | `getJiraProjectIssueTypesMetadata` on `PROJECT` |
+
+Resolving ids per project each run is deliberate. Ids are not portable between
+projects, and a stale one fails at creation with an error that does not say why.
+
+---
+
 ## Step 1 — Parse Input
 
 Extract the description from the skill arguments.
@@ -17,17 +45,19 @@ If no description provided, use AskUserQuestion:
 
 ## Step 2 — Fetch Open Tech Debt Tickets (Titles Only)
 
-Fetch all non-Done issues from the Tech Debt Board for duplicate checking.
-**Titles only** — cheap, token-efficient.
-Note: board currently has ~375 issues, all fit in one page at `maxResults=500`. If board grows past 500, add `startAt` pagination.
+Fetch open issues for duplicate checking. **Titles only** — cheap and
+token-efficient.
 
-```bash
-JIRA_API_TOKEN=$(sed -n 's/^JIRA_API_TOKEN=//p' ~/.claude/.env)
-JIRA_EMAIL=$(sed -n 's/^JIRA_EMAIL=//p' ~/.claude/.env)
+With a board configured, read the board. Without one, search the project:
 
-# Save to temp file — avoids shell escaping != as \!= in python3 -c "..." inline scripts
-curl -s -u "${JIRA_EMAIL}:${JIRA_API_TOKEN}" \
-  "https://powerx.atlassian.net/rest/agile/1.0/board/361/issue?maxResults=500&fields=summary,status" \
+```
+searchJiraIssuesUsingJql
+  jql:    project = {PROJECT} AND statusCategory != Done ORDER BY created DESC
+  fields: ["summary", "status"]
+```
+
+Page with `nextPageToken` rather than assuming everything fits one response — a
+long-lived tech debt project outgrows any single page eventually.
   -o /tmp/td_issues.json
 
 python3 << 'EOF'
@@ -61,8 +91,8 @@ Show the matches, then use AskUserQuestion:
 Question: "Found {N} possible duplicate(s) before creating — want to review them?"
 
 Matches shown as:
-  DEV-XXXX: {summary} ({status})
-  DEV-YYYY: {summary} ({status})
+  {KEY}: {summary} ({status})
+  {KEY2}: {summary} ({status})
 
 Options:
   A) Dive in    — fetch full description of top match(es) and show me
@@ -70,14 +100,19 @@ Options:
   C) Cancel     — I'll update an existing ticket manually
 ```
 
-**If "Dive in"** → fetch and show description of the top 1-2 matches:
-```bash
-curl -s -u "${JIRA_EMAIL}:${JIRA_API_TOKEN}" \
-  "https://powerx.atlassian.net/rest/api/3/issue/DEV-XXXX?fields=summary,description,status"
+**If "Dive in"** → fetch and show the description of the top 1-2 matches:
+
 ```
-Convert ADF description to plain text (extract `text` fields recursively). Then ask again:
+getJiraIssue
+  issueIdOrKey:          {KEY}
+  fields:                ["summary", "description", "status"]
+  responseContentFormat: "markdown"
 ```
-"Having seen the detail — still want to create a new ticket, or does DEV-XXXX cover it?"
+
+Ask for `markdown` rather than `adf` and Jira does the flattening for you. Then
+ask again:
+```
+"Having seen the detail — still want to create a new ticket, or does {KEY} cover it?"
 Options: Create new | Link to existing and cancel
 ```
 
@@ -87,7 +122,7 @@ Options: Create new | Link to existing and cancel
 
 ## Step 4 — Expand Description with AI
 
-Use inference to turn Fred's quick note into a structured ticket description.
+Use inference to turn the user's quick note into a structured ticket description.
 
 ```bash
 EXPANDED=$(echo "Turn this brief tech debt note into a well-structured Jira ticket description.
@@ -114,60 +149,43 @@ Note: ${USER_DESCRIPTION}" | bun ~/.claude/skills/PAI/Tools/Inference.ts standar
 
 ## Step 5 — Create the Jira Ticket
 
-Build the ADF description payload and create the issue.
+Check what the project actually requires before building the payload. Projects
+carry mandatory custom fields, and a missing one fails with an error that names a
+field id and nothing else:
 
-```bash
-JIRA_API_TOKEN=$(sed -n 's/^JIRA_API_TOKEN=//p' ~/.claude/.env)
-JIRA_EMAIL=$(sed -n 's/^JIRA_EMAIL=//p' ~/.claude/.env)
-
-# Build summary: capitalise first letter, truncate at 255 chars
-SUMMARY="${USER_DESCRIPTION:0:255}"
-
-# Convert expanded markdown to ADF (use paragraph blocks — sufficient for Jira)
-python3 - <<'PYEOF'
-import json, sys, os
-
-expanded = os.environ.get('EXPANDED', '')
-
-# Build ADF content: split into paragraphs by blank lines
-paragraphs = [p.strip() for p in expanded.split('\n\n') if p.strip()]
-content = []
-for p in paragraphs:
-    content.append({
-        "type": "paragraph",
-        "content": [{"type": "text", "text": p}]
-    })
-
-adf = {"type": "doc", "version": 1, "content": content}
-
-payload = {
-    "fields": {
-        "project": {"key": "DEV"},
-        "issuetype": {"id": "10022"},   # Story
-        "summary": os.environ.get('SUMMARY', ''),
-        "description": adf,
-        "priority": {"id": "5"},        # Lowest
-        "assignee": {"id": "712020:4b8d9734-1d88-42e4-a553-37ebedd98c6f"},
-        "customfield_10319": {"id": "10993"},  # Type: Non Functional/Tech Debt (required field)
-        "parent": {"key": "DEV-5478"},         # Epic: Work Order Management - Tech Debt
-        "customfield_10014": "DEV-5478"        # Epic Link (legacy field — both required)
-    }
-}
-
-print(json.dumps(payload))
-PYEOF
+```
+getJiraIssueTypeMetaWithFields
+  projectIdOrKey: {PROJECT}
+  issueTypeId:    {resolved in step 0}
 ```
 
-Then POST:
-```bash
-RESPONSE=$(curl -s -u "${JIRA_EMAIL}:${JIRA_API_TOKEN}" \
-  -X POST \
-  -H "Content-Type: application/json" \
-  -d "${PAYLOAD}" \
-  "https://powerx.atlassian.net/rest/api/3/issue")
+Anything flagged required and not yet known gets asked about once, by its display
+name. Never invent a value for a required custom field, and never carry a field
+id from another project.
 
-TICKET_KEY=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['key'])" 2>/dev/null)
-TICKET_URL="https://powerx.atlassian.net/browse/${TICKET_KEY}"
+Then create it:
+
+```
+createJiraIssue
+  projectKey:  {PROJECT}
+  issueTypeName: {ISSUE_TYPE}
+  summary:     first 255 chars of the description, first letter capitalised
+  description: the expanded text
+  additional_fields:
+    priority: {name: PRIORITY}
+    assignee: {id: <account id from atlassianUserInfo>}
+    parent:   {key: PARENT_EPIC}      ← omit the key entirely when unset
+```
+
+Send `parent` only when an epic is configured. Sending it as null or an empty
+string is rejected, and sending a legacy Epic Link field alongside is only needed
+on projects that still have one — check the metadata above rather than assuming.
+
+`createJiraIssue` returns the new key. Build the link from it and the site
+resolved in step 0:
+
+```bash
+TICKET_URL="${JIRA_SITE}/browse/${TICKET_KEY}"
 ```
 
 ---
@@ -175,7 +193,7 @@ TICKET_URL="https://powerx.atlassian.net/browse/${TICKET_KEY}"
 ## Step 6 — Open Ticket in Browser
 
 ```bash
-open "${TICKET_URL}"
+open "${TICKET_URL}"        # macOS; xdg-open elsewhere
 ```
 
 ---
@@ -231,7 +249,7 @@ Options:
   A) Yes, spin up worktree  — invoke /Worktree {TICKET_KEY} immediately
   B) Not now               — leave the ticket for later
 ```
-If Fred says yes → invoke the Worktree skill: read `~/.claude/skills/Worktree/SKILL.md` and execute the Single workflow for `{TICKET_KEY}`.
+If the user says yes → invoke the Worktree skill: read `~/.claude/skills/Worktree/SKILL.md` and execute the Single workflow for `{TICKET_KEY}`.
 
 ---
 
@@ -240,7 +258,7 @@ If Fred says yes → invoke the Worktree skill: read `~/.claude/skills/Worktree/
 Output the report using clickable OSC 8 hyperlinks for the ticket URL and board URL:
 
 ```bash
-BOARD_URL="https://powerx.atlassian.net/jira/software/c/projects/DEV/boards/361"
+BOARD_URL="${JIRA_SITE}/jira/software/c/projects/${PROJECT}/boards/${BOARD_ID}"   # omitted when no board is configured
 
 echo "✓ Created: ${TICKET_KEY}"
 printf '  \e]8;;%s\e\\%s\e]8;;\e\\\n' "${TICKET_URL}" "${TICKET_URL}"
@@ -267,7 +285,7 @@ Then output the fixability rating inline:
 
 | Situation | Action |
 |-----------|--------|
-| Jira API fails | Show raw error response, provide `curl` command Fred can run manually |
-| Inference fails | Use Fred's raw description as the ticket description (unformatted) |
+| Jira API fails | Show the raw error response and the equivalent call the user can run manually |
+| Inference fails | Use the user's raw description as the ticket description (unformatted) |
 | `open` not available | Print URL prominently with a reminder to open manually |
-| Duplicate found, Fred cancels | Report the existing ticket key and URL so Fred can add a comment instead |
+| Duplicate found, user cancels | Report the existing ticket key and URL so they can add a comment instead |

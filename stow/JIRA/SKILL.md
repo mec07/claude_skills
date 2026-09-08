@@ -1,6 +1,6 @@
 ---
 name: Jira
-description: Jira integration via Atlassian MCP + issue link fallback. USE WHEN jira, ticket, issue, DEV-, sprint, board, backlog, create plan, fetch ticket, ticket details, story points, acceptance criteria.
+description: Jira integration via Atlassian MCP + issue link fallback. Works with any Jira site and project — the site comes from your environment, ticket keys are matched by shape. USE WHEN jira, ticket, issue, ticket key, sprint, board, backlog, create plan, fetch ticket, ticket details, story points, acceptance criteria.
 ---
 
 # Jira
@@ -164,16 +164,16 @@ examples.
 
 ### Plan File Naming Convention (CRITICAL)
 
-**Filename format:** `DEV-{number}-plan.scratch.md`
-- Example: `DEV-6156-plan.scratch.md`, `DEV-6158-plan.scratch.md`
+**Filename format:** `{KEY}-plan.scratch.md`, where `{KEY}` is the Jira key
+- Example: `ABC-123-plan.scratch.md`, `ABC-124-plan.scratch.md`
 - `.scratch.md` extension ensures files are gitignored
-- **NEVER** use `PLAN-DEV-` prefix or `.md` without `.scratch`
+- **NEVER** prefix with `PLAN-`, and never use `.md` without `.scratch`
 
 **Placement rule:** Place the plan in the **parent-most folder in the monorepo** that the ticket refers to.
 - If ticket references `data/hasura/metadata` and `data/application-db/migrations` → plan goes in `data/` (the parent-most common folder)
 - If ticket references `data/auth-api/src/...` → plan goes in `data/auth-api/`
 - **NEVER** place plans in the repo root — always in the relevant sub-project folder
-- Monorepo root is `/Users/freddylem/dev/powerx/data/`, sub-projects live under `data/`, `apps/`, `auth-api/`, etc.
+- The repo root is `$(git rev-parse --show-toplevel)`; sub-projects are whatever top-level directories that repo actually has
 
 ### Steps
 
@@ -181,18 +181,18 @@ examples.
 2. Analyze description, acceptance criteria, subtasks
 3. Identify which monorepo folders the ticket references
 4. Determine the parent-most relevant folder
-5. Create `DEV-{number}-plan.scratch.md` in that folder with:
+5. Create `{KEY}-plan.scratch.md` in that folder with:
    - Summary of the ticket
    - Technical approach
    - Step-by-step implementation plan
    - Files likely to be modified
    - Testing considerations
-   - `branch: DEV-{number}-{jira-slugified-title}` line at the top
-     (Fred can replace with exact Jira branch name from "Copy branch name" in Jira UI)
+   - `branch: {KEY}-{jira-slugified-title}` line at the top
+     (replace with the exact name from Jira's "Copy branch name" if you prefer it)
 
 **Branch line format (always include at top of plan file):**
 ```markdown
-branch: DEV-6182-travel-backend-add-missing-user-fields
+branch: ABC-123-add-missing-user-fields
 ```
-This is read by `/Worktree DEV-XXXX` to use the correct branch name.
-If Fred has copied the exact branch name from Jira → paste it here to override the auto-generated slug.
+This is read by `/Worktree {KEY}` to use the correct branch name.
+If you have copied the exact branch name from Jira → paste it here to override the auto-generated slug.
