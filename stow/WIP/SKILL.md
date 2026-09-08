@@ -23,10 +23,10 @@ Run Sync first — Triage needs the PR list it produces.
 you are logged into, so nothing about you is written into this skill and it works
 unchanged for anyone. Resolution table: `Reference/Resolution.md`.
 
-**No accumulating state.** The services track the work; this skill queries live
-and renders. The one file it keeps is your triage decisions, which no service
-records — pruned against live PR state every run. Format:
-`Reference/Deferrals.md`.
+**Decisions are kept, nothing is deleted.** The services track the work; this
+skill queries live and renders. The one file it keeps is your triage decisions,
+so it stops asking about PRs you have chosen to ignore. Entries are never removed
+automatically — only when you say so. Format: `Reference/Deferrals.md`.
 
 ## Requirements
 

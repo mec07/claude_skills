@@ -7,19 +7,25 @@ Runs after `Workflows/Sync.md`, which supplies the open-PR list. Triggered by
 `/WIP triage`, by "old PRs", or offered at the end of a sync when there is
 anything to ask about.
 
-## Step 1 — Load and clean the deferral file
+## Step 1 — Load the deferral file and re-open due decisions
 
 Read `~/.claude/wip/deferrals.json`. Format and failure handling:
 `Reference/Deferrals.md`.
 
-Before asking anything, apply both bounding rules:
+**Delete nothing here.** Entries are never removed as a side effect of time
+passing or of a PR closing. Mark their state and move on:
 
-1. Drop any entry whose URL is not in the current open-PR set.
-2. Drop `snooze` entries whose `until` has passed, and `waiting` entries whose PR
-   has a newer `updatedAt` than the recorded `seen_activity_at`.
+1. A `snooze` whose `until` has passed becomes askable again. The entry stays,
+   carrying its `snooze_count`, which sets how long the next snooze lasts —
+   7, 14, 30, 90 then 180 days. The whole point of this file is to stop asking
+   about work that is being deliberately ignored, and a fixed week would mean
+   asking every week.
+2. A `waiting` entry whose PR has a newer `updatedAt` than `seen_activity_at`
+   becomes askable again — the thing being waited on has happened.
+3. An entry whose URL is not in the current open-PR set gets
+   `pr_state: closed`. It is not asked about and it is not removed.
 
-Write the cleaned file back. This is what stops it growing and what makes a
-finished wait re-surface on its own.
+Write the file back with the updated states.
 
 ## Step 2 — Select what to ask about
 
@@ -44,11 +50,12 @@ Use `AskUserQuestion`. It takes **at most four questions per call**, so batch in
 fours and send the next call as soon as the previous answers return.
 
 Each question carries what is needed to decide without opening the PR: age, repo,
-title, the PR's own state, and its URL.
+title, the PR's own state, its URL, and — if it has been parked before — how many
+times.
 
 ```
 PR 1/14: acme/api#5903 — "chore: ingestion adapter READMEs" (57d)
-         conflicts · review required
+         conflicts · review required · snoozed 3 times
          https://github.com/acme/api/pull/5903
 ```
 
@@ -57,7 +64,7 @@ Options, in this order:
 | Option | Meaning |
 |---|---|
 | **Action today** | It matters now. Goes on today's list, no deferral written |
-| **Ignore for a week** | Writes a `snooze` with `until` = today + 7 days |
+| **Ignore for {interval}** | Writes a `snooze`. The interval backs off with `snooze_count`: 7, 14, 30, 90, then 180 days. Label it with the real interval, and the count once it is above one |
 | **Waiting for a response** | Writes a `waiting` entry; ask who or what, and record the PR's current `updatedAt` |
 | **Close it** | The agent closes the PR — see step 4 |
 | *(free text)* | Anything else: "close with a comment explaining why", "reassign to X", "rebase first". Recorded in `note` and acted on |
@@ -77,9 +84,14 @@ at enough to describe.
 
 **Ignore for a week / Waiting** — write the deferral entry. Nothing else happens.
 
-**Close it** — closing is reversible but outward-facing, so say what is about to
-be closed and let the answer stand as the confirmation. Do not re-prompt per PR;
-the option was the prompt.
+**Close it** — never close on the strength of the menu choice alone. Selecting
+the option states an intent; closing is an outward-facing action on a shared
+repo, so confirm it explicitly first.
+
+List every PR about to be closed, by title and URL, and get a yes. One
+confirmation can cover a batch, but the batch must be enumerated — never close a
+PR whose URL the user has not just seen. If the answer is anything other than a
+clear yes, close nothing.
 
 ```bash
 # GitHub
@@ -94,7 +106,10 @@ the PR untouched — never write a deferral to paper over a failed close.
 
 **Free text** — do what it says if it is within the skill's reach (close with a
 comment, add a comment, mark draft, reassign). If it is not, record it in `note`
-and surface it in the summary as an action for her.
+and surface it in the summary as an action for the user.
+
+Free text that closes or deletes anything goes through the same explicit
+confirmation as the Close option. "Close with a comment" is still a close.
 
 ## Step 5 — Report
 
@@ -113,8 +128,15 @@ Snoozed to {date} (2)
 Waiting (1)
 - acme/api#6919 — on review from the platform team, since {date}
 
-Deferral file: 3 entries, {n} pruned this run
+Deferral file: {n} entries ({k} for PRs now closed)
 ```
 
-Always print the deferral-file line. It is what makes the file's size visible,
-and a growing count is the signal that something is wrong.
+Always print the deferral-file line — it is what keeps the file's size in view.
+When `k` is more than a handful, offer to remove those entries, and remove them
+only on an explicit yes:
+
+```
+14 of the 31 entries are for PRs that are now closed or merged. Remove those 14?
+```
+
+Nothing is removed without that answer.
