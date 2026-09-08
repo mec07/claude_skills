@@ -48,12 +48,31 @@ gh search prs --author=@me --merged --merged-at=">=$SINCE" --limit 50 \
 
 ## Step 2 — GitHub: per-PR detail
 
-For each open PR found in step 1, fetch the state that search cannot return.
-Run these in parallel; there are usually only a handful.
+For each open PR found in step 1, fetch the state that search cannot return:
 
 ```bash
-gh pr view <url> --json number,title,url,headRefName,reviewDecision,mergeable,statusCheckRollup,isDraft,updatedAt
+gh pr view <url> --json number,title,url,headRefName,reviewDecision,mergeable,statusCheckRollup,isDraft,updatedAt,body
 ```
+
+Run them in parallel. Put the URLs in a file and the fetch in a script, then let
+`xargs` pair them:
+
+```bash
+printf '%s\n' "${urls[@]}" > "$W/urls.txt"
+cat > "$W/fetch.sh" <<'SH'
+#!/bin/sh
+n=$(printf '%s' "$1" | sed 's|https://github.com/||; s|/pull/|_|; s|/|-|g')
+gh pr view "$1" --json number,title,url,headRefName,reviewDecision,mergeable,statusCheckRollup,isDraft,updatedAt,body > "$2/$n.json" 2>/dev/null
+SH
+chmod +x "$W/fetch.sh"
+mkdir -p "$W/detail"
+xargs -P 8 -I{} "$W/fetch.sh" {} "$W/detail" < "$W/urls.txt"
+```
+
+> Do not inline the loop body into `xargs -I{} sh -c '...'` with the working
+> directory interpolated. With a few dozen URLs that fails outright:
+> `xargs: command line cannot be assembled, too long`. A script file on disk
+> keeps each invocation short.
 
 - `reviewDecision` — `APPROVED`, `CHANGES_REQUESTED`, `REVIEW_REQUIRED`, or empty
 - `mergeable` — `CONFLICTING` means merge conflicts
@@ -184,30 +203,40 @@ For each ticket in an in-progress category with no PR and no update in 3+ days �
 Overwrite `~/.claude/wip/WIP.md` completely. Never append. Open items only —
 merged and closed work appears as a count, not a list.
 
+**Every PR and every ticket carries a link.** A summary you cannot click is a
+summary you have to re-search. PR URLs come straight from the query; ticket URLs
+are `{jira-site}/browse/{KEY}`, with the site taken from the Atlassian resource
+already resolved for the MCP call.
+
 ```markdown
 # Work In Progress — {date}
 
 ## Needs attention
-- 🔴 CI failing — {repo}#{n} "{title}" ({age})
-- ⚠️  Waiting on review {age} — {project}!{n} "{title}"
+- 🔴 CI failing — [{repo}#{n}]({url}) "{title}" ({age})
+- ⚠️  Waiting on review {age} — [{project}!{n}]({url}) "{title}"
 
 ## Status mismatches
-- {KEY}-{n} is "{status}" in Jira but PR #{n} is open → move to In Progress
+- [{KEY}]({ticket_url}) is "{status}" but [{repo}#{n}]({url}) is open → move it to in progress
 
 ## Open PRs ({count})
-| Source | PR | Title | State | Age |
+| Source | PR | Ticket | State | Age |
 |---|---|---|---|---|
-| GitHub | {repo}#{n} | {title} | draft | 3d |
-| Azure  | {project}!{n} | {title} | review requested | 5d |
+| GitHub | [{repo}#{n}]({url}) | [{KEY}]({ticket_url}) | draft | 3d |
+| Azure  | [{project}!{n}]({url}) | — | review requested | 5d |
 
 ## Active tickets ({count})
-- {KEY}-{n} {status} — {summary}
+- [{KEY}]({ticket_url}) {status} — {summary}
 
 ## Merged last 14 days: {count}
 
 ## Sources
 GitHub ✅ · Azure DevOps ✅ · Jira ✅
 ```
+
+When the open-PR list is long, split it into **active** and **stalled** at the
+28-day line rather than printing one long table. Stalled entries can be grouped
+by repo with a count, since the per-PR decision belongs to
+`Workflows/Triage.md`.
 
 Omit any section that is empty. List skipped sources under `## Sources` with the
 reason, e.g. `Azure DevOps ⏭ (az devops organization not configured)`.
@@ -216,3 +245,16 @@ reason, e.g. `Azure DevOps ⏭ (az devops organization not configured)`.
 
 Display the same content in the terminal, flags first, then confirm the file
 path that was written.
+
+## Step 9 — Offer triage
+
+Count the open PRs whose last activity is more than 28 days ago and that have no
+live deferral (`Reference/Deferrals.md`). If there are any, say how many and
+offer to run `Workflows/Triage.md` now.
+
+```
+21 PRs have had no activity in over 28 days. Triage them?
+```
+
+Do not start triage unprompted — it asks a lot of questions, and a sync should
+stay something you can run in a few seconds.
