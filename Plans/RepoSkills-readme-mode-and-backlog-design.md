@@ -835,11 +835,30 @@ framework name, an endpoint list that mirrors the controllers.
 README that repeats a version only goes stale. Name a version only where the unit deliberately pins
 something different from the convention, and say what it differs from.
 
-**Link, never list.** Environment variables, configuration values, credentials, profile and role
-names: point at the file that declares them, or name the variable, never reproduce the value. A
-value copied into a README is wrong for every reader but its author, and is a second source of
-truth by definition. If the declaring file is itself wrong, fix that file rather than documenting
-the discrepancy.
+**Link, never list.** Where a fact is declared in a file, point at that file instead of restating
+the fact. The test is not whether the fact appears on a list of forbidden categories; it is whether
+some file in the repo already declares it. If one does, that file is the source of truth and the
+prose gets a pointer.
+
+Configuration is where this bites hardest, and the categories are wider than an enumeration tends
+to reach: environment variables, deployment environments and their URLs, cluster, region and
+account names, credentials, profile and role names, feature flags, CI and pipeline settings,
+resource limits, timeouts and retry counts, port numbers. Treat that list as illustrative rather
+than exhaustive. A value copied into prose is wrong for every reader but its author, and is a
+second source of truth by definition. If the declaring file is itself wrong, fix that file rather
+than documenting the discrepancy.
+
+**The rule binds every artifact RepoSkills writes, not only READMEs.** Section 5 is the README
+grammar, but a task skill or an orientation file that reproduces a config value goes stale exactly
+as fast and is read by exactly the same agents. `conventions.md`, `navigate-unit`, the per-unit
+platform routing files and every generated task skill are all in scope.
+
+**Generation instructs, validation enforces.** The positive contract below shapes what an agent
+writes; it does not catch what slips through, and the Form note below records that agents
+under-applied this very rule when it was stated as guidance alone. Phase 4 therefore gets a check
+for it: **New Check 15**, specified in section 6.5. Without it the failure mode is silent, which is
+how a copied value survives generation, survives review, and is found months later by whoever
+trusted it.
 
 **Form note.** Item 18 specifies this rule as a list of prohibitions, and records that agents
 under-applied it anyway: "they removed tables but still named individual env vars, listed
@@ -984,6 +1003,19 @@ while macOS stock is 3.2 (`phase-2-map-generate.md:958`). `data-2`'s replacement
 | 12 | Threshold rules verified on both ends | `phase-4-validate.md` | **New Check 14** |
 | 16 | Glossary terms alphabetical | `phase-1-domain-interview.md` | `Domain Glossary`, line 251 |
 | 17 | Canonical task-skill names and boilerplate USE-WHEN | `phase-2-map-generate.md` | Task-skill generation |
+| n/a | Restated facts that a file already declares | `phase-4-validate.md` | **New Check 15.** Appends after Checks 13 and 14 |
+
+**Check 15 did not come from the backlog.** It is the enforcement half of section 5.2's link, never
+list rule, added because that rule had generation-side guidance and nothing that caught an escape.
+The check reads: for every concrete value a generated artifact states, establish whether a file in
+the repo declares it. Where one does, the artifact must carry a pointer to that file rather than
+the value, and the finding is a defect. Deployment environments, connection strings and resource
+limits are the highest-yield places to look, because they read as orientation rather than as
+configuration and so survive a reviewer's eye. Two notes on scope, both of which matter or the
+check produces noise instead of findings. It covers every artifact RepoSkills writes, not only
+READMEs, per 5.2. And a value that is genuinely stated nowhere in the repo is not a violation: it
+is either a fact the code cannot express, which 5.2 keeps, or a fact with no source of truth, which
+is worth surfacing to the human in Phase 9 rather than silently deleting.
 
 Item 2 gets prohibition form, being a genuine discipline failure: an agent that knows one grep is
 insufficient and stops anyway. Encode as "a negative result from one search is a hypothesis, not a
@@ -996,6 +1028,9 @@ for what the code cannot say.
 ### 6.6 Tally
 
 Obviated 2, rewritten 5, reference implementation 1, fixed in place 10. Total 18.
+
+These are backlog items. The 6.5 table carries one further row, Check 15, which originated in this
+spec rather than the backlog and is deliberately outside the count.
 
 ---
 
@@ -1061,7 +1096,7 @@ weighed that and chosen to leave it untracked.
 | 2a-ii | README create and update, with the conform/fix/preserve semantics of 3.2 and the induction loop of 5.3 | Needs 2a-i's grammar to exist before it can write against it |
 | 2a-iii | Tooling and re-run paths: drift for both shapes, routing pointers, simulation access, token budgets, state reconstruction, `--update` semantics, the DR commit policy | Independent of 2a-ii once 2a-i lands |
 | 2b | **Contract.** Stop generating module skills, run the 3.4 harvest, remove the `modules/` contracts from 3.5 | The cutover, still atomic, but now half the review surface |
-| 3 | Items 2, 4, 12 (phase-4 Checks 13 and 14), items 3, 5, 16 (phase-1 questions) | Additive. Checks 13 and 14 append after the existing 12, so nothing renumbers and no other file is touched |
+| 3 | Items 2, 4, 12 (phase-4 Checks 13 and 14), the link-never-list Check 15 of 6.5, items 3, 5, 16 (phase-1 questions) | Additive. Checks 13 to 15 append after the existing 12, so nothing renumbers and no other file is touched. Check 15 needs 5.2's rule to be the shipped wording, which 2a-i generates, so it sequences here rather than earlier |
 | 4 | Items 6, 8, 17 | Independent of everything else |
 | 5 | The three added README sections from 5.1, with their own baseline test | Deliberately after the grammar is proven |
 | 6 | Regression run: first-run generation, then update-path against current `data-2` main | Needs everything above |
@@ -1111,6 +1146,11 @@ Per that skill's guidance, match the test to the failure type:
   metric: five different interpretations across five reps means the wording is not binding.
 - **Structural changes** (sections 3, 4, 5.1): application scenarios. Can an agent generate a
   correct README for a unit it has not seen?
+- **Detection changes** (6.5's Check 15): seed a unit's README with a value the repo declares
+  elsewhere, such as a staging URL that lives in the deployment config, and confirm the check finds
+  it and names the declaring file. Then seed a fact declared nowhere and confirm the check leaves it
+  alone. A detector that fires on both is worse than none, because it trains the reader to dismiss
+  it, and this is the failure mode 6.5's scope note exists to prevent.
 
 **Regression target: current `data-2` main, not the June baseline.** Checked 2026-08-27.
 
@@ -1322,6 +1362,21 @@ main and the skill source on 2026-09-02.
 | Plan: the deferred-sections assertion was a no-op, wrong file, wrong pattern, and no `absent` helper existed | Replaced by a manual read check that the generated template does not mention *Contracts owned* |
 | Plan: the fixture never exercised the authoritative-source rule Step 4a calls the one that matters most | A Python project (`analytics/pipeline`) invisible to the workspace globs is the counterexample, asserted by name on the `authoritative-source` line |
 | Plan: the confirmation venue for `create-pending-confirmation` was claimed covered but wired nowhere | Routed to the Phase 9 checkpoint alongside pattern confirmation, as the two new skip-blocking conditions |
+
+**Owner decision, 2026-09-08: strengthen link, never list.** The owner raised restated facts as a
+problem hit repeatedly across projects and fixed only after the fact, asking that it be recorded
+rather than rediscovered. Section 5.2 already carried the rule, so the change closes the three gaps
+that let it fail in practice rather than restating it:
+
+| Gap | Resolution |
+|---|---|
+| The rule was framed as an enumeration of categories (env vars, config values, credentials, profile and role names), so an agent working down that list had no obvious reason to include the owner's own example, a deployment environment table | 5.2's test is now whether any file in the repo declares the fact, with the categories illustrative rather than exhaustive, and deployment environments, cluster, region and account names, feature flags, CI settings, limits and timeouts named among them |
+| The rule lived in section 5, the README grammar, and so did not visibly bind the other artifacts RepoSkills generates, which go stale identically and are read by the same agents | 5.2 now states that it binds every generated artifact, naming `conventions.md`, `navigate-unit`, the platform routing files and the task skills |
+| Nothing enforced it. Phase 4 had Checks 1 to 12 plus new 13 and 14, none of which asks whether a stated value is declared elsewhere, so a violation was silent, which is precisely how the owner's instances survived to be found later | New Check 15 in 6.5, sequenced into stage 3 with Checks 13 and 14. Scoped so it produces findings rather than noise: a value declared nowhere in the repo is not a violation, and belongs either to 5.2's keep rule or to a Phase 9 question |
+
+5.2's existing Form note is the reason enforcement was the load-bearing gap rather than wording: it
+already records, from item 18, that agents under-applied this rule even after it was stated, which
+is why the fix is a check rather than a firmer sentence.
 
 ---
 
