@@ -88,7 +88,7 @@ baselines deliberately assert against a previous task's output.
 - **Deployment is a Medium signal** (`phase-0-discover.md:177`). It never alone qualifies a boundary.
 - **Generated tooling targets bash 3.2**, macOS stock. Not bash 4+.
 - **No em dashes in any prose added to the repository.**
-- **Token budget:** `phase-2-map-generate.md` is already 1199 lines and is the largest file in the skill. Do not grow it by more than the wiring needed to call out to a new file.
+- **Token budget:** `phase-2-map-generate.md` is the largest file in the skill. Do not grow it by more than the wiring needed to call out to a new file. Every check on its size in this plan is a **delta measured at run time**, never an absolute line count: an absolute goes stale the moment anything else touches the file, and a stale threshold reads as a failure on a correct implementation. Record `wc -l` before you edit, compare after.
 - Every task ends with a commit.
 
 ---
@@ -406,7 +406,7 @@ In `stow/RepoSkills/orchestration.md`, inside the `state.md` template, immediate
 ```markdown
 ## Project System
 
-Recorded by Phase 0 Step 4.5. Absent when the repo has no project system, which is
+Recorded by Phase 0 Step 4a. Absent when the repo has no project system, which is
 valid: Step 4's signal detection is then the whole answer.
 
 enumeration-query: <command listing every project the repo recognises, or "none">
@@ -592,20 +592,31 @@ heading, insert:
 ```markdown
 ## Step 4b: Decide Create, Update or Confirm per Candidate (Step 0.4b)
 
-For each boundary candidate Step 4 recorded, plus each directory Step 4a's project system excludes,
-decide what the README phases may later do there. This step only records; no file in the target
-repo changes. Four questions, in this order.
+For each boundary candidate Step 4 recorded, plus the workspace root, plus each directory Step 4a's
+project system excludes, decide what the README phases may later do there. The root is named
+explicitly because Step 4's monorepo rule (`phase-0-discover.md:206`) makes every workspace *member*
+a candidate and is silent on the root itself, so a set defined only by Step 4's output can omit the
+one entry question 0 exists to catch. This step only records; no file in the target repo changes.
+Four questions, in this order.
 
 **0. Is it the workspace root?** The workspace root is never a unit and its README is out of scope,
 however strong its signals: a root README is a repo-wide document with its own shape, not a unit
 README, and it must never be created or conformed by this pipeline. Record it as `- path: .` with
 `action: excluded` and the reason `workspace-root`.
 
-**1. Does the project system exclude it?** `action: excluded`, and this wins even when a README
-exists there: an excluded directory's README is its self-documentation of the exclusion, not an
-invitation to conform it. Record `readme: exists` so the writing phase knows the self-documentation
-is already present, and record excluded candidates rather than dropping them, so a later phase can
-give the ones without a README one that says they are deliberately outside the system.
+**1. Does the *authoritative* project system exclude it?** `action: excluded`, and this wins even
+when a README exists there: an excluded directory's README is its self-documentation of the
+exclusion, not an invitation to conform it. Record `readme: exists` so the writing phase knows the
+self-documentation is already present, and record excluded candidates rather than dropping them, so
+a later phase can give the ones without a README one that says they are deliberately outside the
+system.
+
+**Invisibility to a non-authoritative query is not exclusion.** Read the `authoritative-source` key
+Step 4a recorded and ask only that query. A directory the authoritative source can see and
+deliberately leaves out is excluded. A directory that source never had the vocabulary to describe is
+not: the npm workspace globs cannot see a Python project, which says nothing about whether the repo
+recognises it. Both shapes present as "a manifest the workspace globs do not match", and the
+counterexample Step 4a recorded is what tells them apart.
 
 **2. Does a README already exist?** Test against the version control file list
 (`git ls-files`), not the working tree, because the local filesystem hides a miscased
@@ -688,6 +699,9 @@ create-pending-confirmation | excluded) and `nested-under` (closest enclosing un
 ```
 
 - [ ] **Step 4: Re-run and verify**
+
+Do a **fresh run** of Phase 0 per the Run protocol at the top of this plan. Task 2's `state.md`
+predates Step 4b and carries no `## Unit List`, so asserting against it cannot pass.
 
 ```bash
 sh "$REPO/tests/assert-phase0.sh" "$STATE"
@@ -839,7 +853,7 @@ context loss.
 - [ ] 2.2b: Generate conventions.md (.ai/skills/conventions.md)
 ```
 
-And in the same edit, amend the self-review item at `phase-2-map-generate.md:1083`, the Structural
+And in the same edit, amend the self-review item at `phase-2-map-generate.md:1128`, the Structural
 Integrity checklist's no-duplicate-facts item. During the expand stage, `conventions.md`'s Standard
 commands deliberately coexist with orientation's Quick Reference (`phase-2-map-generate.md:226`) and
 the full reference in `tasks/scripts.md`, so a diligent Phase 2 agent following that checklist item
@@ -861,6 +875,17 @@ sh "$REPO/tests/assert-artifacts.sh" "$FIXTURE"
 ```
 
 Expected: `PASS` on all five conventions assertions.
+
+Then check this task's share of the token budget, as a delta against the last commit rather than an
+absolute line count:
+
+```bash
+git -C "$REPO" diff --numstat HEAD -- stow/RepoSkills/phase-2-map-generate.md
+```
+
+Expected: about 32 lines added. Step 2.2b is about 27, the expand-stage exemption note about 4, and
+the checklist line 1. Materially more than about 40 means grammar content has leaked into phase 2
+and belongs in `readme-grammar.md`.
 
 - [ ] **Step 6: Commit**
 
@@ -894,8 +919,8 @@ boundary the owner declined is re-proposed on every machine forever."
 - Produces: `.ai/skills/readme-template.md` in the target repo, the repo-specific instantiation of the grammar, and the Phase 9 confirmation venue the grammar's induction loop names. Consumed by plan 2a-ii, which writes the READMEs themselves.
 
 **Why a separate file.** Spec section 9: six backlog items already target
-`phase-2-map-generate.md`, which is 1199 lines and the largest file in the skill. Growing it risks
-the context failure these changes exist to prevent. Phase 2 gets wiring; the grammar lives apart.
+`phase-2-map-generate.md`, the largest file in the skill. Growing it risks the context failure these
+changes exist to prevent. Phase 2 gets wiring; the grammar lives apart.
 
 **Why the grammar adopts before it imposes.** The reference repo
 (`/Users/powerx/src/github.com/powerxai/data`, main) already enforces a README convention in CI:
@@ -1005,7 +1030,8 @@ loop's venue. Never silently pick a side, and never emit a template the repo's o
 fail.
 
 How far a run may restructure an existing README to align it with the adopted convention (the
-bounded write territory) is pending spec section 3.2 and lands in a follow-up; this file governs
+bounded write territory) is settled in spec section 3.2, marker-based on `provenance=generated`
+rather than positional, and is implemented in 2a-ii. This is not an open question; this file governs
 only what the generated template says.
 
 ## Two skeletons, chosen by deployability
@@ -1210,15 +1236,19 @@ slim skeleton without Monitoring or Running-locally sections, and that it does *
 
 - [ ] **Step 6: Check the token budget you were warned about**
 
+Measure the delta this task added, not the file's absolute size. An absolute threshold goes stale
+the moment any other commit touches the file, and then reads as a failure on a correct
+implementation.
+
 ```bash
-wc -l "$REPO/stow/RepoSkills/phase-2-map-generate.md"
+git -C "$REPO" diff --numstat HEAD -- stow/RepoSkills/phase-2-map-generate.md
 ```
 
-Expected: about 1242 lines, up from 1199. The additions are Task 4's Step 2.2b (about 27 lines), its
-expand-stage exemption note (about 4 lines), this task's Step 2.2c (about 10 lines) and one
-checklist line for each new step. If the count is materially above about 1250, grammar content has
-leaked into phase 2 and belongs in `readme-grammar.md`. This is not the final ceiling: Task 6 grows
-the same file once more and carries its own check.
+Expected: about 11 lines added. Step 2.2c is about 10 and the checklist line is 1. Materially more
+than about 18 means grammar content has leaked into phase 2 and belongs in `readme-grammar.md`.
+
+This is not the last growth: Task 6 edits the same file once more and carries its own delta check.
+Across this whole plan the file gains about 60 lines, roughly 32 in Task 4, 11 here and 17 in Task 6.
 
 - [ ] **Step 7: Commit**
 
@@ -1239,9 +1269,9 @@ Variables), and Phase 9 gains the confirmation venue the induction loop and the
 create gate both depend on.
 
 The grammar is a separate file rather than an extension of phase 2, per spec
-section 9: six backlog items already target phase-2-map-generate.md, which at
-1199 lines is the largest file in the skill, and growing it risks the context
-failure these changes exist to prevent.
+section 9: six backlog items already target phase-2-map-generate.md, the
+largest file in the skill, and growing it risks the context failure these
+changes exist to prevent.
 
 Contracts owned, Deviations and Lifecycle status are deliberately excluded.
 They are absent from the reference, so shipping them now would flag every
@@ -1298,16 +1328,24 @@ document, and duplicating them there and here is how the two drift apart.
 
 - [ ] **Step 4: Run and verify**
 
-Expected: `PASS`. Then check the final ceiling for `phase-2-map-generate.md`, since this is the last
-task in this plan that grows it:
+Run Phase 2 per the Run protocol at the top of this plan, taking the **re-run on existing Phase 0
+state** path, since this task changes only Phase 2 behaviour. Then:
 
 ```bash
-wc -l "$REPO/stow/RepoSkills/phase-2-map-generate.md"
+sh "$REPO/tests/assert-artifacts.sh" "$FIXTURE"
 ```
 
-Expected: about 1259 lines. This task's generation instruction is about 17 lines on top of Task 5's
-count of about 1242. Anything materially above about 1265 means content that belongs in
-`readme-grammar.md` or `conventions.md` has leaked into phase 2.
+Expected: `PASS`. Then check the last growth this plan puts on `phase-2-map-generate.md`, as a delta
+against the previous commit rather than an absolute line count:
+
+```bash
+git -C "$REPO" diff --numstat HEAD -- stow/RepoSkills/phase-2-map-generate.md
+```
+
+Expected: about 17 lines added, the generation instruction plus its checklist line. Materially more
+than about 25 means content that belongs in `readme-grammar.md` or `conventions.md` has leaked into
+phase 2. Across the whole plan the file should have gained about 60 lines: verify with
+`git diff --numstat <the commit before Task 4> -- stow/RepoSkills/phase-2-map-generate.md`.
 
 - [ ] **Step 5: Commit**
 
@@ -1478,6 +1516,28 @@ Applied in this amendment:
 | `f82d966`'s message claimed the deferred-sections assertion was no longer a no-op, but its diff never touched it: the assertion grepped `conventions.md` for `provenance=generated`, which passes whenever Task 4 passes | The `file_lacks` helper, asserting `readme-template.md` exists and omits `Contracts owned` |
 | Steps 2.2b and 2.2c were added to Phase 2 but not to the Phase 2 checklist agents copy into `state.md`, the same untracked-step failure Task 2 fixes for Phase 0 | Both tasks add their checklist line in the same edit |
 | The Self-Review enumerated six `## Unit List` fields where Task 3 defines seven (`name` was missing), counted "three assertion scripts" where there are two plus the fixture generator, and mapped the token-budget check to Task 5 alone | All three corrected |
+
+**Pre-execution verification, 2026-09-09 (Fable, two independent passes).** One pass judged the plan
+against the spec for coverage and constraint enforcement, one ground-truthed every path, anchor and
+embedded script against the branch. Both returned "executable after small fixes". All eight hard
+constraints were confirmed enforced by the plan's own steps, both flagged inferences (the
+pending-confirmation line and the Phase 9 venue) were judged sound, and the existing suite passed
+(`sh tests/install.test.sh`, 28 run, 0 failed).
+
+| Finding | Resolution |
+|---|---|
+| Every line-count ceiling was written against a 1199-line `phase-2-map-generate.md`. Two later commits on this branch (`6f87367`, `300266d`) grew it to 1244 after the plan's last amendment, so Task 5 Step 6 and Task 6 Step 4 would read about 1287 and 1304 on a correct implementation and instruct the agent to conclude grammar content had leaked. Finding 18 recurring, by branch drift rather than arithmetic | Every size check is now a **delta measured at run time** via `git diff --numstat HEAD`, never an absolute: about 32 lines in Task 4, 11 in Task 5, 17 in Task 6, about 60 across the plan. An absolute threshold cannot survive an unrelated commit; a delta can. Absolute counts removed from the Global Constraints, both task steps and two commit messages |
+| Step 4b's iteration set was "each boundary candidate Step 4 recorded, plus each directory Step 4a excludes". `phase-0-discover.md:206` makes every workspace *member* a candidate and is silent on the root, and Step 4a does not exclude it, so `.` could never enter the set, question 0 could never fire, and Task 3's workspace-root assertion would be permanently red | The workspace root is named explicitly in the iteration set, with the reason |
+| Task 3 Step 4 said "Re-run and verify" and Task 6 Step 4 said "Run and verify", but both showed only the assert command. Against the prior task's artifacts the expected `PASS` is impossible | Each now names its Run protocol path: a fresh Phase 0 run for Task 3, a Phase 2 re-run on existing Phase 0 state for Task 6 |
+| Step 4b question 1 read "does the project system exclude it?". In the fixture both `experiments/spike` (must be `excluded`) and `analytics/pipeline` (must be `create`) have a manifest and are unmatched by the workspace globs, so the literal wording gives them the same answer and the two readings produce opposite actions | Question 1 now reads "does the **authoritative** project system exclude it?", with a paragraph stating that invisibility to a non-authoritative query is not exclusion and pointing at the `authoritative-source` key and its counterexample. Owner's decision |
+| Spec section 3 conditioned `readme-template.md` on "at least one unit is confirmed", while Task 5 Step 2.2c generated it unconditionally | The spec is corrected, not the plan: the template is what an agent reads before writing its first README, so gating it on a confirmed unit withholds it from the run about to need it. `navigate-unit` keeps its condition. Owner's decision |
+| `phase-2-map-generate.md:1083` (the no-duplicate-facts item) is now `:1128`; the `## Project System` schema still said "Recorded by Phase 0 Step 4.5", a fossil of the pre-renumbering draft; the grammar's write-boundary note still said "pending spec section 3.2" though 3.2 is settled | All three corrected. The remaining drifted numbers (`phase-2-map-generate.md:226` to 228, the two checklist ranges) are quoted with distinctive strings, so editing by content resolves them |
+| One pass reported `orchestration.md:414` had moved to `:417` | **Not accepted.** `grep -n` puts the prohibition at 414 on this branch, and the other pass independently agreed. Left unchanged |
+
+Verified correct and left alone: all four `phase-0-discover.md` anchors (175, 177, 200, 212), every
+`orchestration.md`, `phase-9-human-checkpoint.md` and `SKILL.md` anchor, the start-of-task block
+(runs verbatim from a cold shell), the three embedded scripts (POSIX `sh`, including the `awk`
+helper), zero em dashes, and Task 7 Step 5's expand invariant.
 
 Deliberately left alone: the bounded-write-territory semantics ("how much of an existing README a
 run may rewrite"). Spec 3.2 has now settled them, marker-based on `provenance=generated` rather
