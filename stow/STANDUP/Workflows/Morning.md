@@ -4,7 +4,7 @@
 
 ### 1. Pull Clockify entries (yesterday)
 
-Get yesterday's time entries to see what Fred actually tracked:
+Get yesterday's time entries to see what was actually tracked:
 
 ```bash
 # Get yesterday's date
@@ -29,18 +29,22 @@ for e in entries:
 ### 2. Pull Git commits (last 24h)
 
 ```bash
-cd $HOME/dev/powerx/data
-git log --oneline --since="24 hours ago" --author="fred" --all 2>/dev/null || echo "  No commits in last 24h"
+cd "$(git rev-parse --show-toplevel)" || echo "Not in a git repository — skipping git activity."
+git log --oneline --since="24 hours ago" --author="$(git config user.email)" --all 2>/dev/null \
+  || echo "  No commits in last 24h"
 ```
 
 ### 3. Pull GitHub PR activity
 
 ```bash
-# PRs opened/merged by Fred in last 24h
-gh pr list --repo powerxai/data --author @me --state all --json number,title,state,updatedAt,url --limit 10
+# Your PRs updated in the last 24h, across every repo you can see
+SINCE=$(date -u -d '1 day ago' +%F 2>/dev/null || date -u -v-1d +%F)
+gh search prs --author=@me --updated=">=$SINCE" --limit 20 \
+  --json number,title,repository,url,state,updatedAt
 
-# Reviews requested from Fred
-gh pr list --repo powerxai/data --search "review-requested:@me" --json number,title,url --limit 5
+# Reviews waiting on you, across every repo
+gh search prs --review-requested=@me --state=open --limit 10 \
+  --json number,title,repository,url
 ```
 
 ### 4. Pull Jira ticket activity
@@ -93,7 +97,14 @@ Format everything into the standup template:
 
 ### 8. Optional: Write to Obsidian
 
-If Fred asks, write the standup section to today's Obsidian daily note at:
+Only when `OBSIDIAN_VAULT` is set. If it is unset, skip this step without
+mentioning it — a terminal standup is the normal case.
+
+```bash
+[ -n "$OBSIDIAN_VAULT" ] || exit 0
+```
+
+Write the standup section to that day's daily note under `$OBSIDIAN_VAULT`:
 `{VAULT}/{YYYY-MM-DD}.md`
 
 Append under a `## Standup` heading — don't overwrite existing content.

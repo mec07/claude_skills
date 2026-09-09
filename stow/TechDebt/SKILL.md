@@ -9,22 +9,21 @@ Create a well-formed Jira tech debt ticket from a quick description, with duplic
 
 ## Configuration
 
-```
-Jira project:     DEV
-Tech Debt Board:  361  (🤖 Tech Debt Board)
-Board URL:        https://powerx.atlassian.net/jira/software/c/projects/DEV/boards/361
-Issue type:       Story (ID: 10022)
-Priority:         Lowest (ID: 5)
-Assignee:         Fred (712020:4b8d9734-1d88-42e4-a553-37ebedd98c6f)
-Parent epic:      DEV-5478  (Work Order Management - Tech Debt)
-```
+Which project, board and epic tech debt belongs in is a property of your team's
+Jira, so it comes from you rather than from this file:
+
+`~/.claude/techdebt/config.json` — shape, defaults and the first-run flow are in
+`Reference/Setup.md`. When the file is missing, the skill asks and writes it.
+
+Everything else is derived at runtime — the Jira site, your account, and the
+issue-type and priority ids for the configured project. No site URL, account id
+or token appears in this skill.
 
 ## Auth
 
-```bash
-JIRA_API_TOKEN=$(sed -n 's/^JIRA_API_TOKEN=//p' ~/.claude/.env)
-JIRA_EMAIL=$(sed -n 's/^JIRA_EMAIL=//p' ~/.claude/.env)
-```
+Jira is reached through the Atlassian MCP, which owns the credentials. The MCP
+resolves the site with `getAccessibleAtlassianResources` and the current user
+with `atlassianUserInfo`; this skill never reads a token.
 
 ## Trigger
 

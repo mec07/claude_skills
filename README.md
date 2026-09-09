@@ -13,7 +13,7 @@ A collection of personal [Claude Code](https://docs.anthropic.com/en/docs/claude
 | **JIRA** | `/Jira <command>` | Jira integration via Atlassian MCP Server. Fetch, search, create, edit, transition, comment, and worklog via MCP; issue linking via CLI fallback. |
 | **TechDebt** | `/TechDebt <description>` | Create a well-formed Jira tech debt ticket from a quick description, with duplicate detection, without leaving your flow. |
 | **Worktree** | `/Worktree <ticket>` | Spin up isolated git worktrees for Jira tickets. Works in the worktree, pushes a branch, creates a draft PR, and reports back. Supports parallel execution. |
-| **WOP** | `/WOP` | Work in Progress sync. Pulls live data from Jira and GitHub, detects staleness and status mismatches, and updates the WIP Obsidian page. |
+| **WIP** | `/WIP` | Work in progress sync. Pulls your open PRs from GitHub (all repos) and Azure DevOps, plus your open Jira tickets, cross-references them, and flags staleness and status mismatches. No configuration — every identity resolves from the CLIs you are logged into. |
 | **STANDUP** | `/STANDUP` | Morning standup prep. Pulls the last 24h from Clockify, Jira, GitHub, and git log and compiles it into a ready-to-use standup format. |
 | **CodeReview** | `/CodeReview` | Uncle Bob (Robert C. Martin) style opinionated code review. 5 lenses (Architecture, Type Safety, State Management, Testing, Pragmatics), 4 severity tiers, file:line citations, and a priority table. Supports full codebase or single-file review. |
 | **Sensei** | `/sensei [on\|off\|gaps]` | Teaching/mentor mode that guides rather than gives answers. Toggles between doer and guide modes. Uses 5-level adaptive scaffolding (Observer → Full Scaffold), Socratic questioning, the TODO(human) pattern, and spaced retrieval of knowledge gaps. Generates session reports and tracks learning progress. |
@@ -76,7 +76,8 @@ The installer itself only needs `git` and a POSIX shell. Individual skills have 
 
 | Dependency | Required by | Install |
 |------------|-------------|---------|
-| [GitHub CLI](https://cli.github.com/) (`gh`) | ReviewPR, WOP, STANDUP, Worktree | `brew install gh` / [github.com/cli/cli](https://github.com/cli/cli#installation) |
+| [GitHub CLI](https://cli.github.com/) (`gh`) | ReviewPR, WIP, STANDUP, Worktree | `brew install gh` / [github.com/cli/cli](https://github.com/cli/cli#installation) |
+| [Azure CLI](https://learn.microsoft.com/cli/azure/) (`az`) + `azure-devops` extension | WIP (optional — section skipped if absent) | `brew install azure-cli && az extension add --name azure-devops` |
 | [Node.js](https://nodejs.org/) (v18+) | JIRA (MCP proxy) | `brew install node` / [nodejs.org](https://nodejs.org/) |
 | [Bun](https://bun.sh/) | JIRA (link fallback), Sleep, TechDebt | `curl -fsSL https://bun.sh/install \| bash` |
 | [Python 3](https://www.python.org/) | TechDebt, STANDUP, Worktree, installer | Usually pre-installed on macOS/Linux |
@@ -90,12 +91,15 @@ The installer itself only needs `git` and a POSIX shell. Individual skills have 
 Some skills need credentials in `~/.claude/.env`:
 
 ```bash
-JIRA_API_TOKEN=...    # JIRA issue linking fallback, TechDebt
-JIRA_EMAIL=...        # JIRA issue linking fallback, TechDebt
+JIRA_SITE=https://your-site.atlassian.net   # JIRA issue linking fallback
+JIRA_API_TOKEN=...                          # JIRA issue linking fallback
+JIRA_EMAIL=...                              # JIRA issue linking fallback
 CLOCKIFY_API_KEY=...  # STANDUP (optional)
 ```
 
-Most Jira operations now use the Atlassian MCP Server (OAuth 2.1 — no API tokens needed). The env vars above are only required for the issue linking CLI fallback and the TechDebt skill's direct API calls. The installer will prompt for missing credentials when installing the JIRA skill.
+Most Jira operations use the Atlassian MCP Server (OAuth 2.1 — no API tokens needed), including everything TechDebt does. The env vars above are required only by the issue linking CLI fallback, which the MCP does not yet cover. `JIRA_SITE` has no default: no Jira instance is compiled into any skill here. The installer prompts for whatever is missing when installing the JIRA skill.
+
+TechDebt additionally needs to know which project, board and epic tech debt belongs in. That is a property of your team's Jira rather than a credential, so it lives in `~/.claude/techdebt/config.json` — the skill asks on first run and writes it for you. See `stow/TechDebt/Reference/Setup.md`.
 
 ## Adding a new skill
 

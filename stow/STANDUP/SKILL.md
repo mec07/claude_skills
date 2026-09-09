@@ -12,16 +12,26 @@ Retrospective standup prep. Looks backwards ~24h and compiles what happened into
 - `/standup` — explicit invocation
 - "standup notes", "what did I do yesterday", "morning prep"
 
-## Configuration
+## Context (derived, never configured)
 
+Nothing about a particular repo, user or vault is written into this skill.
+
+```bash
+REPO=$(git rev-parse --show-toplevel 2>/dev/null)   # empty if not in a repo
 ```
-Repo:          $HOME/dev/powerx/data
-GitHub org:    powerxai/data
-Jira:          Atlassian MCP (searchJiraIssuesUsingJql)
-Clockify tool: ~/.claude/skills/_CLOCKIFY/Tools/Clockify.ts (if exists) or REST API
-Vault base:    $HOME/Library/CloudStorage/GoogleDrive-fredlemi@gmail.com/My Drive/Obsidian/Obsidian Vault
-WIP page:      {VAULT}/PAI/PAI Work In Progress.md
-```
+
+| Value | Resolved from |
+|-------|---------------|
+| Git activity | `REPO`, or skipped with a note when not in a repo |
+| GitHub user | `@me` in search qualifiers |
+| GitHub repos | none — `gh search prs` spans every repo you can see |
+| Jira user | `currentUser()` in JQL, via the Atlassian MCP |
+| Clockify | `Clockify.ts` if present, else the REST API with `CLOCKIFY_API_KEY` |
+
+**Optional Obsidian output.** Set `OBSIDIAN_VAULT` to a vault directory and the
+standup is also written to that day's daily note. Unset — the default — the step
+is skipped silently and the standup is terminal-only. No vault path is stored
+here.
 
 ## Workflow Routing
 
@@ -61,4 +71,4 @@ All data is pulled from existing tools — no raw API calls needed:
 
 ## Output Destination
 
-Display in terminal. If Fred asks, also write to today's Obsidian daily note.
+Display in terminal. When `OBSIDIAN_VAULT` is set, also write to that day's daily note.
