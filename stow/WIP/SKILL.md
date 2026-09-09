@@ -1,12 +1,17 @@
 ---
 name: WIP
-description: Work in progress sync — pulls your open pull requests from GitHub and Azure DevOps and your open tickets from Jira, cross-references them, flags staleness and status mismatches, and triages PRs that have gone stale. USE WHEN wip, work in progress, what am I working on, what's the state of things, check my PRs, open PRs, stale tickets, sync tickets, triage PRs, old PRs.
+description: Work in progress sync — pulls the PRs you authored and the ones waiting on your review from GitHub and Azure DevOps, plus your open Jira tickets, then groups everything by whose turn it is and triages what has gone stale. USE WHEN wip, work in progress, what am I working on, what's the state of things, check my PRs, open PRs, what do I need to review, reviews waiting on me, stale tickets, sync tickets, triage PRs, old PRs.
 ---
 
 # WIP (Work In Progress)
 
 Answers "what am I actually working on?" from the services that already know:
 GitHub, Azure DevOps and Jira.
+
+Reviewing other people's changes counts as work, so PRs waiting on your review
+are fetched alongside your own and listed first — they are the ones where someone
+else is blocked. Everything open is grouped by whose turn it is: reviews you owe,
+work needing you, approved and ready to merge, and waiting on someone else.
 
 ## Workflow Routing
 

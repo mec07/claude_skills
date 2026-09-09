@@ -26,14 +26,18 @@ Jira availability means the Atlassian MCP tools are present in this session.
 
 `gh search prs` spans every repository you can see, so no owner or repo is named.
 
+Two queries, and **neither is the secondary one**. Writing PRs and reviewing
+them are both the work; a review someone is blocked on is usually the more urgent
+of the two.
+
 ```bash
+# Reviews you owe — PRs anywhere that are waiting on you
+gh search prs --review-requested=@me --state=open --limit 50 \
+  --json number,title,repository,url,updatedAt,isDraft
+
 # Open PRs you authored, anywhere
 gh search prs --author=@me --state=open --limit 50 \
   --json number,title,repository,url,isDraft,createdAt,updatedAt
-
-# PRs waiting on your review, anywhere
-gh search prs --review-requested=@me --state=open --limit 50 \
-  --json number,title,repository,url,updatedAt
 
 # Merged in the last 14 days (GNU date first, BSD/macOS fallback)
 SINCE=$(date -u -d '14 days ago' +%F 2>/dev/null || date -u -v-14d +%F)
@@ -185,7 +189,32 @@ Then flag:
 | Open, unassigned | your PR is open | ⚠️ Ticket has no assignee — claim it |
 | — | no resolvable key | ℹ️ Untracked work |
 
-## Step 6 — Detect staleness
+## Step 6 — Decide whose turn each PR is
+
+Age is not the useful axis. **Whose turn it is** is, and every open PR belongs to
+exactly one of four buckets. Apply the rules top to bottom and stop at the first
+match — a PR can satisfy several, and the order encodes which matters most.
+
+| # | Bucket | GitHub condition | Azure condition |
+|---|--------|------------------|-----------------|
+| 1 | **Reviews you owe** | returned by `--review-requested=@me` | returned by `--reviewer "$AZ_USER"` |
+| 2 | **Needs work from you** | `mergeable == CONFLICTING`, or any check `FAILURE`/`TIMED_OUT`, or `reviewDecision == CHANGES_REQUESTED`, or `isDraft` | `mergeStatus == conflicts`, or any reviewer vote `-10` (rejected) or `-5` (waiting for author), or `isDraft` |
+| 3 | **Ready to merge** | `reviewDecision == APPROVED`, checks green, `mergeable != CONFLICTING` | every required reviewer voted `10` or `5`, `mergeStatus == succeeded` |
+| 4 | **Waiting on someone else** | anything remaining — typically `REVIEW_REQUIRED` or no decision yet | anything remaining — reviewers at vote `0` |
+
+**Why blocking signals outrank approval.** An approved PR with conflicts or red
+CI is not ready for anything; it is waiting on you. Checking approval first would
+file it under "ready to merge" and it would sit there. So conflicts and failing
+checks are tested before `APPROVED`.
+
+**Why "ready to merge" is separate from "waiting".** It is the cheapest action on
+the whole list — the work is done and one click finishes it. Folded into the
+waiting pile it is invisible, and approved PRs rot while their branches drift.
+
+**Draft counts as your turn.** A draft is not waiting on anyone else, whatever
+its review state.
+
+## Step 6b — Detect staleness
 
 For each open PR, from either source:
 
@@ -211,18 +240,26 @@ already resolved for the MCP call.
 ```markdown
 # Work In Progress — {date}
 
-## Needs attention
-- 🔴 CI failing — [{repo}#{n}]({url}) "{title}" ({age})
-- ⚠️  Waiting on review {age} — [{project}!{n}]({url}) "{title}"
+## 👀 Reviews you owe ({count})
+Other people are blocked on these.
+- [{repo}#{n}]({url}) "{title}" — waiting {age}
+- [{project}!{n}]({url}) "{title}" — waiting {age}
+
+## 🔴 Needs work from you ({count})
+| PR | Ticket | Why | Age |
+|---|---|---|---|
+| [{repo}#{n}]({url}) | [{KEY}]({ticket_url}) | conflicts + CI failing | 5d |
+| [{repo}#{n}]({url}) | — | changes requested | 3d |
+
+## ✅ Ready to merge ({count})
+Approved, green, no conflicts.
+- [{repo}#{n}]({url}) "{title}" — approved {age} ago
+
+## ⏳ Waiting on someone else ({count})
+- [{repo}#{n}]({url}) "{title}" — review requested {age}
 
 ## Status mismatches
 - [{KEY}]({ticket_url}) is "{status}" but [{repo}#{n}]({url}) is open → move it to in progress
-
-## Open PRs ({count})
-| Source | PR | Ticket | State | Age |
-|---|---|---|---|---|
-| GitHub | [{repo}#{n}]({url}) | [{KEY}]({ticket_url}) | draft | 3d |
-| Azure  | [{project}!{n}]({url}) | — | review requested | 5d |
 
 ## Active tickets ({count})
 - [{KEY}]({ticket_url}) {status} — {summary}
@@ -233,18 +270,27 @@ already resolved for the MCP call.
 GitHub ✅ · Azure DevOps ✅ · Jira ✅
 ```
 
-When the open-PR list is long, split it into **active** and **stalled** at the
-28-day line rather than printing one long table. Stalled entries can be grouped
-by repo with a count, since the per-PR decision belongs to
-`Workflows/Triage.md`.
+The four PR sections are the whole point of the file, and they are ordered by
+whose turn it is rather than by age: reviews you owe first because someone else
+is blocked, then your own blocked work, then the one-click finishes, then the
+things you cannot act on at all.
+
+Within **Waiting on someone else**, split at the 28-day line: recent entries
+listed individually, anything older collapsed to a per-repo count with a pointer
+to `Workflows/Triage.md`, which is where those decisions belong. Never collapse
+the first three sections — those are all actionable today however old they are.
 
 Omit any section that is empty. List skipped sources under `## Sources` with the
 reason, e.g. `Azure DevOps ⏭ (az devops organization not configured)`.
 
 ## Step 8 — Present
 
-Display the same content in the terminal, flags first, then confirm the file
-path that was written.
+Display the same content in the terminal, **leading with reviews you owe**, then
+confirm the file path that was written.
+
+Reviews come first because they are the only items where somebody else is
+waiting. If that section is empty, say so in one line rather than omitting it
+silently — "no reviews waiting on you" is worth knowing.
 
 ## Step 9 — Offer triage
 

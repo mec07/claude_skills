@@ -33,8 +33,21 @@ Write the file back with the updated states.
 A PR is asked about when **all** of these hold:
 
 - it is open, on either source
+- it is in the **Waiting on someone else** bucket (`Workflows/Sync.md`, step 6)
 - its last activity is more than **28 days** ago
 - it has no surviving deferral entry after step 1
+
+The bucket condition is what keeps triage honest. A review you owe, a PR with
+conflicts, and an approved PR ready to merge are all things to *do*, not things
+to park — offering "ignore for a week" on a review somebody is blocked on would
+be actively wrong. Only work you cannot act on is triage material.
+
+If the sync found actionable items, say so before asking anything:
+
+```
+3 reviews are waiting on you and 2 PRs need work before triage. Handle those
+first, or carry on?
+```
 
 Sort oldest first. Report the count before starting: "14 PRs older than 28 days,
 3 currently snoozed, 1 waiting."

@@ -18,6 +18,12 @@ this skill. Everything resolves from the CLIs the user is already logged into.
 repository. `gh search prs` has no repo scope and returns everything visible,
 which is the point.
 
+**Reviews you owe are a first-class source, not a footnote.** A large part of the
+work is reviewing other people's changes, and those are the items where somebody
+else is blocked waiting on you. `--review-requested=@me` on GitHub and
+`--reviewer "$AZ_USER"` on Azure are queried alongside the authored-PR queries,
+and the output lists them first. See the bucket rules in `Workflows/Sync.md`.
+
 **Jira projects.** Ticket keys are found by shape, `[A-Z][A-Z0-9]+-[0-9]+`, then
 validated against the project list. Filtering by the prefixes seen in the
 assigned-ticket query instead would hide any PR citing a project you have no open
