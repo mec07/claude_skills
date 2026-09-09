@@ -2,6 +2,21 @@
 
 Execute multiple tickets simultaneously — each gets its own worktree and Engineer agent.
 
+## Context
+
+Resolve these first. Every path and remote below is derived from them.
+
+```bash
+REPO=$(git rev-parse --show-toplevel) || { echo "Not inside a git repository."; exit 1; }
+REPO_NAME=$(basename "$REPO")
+REPO_SLUG=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)
+DEFAULT_BRANCH=$(git -C "$REPO" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')
+DEFAULT_BRANCH=${DEFAULT_BRANCH:-$(git -C "$REPO" rev-parse --verify -q main >/dev/null && echo main || echo master)}
+WT_BASE="${WORKTREE_BASE:-$HOME/dev/worktrees}/$REPO_NAME"
+```
+
+See the skill's Context section for what each one means.
+
 ## Voice
 
 ```bash
@@ -19,18 +34,18 @@ Running **Parallel** workflow in **Worktree** skill...
 
 Triggered when `/Worktree` receives 2+ ticket numbers:
 ```
-/Worktree DEV-189 DEV-201 DEV-234
+/Worktree ABC-1 ABC-2 ABC-3
 ```
 
 ---
 
 ## Step 1 — Parse All Ticket Numbers
 
-Extract all `DEV-\d+` patterns from input.
+Extract all `[A-Z][A-Z0-9]+-[0-9]+` patterns from input.
 
 ```
-/Worktree DEV-189 DEV-201 DEV-234
-→ tickets = [DEV-189, DEV-201, DEV-234]
+/Worktree ABC-1 ABC-2 ABC-3
+→ tickets = [ABC-1, ABC-2, ABC-3]
 ```
 
 ---
@@ -44,9 +59,9 @@ Fetch all tickets simultaneously using parallel Bash calls:
 JIRA_API_TOKEN=$(sed -n 's/^JIRA_API_TOKEN=//p' ~/.claude/.env)
 JIRA_EMAIL=$(sed -n 's/^JIRA_EMAIL=//p' ~/.claude/.env)
 
-for TICKET in DEV-189 DEV-201 DEV-234; do
+for TICKET in ABC-1 ABC-2 ABC-3; do
   curl -s -u "${JIRA_EMAIL}:${JIRA_API_TOKEN}" \
-    "https://powerx.atlassian.net/rest/api/3/issue/${TICKET}?fields=summary,description,status"
+    # use the JIRA skill to fetch ${TICKET}: summary, description, status
 done
 ```
 
@@ -55,11 +70,11 @@ done
 ## Step 3 — Determine Branch Names (All Tickets)
 
 For each ticket, follow the branch name resolution from `Workflows/Single.md` Step 3:
-1. Check for `DEV-XXX*.scratch.md` → `branch:` line
+1. Check for `{KEY}*.scratch.md` → `branch:` line
 2. Slugify Jira title
 3. Fallback
 
-Collect: `[(DEV-189, branch-1), (DEV-201, branch-2), (DEV-234, branch-3)]`
+Collect: `[(ABC-1, branch-1), (ABC-2, branch-2), (ABC-3, branch-3)]`
 
 ---
 
@@ -68,14 +83,13 @@ Collect: `[(DEV-189, branch-1), (DEV-201, branch-2), (DEV-234, branch-3)]`
 ⚠️ **CRITICAL: Always branch from `origin/main`** — fetch first, then specify explicitly.
 
 ```bash
-REPO="${HOME}/dev/powerx/data"
 
 # Fetch once before creating any worktrees
 git -C "$REPO" fetch origin main
 
 for each (TICKET, BRANCH):
   git -C "$REPO" worktree add \
-    "${HOME}/dev/worktrees/powerx/${BRANCH}" \
+    "${WT_BASE}/${BRANCH}" \
     -b "${BRANCH}" origin/main
 ```
 
@@ -111,12 +125,12 @@ For each completed worktree:
 2. Append Testing/Screenshots/Deployment/Checklist sections from `.github/PULL_REQUEST_TEMPLATE.md`
 
 ```bash
-git -C "${HOME}/dev/worktrees/powerx/${BRANCH}" push -u origin "${BRANCH}"
+git -C "${WT_BASE}/${BRANCH}" push -u origin "${BRANCH}"
 
 gh pr create \
-  --repo powerxai/data \
+  -R "${REPO_SLUG}" \
   --head "${BRANCH}" \
-  --base main \
+  --base "${DEFAULT_BRANCH}" \
   --title "feat: ${TICKET}: ${SUMMARY}" \
   --draft \
   --body "${PR_BODY}"
@@ -136,12 +150,12 @@ For each ticket with a scratch file found:
 ```
 ✓ 3 worktrees completed:
 
-  DEV-189: branch DEV-189-fix-auth → PR: <url>
-  DEV-201: branch DEV-201-billing-export → PR: <url>
-  DEV-234: branch DEV-234-route-handler → PR: <url>
+  ABC-1: branch ABC-1-fix-auth → PR: <url>
+  ABC-2: branch ABC-2-billing-export → PR: <url>
+  ABC-3: branch ABC-3-route-handler → PR: <url>
 
 To review: fetch in WebStorm → checkout each branch
-To clean up after merge: /Worktree cleanup DEV-189 DEV-201 DEV-234
+To clean up after merge: /Worktree cleanup ABC-1 ABC-2 ABC-3
 ```
 
 ---
@@ -150,7 +164,7 @@ To clean up after merge: /Worktree cleanup DEV-189 DEV-201 DEV-234
 
 If one agent fails, others continue. Report partial success:
 ```
-✓ DEV-189: done → PR <url>
-✗ DEV-201: agent failed — worktree at ~/dev/worktrees/powerx/DEV-201-... left intact
-✓ DEV-234: done → PR <url>
+✓ ABC-1: done → PR <url>
+✗ ABC-2: agent failed — worktree at $WT_BASE/ABC-2-... left intact
+✓ ABC-3: done → PR <url>
 ```
