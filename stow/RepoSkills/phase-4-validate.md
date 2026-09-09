@@ -250,6 +250,7 @@ Every root platform file (CLAUDE.md, AGENTS.md, .cursorrules, .github/copilot-in
 - [ ] Task Routing (table mapping intents to skill combinations, with USE WHEN keywords)
 - [ ] Context Window Discipline
 - [ ] Before Modifying Code
+- [ ] Before Committing
 - [ ] Skill & Routing Maintenance
 - [ ] Documentation (pointers to skill layer)
 - [ ] Coding Standards

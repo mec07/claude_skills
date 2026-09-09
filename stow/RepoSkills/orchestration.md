@@ -406,7 +406,7 @@ Skills do NOT contain:
 
 ### Structure
 
-- `.ai/skills/` contains the detailed skill layer (orientation, modules, tasks, domain context). Root platform files (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md) are each self-sufficient — they contain all 12 required sections and do not redirect to each other. Root files intentionally overlap by design for compaction safety.
+- `.ai/skills/` contains the detailed skill layer (orientation, modules, tasks, domain context). Root platform files (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md) are each self-sufficient — they contain all 13 required sections and do not redirect to each other. Root files intentionally overlap by design for compaction safety.
 - Within the skill layer, every fact lives in exactly one place. Root platform files are exempt from this rule — their overlap is by design.
 - Cross-link aggressively between skills. No orphan skills.
 - Module skills should map to real, coherent boundaries in the codebase -- not to directories.
@@ -641,7 +641,7 @@ Token budgets are **guidelines, not hard cutoffs.** They target conciseness with
 | `tasks/<name>.md` | ~1.5k tokens each | Loaded on-demand for specific tasks |
 | `modules/<name>.md` | ~1.5k tokens each | Loaded on-demand for specific modules |
 | `AGENTS.md` | ~4k tokens | Self-sufficient entry point for Codex, Zed, JetBrains, etc. |
-| `CLAUDE.md` | ~3-4k tokens | Self-sufficient entry point for Claude Code (all 12 required sections) |
+| `CLAUDE.md` | ~3-4k tokens | Self-sufficient entry point for Claude Code (all 13 required sections) |
 | `.github/copilot-instructions.md` | ~3-4k tokens | Self-sufficient entry point for GitHub Copilot |
 | `.cursorrules` | ~3-4k tokens | Self-sufficient entry point for Cursor |
 

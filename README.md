@@ -62,7 +62,9 @@ or pre-commit gate.
 
 `--allow-destroy` is the opt-in for setting aside, rather than deleting, files in the
 target that did not come from `stow/`: it moves them to a temporary directory and prints
-the path, which is worth saving if the files matter. The installer only ever writes
+the path, which is worth saving if the files matter. It applies to the paths that clear a
+skill directory, meaning `--force` and `--uninstall`. A flagless install tops up in place
+and never clears anything, so the flag does nothing there. The installer only ever writes
 symlinks and directories, so any other regular file inside an installed skill (aside from
 `.DS_Store`) was written by a human and cannot be regenerated. Without this flag the
 installer refuses to delete them: it names the files, skips that skill, carries on with
