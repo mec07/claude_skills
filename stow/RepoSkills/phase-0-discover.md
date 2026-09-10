@@ -17,6 +17,7 @@ Copy this checklist into `state.md` under the Phase 0 entry. Mark each item `[x]
 - [ ] 0.3: Find and assess existing documentation
 - [ ] 0.4: Identify module boundary candidates
 - [ ] 0.4a: Discover the project system
+- [ ] 0.4b: Decide create, update or confirm per candidate
 - [ ] 0.5: Detect task skills warranted by the codebase
 - [ ] 0.6: Check domain-context.md freshness
 - [ ] 0.7: Write _triage.md to MEMORY directory
@@ -257,6 +258,96 @@ Where more than one candidate query exists, record `authoritative-source` as the
 authoritative and the counterexample that ruled the others out, per the rule above.
 
 Update `state.md`: mark step 0.4a complete.
+
+---
+
+## Step 4b: Decide Create, Update or Confirm per Candidate (Step 0.4b)
+
+For each boundary candidate Step 4 recorded, plus the workspace root, plus each directory Step 4a's
+project system excludes, decide what the README phases may later do there. The root is named
+explicitly because Step 4's monorepo rule (`phase-0-discover.md:206`) makes every workspace *member*
+a candidate and is silent on the root itself, so a set defined only by Step 4's output can omit the
+one entry question 0 exists to catch. This step only records; no file in the target repo changes.
+Four questions, in this order.
+
+**0. Is it the workspace root?** The workspace root is never a unit and its README is out of scope,
+however strong its signals: a root README is a repo-wide document with its own shape, not a unit
+README, and it must never be created or conformed by this pipeline. Record it as `- path: .` with
+`action: excluded` and the reason `workspace-root`.
+
+**1. Does the *authoritative* project system exclude it?** `action: excluded`, and this wins even
+when a README exists there: an excluded directory's README is its self-documentation of the
+exclusion, not an invitation to conform it. Record `readme: exists` so the writing phase knows the
+self-documentation is already present, and record excluded candidates rather than dropping them, so
+a later phase can give the ones without a README one that says they are deliberately outside the
+system.
+
+**Invisibility to a non-authoritative query is not exclusion.** Read the `authoritative-source` key
+Step 4a recorded and ask only that query. A directory the authoritative source can see and
+deliberately leaves out is excluded. A directory that source never had the vocabulary to describe is
+not: the npm workspace globs cannot see a Python project, which says nothing about whether the repo
+recognises it. Both shapes present as "a manifest the workspace globs do not match", and the
+counterexample Step 4a recorded is what tells them apart.
+
+**2. Does a README already exist?** Test against the version control file list
+(`git ls-files`), not the working tree, because the local filesystem hides a miscased
+`readme.md` that breaks CI elsewhere.
+
+| Found | `readme` | `action` |
+|---|---|---|
+| `README.md` | `exists` | `update` |
+| Any other casing | `exists-miscased` | `update`. The unit HAS a README; renaming it to `README.md` is the writing phase's first move there, recorded here as intent. This phase is read-only and renames nothing |
+| Nothing | `absent` | Continue to question 3 |
+
+An existing README is the strongest ownership signal available, stronger than anything this phase
+can infer, because it is a decision a human already made. Updating one is never gated.
+
+**3. What signals does it have?** Only for candidates with no README, since creating a file where a
+human never put one is the only action that can impose an unwanted artifact.
+
+| Signals detected | `action` |
+|---|---|
+| Own **package manifest** or own **Dockerfile** | `create` |
+| Anything else that qualified as a boundary (an entry point as the only Strong signal, or two Medium types) | `create-pending-confirmation` |
+
+**This table is deliberately narrower than Step 4's signal table, and the two answer different
+questions.** Step 4 decides what qualifies as a boundary, and an own entry point (`main.go`,
+`index.ts`, `app.py`) is a Strong signal there; that table is unchanged. This gate decides what
+earns README creation with no human in the loop, and an entry point alone does not: a shared
+library that deserves a README has its own manifest, because that is exactly what makes it a
+workspace member, while an internal library inside a single frontend app has an `index.ts` and no
+manifest, and one README per internal library is the unwanted-artifact failure this gate exists to
+prevent. The manifest is the discriminator between those two cases. A candidate can therefore
+qualify as a boundary on an entry point and still wait at `create-pending-confirmation` for its
+README.
+
+**Gate on the Signals detected field, not on Confidence.** Confidence records `medium` for both
+"one strong" and "two medium", so the two cases this gate must separate collapse into one value.
+
+**Two Medium signals means two Medium types.** Own data types and own database tables are both
+Domain-boundary indicators, one type, not two signals. Deployment is a Medium signal: a
+deployment-only directory never qualifies as a boundary at all, since qualifying requires one
+Strong or two Medium.
+
+### Recording the unit list
+
+Write a `## Unit List` section to `state.md`, one block per candidate:
+
+```
+- path: services/orders
+  name: <the name the project system reports, or a concise name if it has none>
+  signals: package-manifest(package.json), service(Dockerfile), deployment(.github/workflows/orders.yml)
+  deployable: yes
+  readme: absent
+  action: create
+  nested-under: none
+```
+
+`deployable` comes from the `deployability-predicate` recorded in Step 4a. `nested-under` names the
+closest enclosing unit, or `none`. A nested unit is still a unit: nesting disqualifies neither it nor
+its parent.
+
+Update `state.md`: mark step 0.4b complete.
 
 ---
 

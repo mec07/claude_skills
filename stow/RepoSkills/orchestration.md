@@ -51,6 +51,12 @@ deployability-predicate: <what distinguishes a unit that ships, or "none">
 exclusions: <paths that look like units but are deliberately outside the project system>
 authoritative-source: <which candidate query was confirmed, and the counterexample that ruled the others out>
 
+## Unit List
+
+Recorded by Phase 0 Step 4b: one block per boundary candidate, keys `path`, `name`, `signals`,
+`deployable` (yes/no), `readme` (exists | exists-miscased | absent), `action` (update | create |
+create-pending-confirmation | excluded) and `nested-under` (closest enclosing unit path, or none).
+
 ## Detected Platforms
 - [ ] Claude Code
 - [ ] Cursor
