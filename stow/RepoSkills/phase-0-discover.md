@@ -244,7 +244,9 @@ Reserve `none` for a repo that has no candidate query at all.
 
 ### Recording
 
-Write all five keys into the `## Project System` section of `state.md`.
+Write all five keys into the `## Project System` section of `state.md`, each key occupying a
+single line; the counterexample must appear on the `authoritative-source:` line itself, though
+indented continuation lines may follow beneath a key to record further detail.
 
 Where the repo genuinely has no candidate query at all, write `none` for `enumeration-query`,
 `detail-query` and `deployability-predicate`, record `authoritative-source: none, no candidate query
@@ -341,6 +343,7 @@ Write a `## Unit List` section to `state.md`, one block per candidate:
   readme: absent
   action: create
   nested-under: none
+  reason: <present only when action: excluded, e.g. workspace-root, or the project-system exclusion it fell under>
 ```
 
 `deployable` comes from the `deployability-predicate` recorded in Step 4a. `nested-under` names the

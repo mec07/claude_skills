@@ -55,7 +55,9 @@ authoritative-source: <which candidate query was confirmed, and the counterexamp
 
 Recorded by Phase 0 Step 4b: one block per boundary candidate, keys `path`, `name`, `signals`,
 `deployable` (yes/no), `readme` (exists | exists-miscased | absent), `action` (update | create |
-create-pending-confirmation | excluded) and `nested-under` (closest enclosing unit path, or none).
+create-pending-confirmation | excluded), `nested-under` (closest enclosing unit path, or none) and
+`reason` (present only when `action: excluded`; `workspace-root`, or the project-system exclusion
+it fell under).
 
 ## Detected Platforms
 - [ ] Claude Code
