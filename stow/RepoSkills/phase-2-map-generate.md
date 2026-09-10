@@ -16,6 +16,7 @@ Copy this checklist into `state.md` under the Phase 2 entry. Mark each item `[x]
 - [ ] 2.1: Confirm boundaries (read _triage.md, verify each boundary candidate)
 - [ ] 2.2: Generate orientation skill (.ai/skills/orientation.md)
 - [ ] 2.2b: Generate conventions.md (.ai/skills/conventions.md)
+- [ ] 2.2c: Generate readme-template.md (.ai/skills/readme-template.md)
 - [ ] 2.3: Generate module skills (.ai/skills/modules/<name>.md, parallel for large repos)
 - [ ] 2.4: Generate task skills (.ai/skills/tasks/<name>.md, conditional)
 - [ ] 2.5: Generate platform glue and maintenance tools (AGENTS.md, CLAUDE.md, .cursorrules, copilot-instructions.md, per-module routing, skill-drift.sh)
@@ -284,6 +285,14 @@ updates that line in place once a human answers, rather than inventing a new one
 comment directly under each section heading; it marks that whole section, ending at the next
 heading of the same level. Anything unmarked is human-taught and a later run must never remove it
 for failing to verify. One rule, one direction: mark what is generated.
+
+### Step 2.2c: Generate `.ai/skills/readme-template.md`
+
+Read [readme-grammar.md](readme-grammar.md) and follow its "Generating the repo-specific template"
+section. The grammar lives in that file, not here, so this file stays within its token budget.
+
+Output: `.ai/skills/readme-template.md` in the target repo. This step generates the template only.
+Writing the per-unit READMEs themselves is a later stage.
 
 ---
 

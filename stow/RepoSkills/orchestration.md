@@ -286,12 +286,15 @@ When running the full pipeline:
 
 **Between Phases 0 and 2 -- Phase 1 (Domain Interview) decision:** The orchestrator checks whether Phase 1 should run. If `.ai/skills/domain-context.md` exists AND Phase 0 scored it high-confidence AND its `Last interview` timestamp is within 6 months, skip Phase 1 and proceed to Phase 2. If the user invoked with `--interview` or `--redo-interview`, always run Phase 1 regardless. Otherwise, run Phase 1.
 
-**Between Phases 8 and 9 -- Phase 9 skip condition:** Phase 9 can be skipped if ALL THREE of the following are true:
+**Between Phases 8 and 9 -- Phase 9 skip condition:** Phase 9 can be skipped if ALL FIVE of the following are true:
 1. `_unresolved.md` contains zero issues (or does not exist)
 2. The Reverse Glossary finds zero new domain terms
 3. `_questions.md` contains no unanswered questions (no modules flagged with missing info)
+4. `state.md`'s `## Unit List` contains no `action: create-pending-confirmation` entry
+5. No induced pattern awaits confirmation (no generated artifact carries a `_not yet linked_` row
+   whose pattern was never presented to a human)
 
-If all three conditions are met, skip Phase 9, proceed directly to cleanup, and inform the user that no human input is needed.
+If all five conditions are met, skip Phase 9, proceed directly to cleanup, and inform the user that no human input is needed.
 
 ### Cleanup
 
