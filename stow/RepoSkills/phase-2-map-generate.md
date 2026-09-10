@@ -15,6 +15,7 @@ Copy this checklist into `state.md` under the Phase 2 entry. Mark each item `[x]
 ```
 - [ ] 2.1: Confirm boundaries (read _triage.md, verify each boundary candidate)
 - [ ] 2.2: Generate orientation skill (.ai/skills/orientation.md)
+- [ ] 2.2b: Generate conventions.md (.ai/skills/conventions.md)
 - [ ] 2.3: Generate module skills (.ai/skills/modules/<name>.md, parallel for large repos)
 - [ ] 2.4: Generate task skills (.ai/skills/tasks/<name>.md, conditional)
 - [ ] 2.5: Generate platform glue and maintenance tools (AGENTS.md, CLAUDE.md, .cursorrules, copilot-instructions.md, per-module routing, skill-drift.sh)
@@ -254,6 +255,34 @@ see the scripts/commands task skill.]
 - **Quick reference:** The most common daily commands from actual config files. Cite the source. The full command reference lives in the scripts/commands task skill — orientation just needs the quick-access commands.
 
 **Update state:** Mark step 2.2 complete in `state.md`.
+
+---
+
+### Step 2.2b: Generate `.ai/skills/conventions.md`
+
+The single home for repo-wide structural facts, so no unit README has to restate them. Read
+`## Project System` and `## Unit List` from `state.md` first.
+
+Required sections, in this order:
+
+| Section | Contents |
+|---|---|
+| What counts as a unit | The `enumeration-query`, the `authoritative-source` and its counterexample, and the exclusion list. Not a hand-maintained inventory: name the query |
+| Unit decisions | **Decisions only, never an inventory.** One line per candidate whose disposition a human settled or whose treatment departs from what the query implies: a Medium-only boundary confirmed, a deployability call that contradicts the `deployability-predicate`, an exclusion that needed a ruling. A unit the enumeration query already returns and that nobody argued about gets no line, because the query is its record |
+| Declined candidates | Candidates a human declined, with the date. A decline recorded only in `state.md` would be re-proposed on every other machine forever |
+| Standard layout | Where source, tests and infrastructure live, when the repo is consistent about it |
+| Standard commands | Build, test, lint and run, as the repo actually declares them |
+| Precedence | Verbatim: `code > README > conventions document`. This is its canonical home; the READMEs and `navigate-unit` link here rather than restating it |
+| Confirmed patterns | Induced patterns confirmed by a human, per the grammar file's induction loop |
+
+**A gated candidate not yet settled still gets its Unit decisions line**, marked pending
+confirmation and carrying its signals, written at generation time: the open question must travel
+with the repo rather than sit in one machine's `state.md`, and the Phase 9 confirmation step
+updates that line in place once a human answers, rather than inventing a new one.
+
+**Mark generated sections.** Stamp each section this step writes with `provenance=generated` inside
+the existing `<!-- repo-skills: ... -->` comment. Anything unmarked is human-taught and a later run
+must never remove it for failing to verify. One rule, one direction: mark what is generated.
 
 ---
 
@@ -1126,6 +1155,9 @@ All four root files (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md
 - [ ] `.ai/skills/` directory structure is clean: `orientation.md`, `modules/`, `tasks/`, `domain-context.md` (if exists)
 - [ ] No orphan files — every skill file is referenced from the routing tables in CLAUDE.md / AGENTS.md
 - [ ] No duplicate facts — each fact lives in exactly one canonical location
+  (Expand-stage exemption: `conventions.md` Standard commands deliberately duplicate
+  orientation's Quick Reference and `tasks/scripts.md` while module skills and unit READMEs
+  coexist. Do not strip either copy; removing the duplication is stage 2b's job.)
 - [ ] Module skill overrides reference task skills that exist
 
 Fix any issues found. Then:

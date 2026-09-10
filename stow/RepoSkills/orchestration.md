@@ -431,7 +431,8 @@ Skills do NOT contain:
 - Cross-link aggressively between skills. No orphan skills.
 - Module skills should map to real, coherent boundaries in the codebase -- not to directories.
 - Task skills should map to real workflows agents perform -- not to abstractions.
-- Content that would appear in `conventions.md`, `dependency-map.md`, or `workflows.md` as separate files instead lives in `orientation.md` and individual module skills. Do not generate these as standalone output files.
+- Content that would appear in `dependency-map.md` or `workflows.md` as separate files instead lives in `orientation.md`. Do not generate those as standalone output files.
+- `conventions.md` **is** generated as a standalone file at `.ai/skills/conventions.md`. The original rule forbade it because it was redundant with module skills; once unit READMEs replace those, the conventions document is what stops every README restating the same build commands. It is the single home for repo-wide structural facts.
 
 ### Exploration
 
