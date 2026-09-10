@@ -280,9 +280,10 @@ confirmation and carrying its signals, written at generation time: the open ques
 with the repo rather than sit in one machine's `state.md`, and the Phase 9 confirmation step
 updates that line in place once a human answers, rather than inventing a new one.
 
-**Mark generated sections.** Stamp each section this step writes with `provenance=generated` inside
-the existing `<!-- repo-skills: ... -->` comment. Anything unmarked is human-taught and a later run
-must never remove it for failing to verify. One rule, one direction: mark what is generated.
+**Mark generated sections.** Per spec 3.2's section-level form, place a `provenance=generated`
+comment directly under each section heading; it marks that whole section, ending at the next
+heading of the same level. Anything unmarked is human-taught and a later run must never remove it
+for failing to verify. One rule, one direction: mark what is generated.
 
 ---
 
