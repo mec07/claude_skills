@@ -245,8 +245,8 @@ Reserve `none` for a repo that has no candidate query at all.
 ### Recording
 
 Write all five keys into the `## Project System` section of `state.md`, each key occupying a
-single line; the counterexample must appear on the `authoritative-source:` line itself, though
-indented continuation lines may follow beneath a key to record further detail.
+single line; every path the authoritative query misses must be named on the `authoritative-source:`
+line itself, though indented continuation lines may follow beneath a key to record further detail.
 
 Where the repo genuinely has no candidate query at all, write `none` for `enumeration-query`,
 `detail-query` and `deployability-predicate`, record `authoritative-source: none, no candidate query
@@ -270,6 +270,9 @@ project system excludes, decide what the README phases may later do there. The r
 explicitly because Step 4's monorepo rule (`phase-0-discover.md:206`) makes every workspace *member*
 a candidate and is silent on the root itself, so a set defined only by Step 4's output can omit the
 one entry question 0 exists to catch. This step only records; no file in the target repo changes.
+A directory on Step 4's never-browse exclusion list (`node_modules`, `dist`, `build`, `vendor`,
+`.git` and the rest) is none of those three things, so it is out of scope for the Unit List and is
+not recorded there, or annotated anywhere in `state.md`, at all.
 Four questions, in this order.
 
 **0. Is it the workspace root?** The workspace root is never a unit and its README is out of scope,
