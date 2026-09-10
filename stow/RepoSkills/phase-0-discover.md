@@ -237,13 +237,24 @@ is authoritative there and the Python projects are the counterexample that prove
 
 So: enumerate candidates, run each, and compare their outputs against the boundary candidates Step 4
 found independently. A query that misses a Step 4 candidate carrying a Strong signal is not
-authoritative. Record which query won and what ruled the others out.
+authoritative for the whole repo, but that is a coverage limit, not the absence of a project system:
+record the query anyway, with its coverage boundary and the missed candidate as the counterexample.
+Reserve `none` for a repo that has no candidate query at all.
 
 ### Recording
 
-Write all five keys into the `## Project System` section of `state.md`. Where the repo genuinely has
-no project system, write `none` for the first three and still record `exclusions`, since directory
-based exclusions apply regardless.
+Write all five keys into the `## Project System` section of `state.md`.
+
+Where the repo genuinely has no candidate query at all, write `none` for `enumeration-query`,
+`detail-query` and `deployability-predicate`, record `authoritative-source: none, no candidate query
+exists`, and still record `exclusions`, since directory based exclusions apply regardless.
+
+Where exactly one candidate query exists, record it as `enumeration-query` regardless of its coverage.
+Record `authoritative-source` as that query with "no counterexample, the only candidate" if it covers
+the whole repo, or its coverage boundary and the counterexample if it does not.
+
+Where more than one candidate query exists, record `authoritative-source` as the query confirmed
+authoritative and the counterexample that ruled the others out, per the rule above.
 
 Update `state.md`: mark step 0.4a complete.
 
