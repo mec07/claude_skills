@@ -39,6 +39,17 @@ started: ISO-timestamp
 updated: ISO-timestamp
 update-mode: <fresh|targeted|diff|full>
 
+## Project System
+
+Recorded by Phase 0 Step 4a. Absent when the repo has no project system, which is
+valid: Step 4's signal detection is then the whole answer.
+
+enumeration-query: <command listing every project the repo recognises, or "none">
+detail-query: <command returning one project's root and targets, or "none">
+deployability-predicate: <what distinguishes a unit that ships, or "none">
+exclusions: <paths that look like units but are deliberately outside the project system>
+authoritative-source: <which candidate query was confirmed, and the counterexample that ruled the others out>
+
 ## Detected Platforms
 - [ ] Claude Code
 - [ ] Cursor

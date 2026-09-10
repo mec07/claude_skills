@@ -16,6 +16,7 @@ Copy this checklist into `state.md` under the Phase 0 entry. Mark each item `[x]
 - [ ] 0.2: Detect AI platforms in use
 - [ ] 0.3: Find and assess existing documentation
 - [ ] 0.4: Identify module boundary candidates
+- [ ] 0.4a: Discover the project system
 - [ ] 0.5: Detect task skills warranted by the codebase
 - [ ] 0.6: Check domain-context.md freshness
 - [ ] 0.7: Write _triage.md to MEMORY directory
@@ -206,6 +207,45 @@ For each candidate, record:
 For Monorepo-classified repos, every workspace/project root is automatically a module boundary candidate with high confidence. Focus additional detection effort on sub-boundaries within the largest workspaces.
 
 Update `state.md`: mark step 0.4 complete.
+
+---
+
+## Step 4a: Discover the Project System (Step 0.4a)
+
+Many repos have a tool that already knows what their projects are. Ask it rather than inferring.
+Where no such tool exists, Step 4's signals are the whole answer and this step records `none`.
+
+### What to find
+
+| Key | What it is | Examples of where it comes from |
+|---|---|---|
+| `enumeration-query` | The command that lists every project the repo recognises | An nx or turbo project graph, a workspace glob in the root manifest, a Cargo or Go workspace member list, a Bazel query |
+| `detail-query` | The command returning one project's root and available targets | The same tool's per-project inspection command |
+| `deployability-predicate` | What distinguishes a unit that ships from one that does not | A real deploy target, a Dockerfile, a per-environment infrastructure file |
+| `exclusions` | Directories that look like units but are deliberately outside the system | A manifest present but excluded from the workspace globs |
+
+### The rule that matters most
+
+**When more than one candidate query exists, confirm which is authoritative rather than taking the
+most visible, and record the counterexample that rules the others out.** A query returning a
+plausible subset is the dangerous failure here, because nothing looks wrong.
+
+Worked example from a real repo: in a mixed TypeScript and Python monorepo,
+`pnpm-workspace.yaml` membership looks like the project list and silently excludes every Python
+project, because those carry a hand-written project file and no `package.json`. The nx project graph
+is authoritative there and the Python projects are the counterexample that proves it.
+
+So: enumerate candidates, run each, and compare their outputs against the boundary candidates Step 4
+found independently. A query that misses a Step 4 candidate carrying a Strong signal is not
+authoritative. Record which query won and what ruled the others out.
+
+### Recording
+
+Write all five keys into the `## Project System` section of `state.md`. Where the repo genuinely has
+no project system, write `none` for the first three and still record `exclusions`, since directory
+based exclusions apply regardless.
+
+Update `state.md`: mark step 0.4a complete.
 
 ---
 
