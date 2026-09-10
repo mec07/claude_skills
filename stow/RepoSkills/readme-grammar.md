@@ -151,6 +151,12 @@ verbatim, the Agent Notes citation rule, the conditional section list filtered t
 has substrate for plus the recurring sections Adopt and align found, and an authoring-rules banner
 the drafting agent honours and then deletes.
 
+Head the two skeleton blocks **`Full skeleton (deployable)`** and **`Slim skeleton
+(non-deployable)`**, those exact headings, so a drafting agent reading the generated template can
+tell the two blocks apart without guessing.
+
 Do **not** include `Contracts owned`, `Deviations` or `Lifecycle status`. Those three are absent
 from the reference implementation and land in a later stage with their own baseline test. Shipping
-them now would flag every pre-existing README in the target repo as incomplete.
+them now would flag every pre-existing README in the target repo as incomplete. None of these three
+names may appear anywhere in the generated template, including in the authoring-rules banner: naming
+them there to warn the drafting agent still ships the words the omission was meant to avoid.
