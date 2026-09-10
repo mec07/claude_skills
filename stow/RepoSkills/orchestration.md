@@ -105,6 +105,12 @@ it fell under).
 | ISO-timestamp | fresh | all | abc1234 |
 ```
 
+**Never-browse paths are never named in `state.md`.** A path inside a never-browse exclusion-list
+directory (`node_modules`, `dist`, `build`, `vendor`, `.git` and the rest) is not written into
+`state.md`, not as a unit, not in a file count, and not in an explanatory note about why it was
+excluded. Where a count needs to say what it left out, name the directory category rather than a
+specific path inside it. Any phase can write this file, so the rule binds all of them, not one.
+
 **After Phase 0 completes:** The orchestrator MUST extract the tier classification from `_triage.md` and write it to `state.md` in the `tier:` field and the `## Repo Size Tier` section. All subsequent phases rely on this value.
 
 ### Phase numbering
