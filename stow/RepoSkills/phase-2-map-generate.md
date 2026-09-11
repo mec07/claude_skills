@@ -281,6 +281,9 @@ confirmation and carrying its signals, written at generation time: the open ques
 with the repo rather than sit in one machine's `state.md`, and the Phase 9 confirmation step
 updates that line in place once a human answers, rather than inventing a new one.
 
+**Declined candidates is empty at generation time.** Only Phase 9 Step 9.3a writes to it. A
+project-system exclusion is not a decline, and belongs under "What counts as a unit" instead.
+
 **Mark generated sections.** Per spec 3.2's section-level form, place a `provenance=generated`
 comment directly under each section heading; it marks that whole section, ending at the next
 heading of the same level. Anything unmarked is human-taught and a later run must never remove it

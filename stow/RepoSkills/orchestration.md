@@ -436,7 +436,7 @@ Skills do NOT contain:
 ### Structure
 
 - `.ai/skills/` contains the detailed skill layer (orientation, modules, tasks, domain context). Root platform files (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md) are each self-sufficient — they contain all 13 required sections and do not redirect to each other. Root files intentionally overlap by design for compaction safety.
-- Within the skill layer, every fact lives in exactly one place. Root platform files are exempt from this rule — their overlap is by design.
+- Within the skill layer, every fact lives in exactly one place. Root platform files are exempt from this rule — their overlap is by design. Expand-stage exemption: while module skills and unit READMEs coexist, `conventions.md`'s Standard commands deliberately duplicate `orientation.md`'s Quick Reference and `tasks/scripts.md`. No phase may strip either copy; removing the duplication belongs to stage 2b.
 - Cross-link aggressively between skills. No orphan skills.
 - Module skills should map to real, coherent boundaries in the codebase -- not to directories.
 - Task skills should map to real workflows agents perform -- not to abstractions.
