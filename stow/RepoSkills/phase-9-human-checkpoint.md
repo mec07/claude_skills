@@ -14,8 +14,11 @@ Before starting any work, check whether this phase can be skipped entirely.
 1. `_unresolved.md` contains zero issues (or doesn't exist)
 2. The Reverse Glossary (Step 9.1) finds zero new domain terms
 3. Phase 2 did not flag any modules with unknown local run/test procedures
+4. `state.md`'s `## Unit List` contains no `action: create-pending-confirmation` entry
+5. No induced pattern awaits confirmation (no generated artifact carries a `_not yet linked_` row
+   whose pattern was never presented to a human)
 
-If all three conditions are met:
+If all five conditions are met:
 - Mark Phase 9 complete in `state.md` with note: `Skipped — all issues resolved, no new domain terms, no missing info.`
 - Jump directly to Cleanup (Step 9.6)
 - Report to the orchestrator: "Phase 9 skipped — no human input needed."
@@ -31,6 +34,7 @@ Copy this checklist into `state.md` under the Phase 9 entry. Mark each item `[x]
 - [ ] 9.1: Reverse Glossary — mine code for undefined domain terms
 - [ ] 9.2: Present unresolvable issues from Phase 6
 - [ ] 9.3: Present missing info questions from Phase 2
+- [ ] 9.3a: Confirm gated units and induced patterns
 - [ ] 9.4: Incorporate human answers into skill files and domain-context.md
 - [ ] 9.5: Post-answer validation — verify all changes, re-check routing, spot-check 5 claims
 - [ ] 9.6: Offer drift detection integration (CI + local hook)
@@ -196,6 +200,33 @@ Can you describe the setup for any of these?
 Handle responses the same way as Step 2 (direct answer, skip/defer, partial, unknown).
 
 Update `state.md`: mark step 9.3 complete.
+
+---
+
+## Step 3a: Confirm Gated Units and Induced Patterns (Step 9.3a)
+
+Read `## Unit List` from `state.md`. For each entry with `action: create-pending-confirmation`,
+present the path and its signals and ask whether it should get a README. Record the outcome in
+`.ai/skills/conventions.md`: a yes updates the candidate's pending line under Unit decisions to
+confirmed, and its `action` in `state.md` becomes `create`; a no updates the line and adds the
+candidate to Declined candidates with the date. Never record an outcome only in `state.md`: that
+file lives on one machine, and a decline recorded nowhere else is re-proposed on every other
+machine forever.
+
+Then present the full list of `action: create` units, Strong candidates included. Ungated means no
+per-unit interrogation, not no visibility: on a first run this list is every file about to appear
+in someone's source tree, and this checkpoint is where a human sees it before any writing phase
+runs. Presentation only; no confirmation is asked for an ungated create.
+
+For each induced pattern awaiting confirmation, follow the induction loop in
+[readme-grammar.md](readme-grammar.md): present the examples and the derived pattern, and record a
+confirmed pattern in `conventions.md` under Confirmed patterns.
+
+When no human answers (a headless run), leave every pending item pending, keep the placeholders,
+and carry the full list forward in the final report: a blocked skip must never become a hung
+pipeline.
+
+Update `state.md`: mark step 9.3a complete.
 
 ---
 

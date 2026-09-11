@@ -114,7 +114,7 @@ proposes has nothing to detect. Both items are obviated and replaced by section 
 | `.ai/skills/orientation.md` | always |
 | `.ai/skills/domain-context.md` | always |
 | `.ai/skills/conventions.md` | always. Requires amending `orchestration.md:414`, see 3.1 |
-| `.ai/skills/readme-template.md` | only where at least one unit is confirmed |
+| `.ai/skills/readme-template.md` | always. The grammar's instantiation costs nothing to emit and is what an agent reads before writing the first README, so gating it on a confirmed unit would withhold it from exactly the run that is about to need it. Contrast `navigate-unit` below, a procedure for using units that has nothing to describe until one exists |
 | `.ai/skills/tasks/<name>.md` | always. `navigate-unit` specifically, only where at least one unit is confirmed |
 | `<unit-root>/README.md` | one per unit boundary, see section 4 |
 | `.ai/skills/Tools/` and root platform-glue files | always |
@@ -1424,6 +1424,23 @@ Two findings were left: Check 15's noise scoping is asserted rather than establi
 stage-3 work and needs the definition of *declares* that the check's own row leaves open; and 3.5's
 "every contract has a row" was already an overstatement before this branch, which 2b should not be
 planned against as if it were complete.
+
+**Pre-execution verification of the 2a-i plan, 2026-09-09.** Two independent passes over the plan
+and this spec before task 1, one for spec coverage and constraint enforcement, one ground-truthing
+paths and anchors. Verdict on both: executable after small fixes, all of them in the plan's own text
+rather than in this design. One finding changed this document:
+
+| Finding | Resolution |
+|---|---|
+| Section 3's output table conditioned `.ai/skills/readme-template.md` on "at least one unit is confirmed", but the template is what an agent reads *before* writing its first README, so the condition withholds it from exactly the run about to need it. The 2a-i plan generates it unconditionally, and the plan was right | The row becomes `always`, with the reasoning and the contrast against `navigate-unit`, which is a procedure for using units and genuinely has nothing to describe until one exists. Owner's decision |
+
+Two further observations recorded rather than acted on, both belonging to later stages: section 3's
+"decisions only" rule for `conventions.md` does not explicitly bless the pending-confirmation line a
+gated candidate carries before anyone settles it, so a 2b-era agent could strip it as an inventory
+violation; and 5.3's confirmation venue gives induced patterns no durable decline state, so a human
+who declines to confirm one is re-asked on every future run, the defect section 3 already fixes for
+units via Declined candidates. The fourth pattern the history above names holds: this pass again
+caught stale quantitative anchors, this time in the plan.
 
 **CI stays advisory,** per item 9's default. Wording is the weakest of the three available layers
 and the owner's instances survived because the freshness signal did not block, but item 10's

@@ -146,3 +146,6 @@ vite.config.ts.timestamp-*
 
 # PAI working state (per-session PRDs), not shareable content
 MEMORY/
+
+# Generated test fixture repo (tests/fixtures/make-fixture-repo.sh recreates it)
+tests/fixture-repo/

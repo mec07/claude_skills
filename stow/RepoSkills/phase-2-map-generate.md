@@ -15,6 +15,8 @@ Copy this checklist into `state.md` under the Phase 2 entry. Mark each item `[x]
 ```
 - [ ] 2.1: Confirm boundaries (read _triage.md, verify each boundary candidate)
 - [ ] 2.2: Generate orientation skill (.ai/skills/orientation.md)
+- [ ] 2.2b: Generate conventions.md (.ai/skills/conventions.md)
+- [ ] 2.2c: Generate readme-template.md (.ai/skills/readme-template.md)
 - [ ] 2.3: Generate module skills (.ai/skills/modules/<name>.md, parallel for large repos)
 - [ ] 2.4: Generate task skills (.ai/skills/tasks/<name>.md, conditional)
 - [ ] 2.5: Generate platform glue and maintenance tools (AGENTS.md, CLAUDE.md, .cursorrules, copilot-instructions.md, per-module routing, skill-drift.sh)
@@ -257,6 +259,46 @@ see the scripts/commands task skill.]
 
 ---
 
+### Step 2.2b: Generate `.ai/skills/conventions.md`
+
+The single home for repo-wide structural facts, so no unit README has to restate them. Read
+`## Project System` and `## Unit List` from `state.md` first.
+
+Required sections, in this order:
+
+| Section | Contents |
+|---|---|
+| What counts as a unit | The `enumeration-query`, the `authoritative-source` and its counterexample, and the exclusion list. Not a hand-maintained inventory: name the query |
+| Unit decisions | **Decisions only, never an inventory.** One line per candidate whose disposition a human settled or whose treatment departs from what the query implies: a Medium-only boundary confirmed, a deployability call that contradicts the `deployability-predicate`, an exclusion that needed a ruling. A unit the enumeration query already returns and that nobody argued about gets no line, because the query is its record |
+| Declined candidates | Candidates a human declined, with the date. A decline recorded only in `state.md` would be re-proposed on every other machine forever |
+| Standard layout | Where source, tests and infrastructure live, when the repo is consistent about it |
+| Standard commands | Build, test, lint and run, as the repo actually declares them |
+| Precedence | Verbatim: `code > README > conventions document`. This is its canonical home; the READMEs and `navigate-unit` link here rather than restating it |
+| Confirmed patterns | Induced patterns confirmed by a human, per the grammar file's induction loop |
+
+**A gated candidate not yet settled still gets its Unit decisions line**, marked pending
+confirmation and carrying its signals, written at generation time: the open question must travel
+with the repo rather than sit in one machine's `state.md`, and the Phase 9 confirmation step
+updates that line in place once a human answers, rather than inventing a new one.
+
+**Declined candidates is empty at generation time.** Only Phase 9 Step 9.3a writes to it. A
+project-system exclusion is not a decline, and belongs under "What counts as a unit" instead.
+
+**Mark generated sections.** Per spec 3.2's section-level form, place a `provenance=generated`
+comment directly under each section heading; it marks that whole section, ending at the next
+heading of the same level. Anything unmarked is human-taught and a later run must never remove it
+for failing to verify. One rule, one direction: mark what is generated.
+
+### Step 2.2c: Generate `.ai/skills/readme-template.md`
+
+Read [readme-grammar.md](readme-grammar.md) and follow its "Generating the repo-specific template"
+section. The grammar lives in that file, not here, so this file stays within its token budget.
+
+Output: `.ai/skills/readme-template.md` in the target repo. This step generates the template only.
+Writing the per-unit READMEs themselves is a later stage.
+
+---
+
 ## Step 3: Generate Module Skills (Layer 2)
 
 For each confirmed Tier 1 boundary from Step 1, write `.ai/skills/modules/<name>.md`. **Guideline: keep module skills concise — target ~1.5k tokens.** If a complex module genuinely needs more to explain its relationships, gotchas, and change impact, that's fine. But if a skill exceeds the guideline, check whether it contains greppable information that should be removed. Verbosity is a smell — investigate it, don't truncate.
@@ -480,6 +522,22 @@ Only generate a task skill if Phase 0 flagged it. The standard set and their tri
 | Secrets Management | `tasks/secrets.md` | Secret store client or vault config |
 | Feature Flags | `tasks/feature-flags.md` | Flag SDK or flag config found |
 | Error Handling | `tasks/error-handling.md` | Custom error classes or error middleware |
+
+**`navigate-unit` is always generated** where at least one unit is confirmed. It is the third leg of
+the architecture: `conventions.md` holds the repo-wide structural facts, a unit's `README.md` holds
+what is true for that one unit, and this skill is the **procedure** for using both.
+
+It contains: how to inspect a unit (confirm it is a unit via the enumeration query, read the
+conventions doc for the standard shape, read the unit's README for its deviations, read the
+infrastructure entry point, find the application entry point, then verify against the code), and how
+to change one and verify the change.
+
+It states the precedence rule by **linking** `conventions.md`, never by restating it:
+`code > README > conventions document`. A deviation documented in a README is intentional, so do not
+"fix" a unit to match the conventions document without first checking why it deviates.
+
+It gives commands and steps. It does **not** restate structural facts: those live in the conventions
+document, and duplicating them there and here is how the two drift apart.
 
 ### Testing task skill: test style and conventions
 
@@ -1126,6 +1184,9 @@ All four root files (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md
 - [ ] `.ai/skills/` directory structure is clean: `orientation.md`, `modules/`, `tasks/`, `domain-context.md` (if exists)
 - [ ] No orphan files — every skill file is referenced from the routing tables in CLAUDE.md / AGENTS.md
 - [ ] No duplicate facts — each fact lives in exactly one canonical location
+  (Expand-stage exemption: `conventions.md` Standard commands deliberately duplicate
+  orientation's Quick Reference and `tasks/scripts.md` while module skills and unit READMEs
+  coexist. Do not strip either copy; removing the duplication is stage 2b's job.)
 - [ ] Module skill overrides reference task skills that exist
 
 Fix any issues found. Then:
