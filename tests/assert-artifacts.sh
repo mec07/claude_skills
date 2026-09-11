@@ -45,5 +45,11 @@ file_has   "environment variables are a pointer" ".ai/skills/readme-template.md"
 file_has   "fallback section names used, since the fixture has no convention" ".ai/skills/readme-template.md" "## Monitoring"
 file_lacks "deferred sections are not shipped"   ".ai/skills/readme-template.md" "Contracts owned"
 
+exists   "navigate-unit generated"           ".ai/skills/tasks/navigate-unit.md"
+file_has "has a USE WHEN line"               ".ai/skills/tasks/navigate-unit.md" "USE WHEN"
+file_has "links the conventions doc"         ".ai/skills/tasks/navigate-unit.md" "conventions.md"
+file_has "states precedence by reference"    ".ai/skills/tasks/navigate-unit.md" "conventions"
+file_has "does not restate the layout"       ".ai/skills/tasks/navigate-unit.md" "procedure"
+
 printf "\n%s\n" "$([ "$FAILED" -eq 0 ] && echo PASS || echo FAIL)"
 [ "$FAILED" -eq 0 ]

@@ -520,6 +520,22 @@ Only generate a task skill if Phase 0 flagged it. The standard set and their tri
 | Feature Flags | `tasks/feature-flags.md` | Flag SDK or flag config found |
 | Error Handling | `tasks/error-handling.md` | Custom error classes or error middleware |
 
+**`navigate-unit` is always generated** where at least one unit is confirmed. It is the third leg of
+the architecture: `conventions.md` holds the repo-wide structural facts, a unit's `README.md` holds
+what is true for that one unit, and this skill is the **procedure** for using both.
+
+It contains: how to inspect a unit (confirm it is a unit via the enumeration query, read the
+conventions doc for the standard shape, read the unit's README for its deviations, read the
+infrastructure entry point, find the application entry point, then verify against the code), and how
+to change one and verify the change.
+
+It states the precedence rule by **linking** `conventions.md`, never by restating it:
+`code > README > conventions document`. A deviation documented in a README is intentional, so do not
+"fix" a unit to match the conventions document without first checking why it deviates.
+
+It gives commands and steps. It does **not** restate structural facts: those live in the conventions
+document, and duplicating them there and here is how the two drift apart.
+
 ### Testing task skill: test style and conventions
 
 The `tasks/testing.md` skill must include a **Test Style & Conventions** section that describes how tests are written in this repo. Derive this from reading the actual test files — look at patterns across multiple test files to identify the conventions.
