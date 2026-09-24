@@ -747,6 +747,9 @@ For team-wide coverage, CI integration is recommended over local hooks.
 - Keep code DRY — search for existing implementations before writing new code
 - Follow existing patterns — read 2-3 examples of similar code first
 - Maintain quality — tests, types, complete implementations, no stubs
+- Document what is, not how it got there — comments, config `description` fields and
+  markdown state current behaviour. No commit hashes, no PR numbers; history
+  belongs in the commit message
 
 ## New to This Repo?
 
@@ -925,6 +928,15 @@ For team-wide coverage, CI integration is recommended over local hooks.
 - Maintain quality — do not take shortcuts that create technical debt.
   If the codebase has tests, write tests. If it has types, use types.
 - Do not be lazy — write complete implementations, not stubs or TODOs.
+- Document what is, not how it got there — comments, config `description`
+  fields, READMEs and skill docs describe current behaviour. Leave out what a
+  value used to be, what was broken before, what an investigation measured, and
+  any reference to a commit hash, a PR number, or a PR's position in a stack.
+  A hash means nothing to a reader and goes stale on a rebase. Git holds that
+  history; the commit message and PR description are where it belongs. Keep a
+  "why" line only
+  where its absence would make the code look safe to delete, and state the
+  mechanism rather than the story it came from.
 
 ## Documentation
 
@@ -979,7 +991,7 @@ Every root file (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md) MU
 | **Before Committing** | Fix what this change falsified, and the drift command that finds it |
 | **Skill & Routing Maintenance** | Living docs guidance — when and how to update skills during use |
 | **Documentation** | Pointers to the full skill layer (orientation, modules, tasks, domain context) |
-| **Coding Standards** | DRY, follow patterns, maintain quality, no stubs |
+| **Coding Standards** | DRY, follow patterns, maintain quality, no stubs, document what is rather than how it got there |
 | **New to This Repo?** | Numbered onboarding steps for agents encountering the repo for the first time |
 
 **Every root file must be self-sufficient.** Each platform has its own compaction behaviour — CLAUDE.md survives in Claude Code, but copilot-instructions.md may be the only thing Copilot retains, and .cursorrules may be the only thing Cursor keeps. An agent reading ANY single root file must be able to navigate the codebase without needing the others. No root file should redirect to another root file — each one stands alone.
@@ -1169,7 +1181,7 @@ All four root files (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md
 - [ ] Before Committing (fix what the change falsified, drift command)
 - [ ] Skill & Routing Maintenance (living docs guidance, refactoring updates)
 - [ ] Documentation (pointers to skill layer: orientation, modules, tasks, domain context)
-- [ ] Coding Standards (DRY, follow patterns, maintain quality)
+- [ ] Coding Standards (DRY, follow patterns, maintain quality, document what is rather than how it got there)
 - [ ] New to This Repo? (numbered onboarding steps)
 - [ ] No root file redirects to another root file — each stands alone
 
@@ -1298,6 +1310,7 @@ Watch for these rationalizations and resist them:
 - **"This module is too complex for 1.5k tokens"** — Then you are including greppable information. Cut the WHAT, keep the WHY and the GOTCHAS.
 - **"I remember what the code does"** — You don't. Read the file. Every time.
 - **"This is probably right"** — Probably is not verified. Check it or mark it `<!-- TODO: verify -->`.
+- **"The reader will want to know how we got here"** — They will not. A skill describes the codebase as it is now. Drop the migration narrative, the superseded approach, and the incident that motivated the guardrail; keep the guardrail and the mechanism behind it.
 - **"I'll update state.md later"** — Update it now. If you don't, context recovery fails and work gets repeated.
 - **"The subagent will figure it out"** — Give the subagent complete context inline. Don't assume it can read your mind.
 - **"This module doesn't need a gotchas section"** — If you found no gotchas, say "None found." Don't silently omit the section — the agent needs to know you checked.
