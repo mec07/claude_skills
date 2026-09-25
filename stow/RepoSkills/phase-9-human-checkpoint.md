@@ -123,7 +123,7 @@ Mine the codebase for domain-specific terms that are not defined in `.ai/skills/
 6. **For skipped terms:** Leave them out. Do not invent definitions.
 
 ### Rules for Reverse Glossary
-- Show the file path and line number where each term appears — the human needs to see the context
+- Show the file path and line number where each term appears — the human needs to see the context. This is the live prompt, not a generated file; a skill never cites a line number
 - State your hypothesis clearly and mark it as a hypothesis, not a fact
 - The human's answer replaces your hypothesis entirely — do not blend or negotiate
 - Do NOT present standard technical vocabulary as domain terms

@@ -748,8 +748,8 @@ For team-wide coverage, CI integration is recommended over local hooks.
 - Follow existing patterns — read 2-3 examples of similar code first
 - Maintain quality — tests, types, complete implementations, no stubs
 - Document what is, not how it got there — comments, config `description` fields and
-  markdown state current behaviour. No commit hashes, no PR numbers; history
-  belongs in the commit message
+  markdown state current behaviour. No line numbers, commit hashes or PR
+  numbers; name the symbol to look for, and leave history to the commit message
 
 ## New to This Repo?
 
@@ -932,7 +932,10 @@ For team-wide coverage, CI integration is recommended over local hooks.
   fields, READMEs and skill docs describe current behaviour. Leave out what a
   value used to be, what was broken before, what an investigation measured, and
   any reference to a commit hash, a PR number, or a PR's position in a stack.
-  A hash means nothing to a reader and goes stale on a rebase. Git holds that
+  A hash means nothing to a reader and goes stale on a rebase. Never cite a line
+  number either - `file.go:80` is wrong the moment a line is added above it, and
+  a drifted citation sends the reader somewhere wrong with no signal that it has
+  moved; name the function, key or block and let them search. Git holds the
   history; the commit message and PR description are where it belongs. Keep a
   "why" line only
   where its absence would make the code look safe to delete, and state the
