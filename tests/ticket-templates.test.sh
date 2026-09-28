@@ -161,6 +161,32 @@ test_rule_check() {
     assert_at_least "RuleCheck has at least ten checklist items" 10 "$n"
 }
 
+test_create_workflow() {
+    f="$JIRA/Workflows/Create.md"
+    assert_file_contains "Create routes to the Bug template"   "Templates/Bug.md" "$f"
+    assert_file_contains "Create routes to the Epic template"  "Templates/Epic.md" "$f"
+    assert_file_contains "Create routes to the Story template" "Templates/Story.md" "$f"
+    assert_file_contains "Create runs the rule check"          "RuleCheck.md" "$f"
+    assert_file_contains "Create bans inference"               "never infers" "$f"
+    assert_file_contains "Create batches missing required sections" "one batched" "$f"
+    assert_file_contains "Create gets approval before creating" "before creating" "$f"
+    assert_file_contains "Create checks required Jira fields"  "getJiraIssueTypeMetaWithFields" "$f"
+    assert_file_contains "Create sends markdown"               "contentFormat" "$f"
+    # Review Focus 1
+    assert_file_contains "Create handles an ambiguous template choice" "names its choice" "$f"
+    # Review Focus 2
+    assert_file_contains "Create proposes a split over the cap" "Propose the split" "$f"
+    # Review Focus 3
+    assert_file_contains "Create invents no custom field value" "invent" "$f"
+    # Review Focus 4
+    assert_file_contains "Create lets an epic stand alone" "stands alone" "$f"
+    assert_no_dashes "Create obeys R3" "$f"
+
+    s="$JIRA/SKILL.md"
+    assert_file_contains "SKILL routing has a Create row" "**Create**" "$s"
+    assert_file_contains "SKILL links the ticket rules" "TicketRules.md" "$s"
+}
+
 # ---- runner ----
 
 test_ticket_rules_exist
@@ -168,6 +194,7 @@ test_story_template
 test_bug_template
 test_epic_template
 test_rule_check
+test_create_workflow
 
 printf "\n%d run, %d failed\n" "$TESTS_RUN" "$TESTS_FAILED"
 [ "$TESTS_FAILED" -eq 0 ]
