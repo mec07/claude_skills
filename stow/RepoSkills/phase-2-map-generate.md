@@ -15,6 +15,8 @@ Copy this checklist into `state.md` under the Phase 2 entry. Mark each item `[x]
 ```
 - [ ] 2.1: Confirm boundaries (read _triage.md, verify each boundary candidate)
 - [ ] 2.2: Generate orientation skill (.ai/skills/orientation.md)
+- [ ] 2.2b: Generate conventions.md (.ai/skills/conventions.md)
+- [ ] 2.2c: Generate readme-template.md (.ai/skills/readme-template.md)
 - [ ] 2.3: Generate module skills (.ai/skills/modules/<name>.md, parallel for large repos)
 - [ ] 2.4: Generate task skills (.ai/skills/tasks/<name>.md, conditional)
 - [ ] 2.5: Generate platform glue and maintenance tools (AGENTS.md, CLAUDE.md, .cursorrules, copilot-instructions.md, per-module routing, skill-drift.sh)
@@ -257,6 +259,46 @@ see the scripts/commands task skill.]
 
 ---
 
+### Step 2.2b: Generate `.ai/skills/conventions.md`
+
+The single home for repo-wide structural facts, so no unit README has to restate them. Read
+`## Project System` and `## Unit List` from `state.md` first.
+
+Required sections, in this order:
+
+| Section | Contents |
+|---|---|
+| What counts as a unit | The `enumeration-query`, the `authoritative-source` and its counterexample, and the exclusion list. Not a hand-maintained inventory: name the query |
+| Unit decisions | **Decisions only, never an inventory.** One line per candidate whose disposition a human settled or whose treatment departs from what the query implies: a Medium-only boundary confirmed, a deployability call that contradicts the `deployability-predicate`, an exclusion that needed a ruling. A unit the enumeration query already returns and that nobody argued about gets no line, because the query is its record |
+| Declined candidates | Candidates a human declined, with the date. A decline recorded only in `state.md` would be re-proposed on every other machine forever |
+| Standard layout | Where source, tests and infrastructure live, when the repo is consistent about it |
+| Standard commands | Build, test, lint and run, as the repo actually declares them |
+| Precedence | Verbatim: `code > README > conventions document`. This is its canonical home; the READMEs and `navigate-unit` link here rather than restating it |
+| Confirmed patterns | Induced patterns confirmed by a human, per the grammar file's induction loop |
+
+**A gated candidate not yet settled still gets its Unit decisions line**, marked pending
+confirmation and carrying its signals, written at generation time: the open question must travel
+with the repo rather than sit in one machine's `state.md`, and the Phase 9 confirmation step
+updates that line in place once a human answers, rather than inventing a new one.
+
+**Declined candidates is empty at generation time.** Only Phase 9 Step 9.3a writes to it. A
+project-system exclusion is not a decline, and belongs under "What counts as a unit" instead.
+
+**Mark generated sections.** Per spec 3.2's section-level form, place a `provenance=generated`
+comment directly under each section heading; it marks that whole section, ending at the next
+heading of the same level. Anything unmarked is human-taught and a later run must never remove it
+for failing to verify. One rule, one direction: mark what is generated.
+
+### Step 2.2c: Generate `.ai/skills/readme-template.md`
+
+Read [readme-grammar.md](readme-grammar.md) and follow its "Generating the repo-specific template"
+section. The grammar lives in that file, not here, so this file stays within its token budget.
+
+Output: `.ai/skills/readme-template.md` in the target repo. This step generates the template only.
+Writing the per-unit READMEs themselves is a later stage.
+
+---
+
 ## Step 3: Generate Module Skills (Layer 2)
 
 For each confirmed Tier 1 boundary from Step 1, write `.ai/skills/modules/<name>.md`. **Guideline: keep module skills concise — target ~1.5k tokens.** If a complex module genuinely needs more to explain its relationships, gotchas, and change impact, that's fine. But if a skill exceeds the guideline, check whether it contains greppable information that should be removed. Verbosity is a smell — investigate it, don't truncate.
@@ -481,6 +523,22 @@ Only generate a task skill if Phase 0 flagged it. The standard set and their tri
 | Feature Flags | `tasks/feature-flags.md` | Flag SDK or flag config found |
 | Error Handling | `tasks/error-handling.md` | Custom error classes or error middleware |
 
+**`navigate-unit` is always generated** where at least one unit is confirmed. It is the third leg of
+the architecture: `conventions.md` holds the repo-wide structural facts, a unit's `README.md` holds
+what is true for that one unit, and this skill is the **procedure** for using both.
+
+It contains: how to inspect a unit (confirm it is a unit via the enumeration query, read the
+conventions doc for the standard shape, read the unit's README for its deviations, read the
+infrastructure entry point, find the application entry point, then verify against the code), and how
+to change one and verify the change.
+
+It states the precedence rule by **linking** `conventions.md`, never by restating it:
+`code > README > conventions document`. A deviation documented in a README is intentional, so do not
+"fix" a unit to match the conventions document without first checking why it deviates.
+
+It gives commands and steps. It does **not** restate structural facts: those live in the conventions
+document, and duplicating them there and here is how the two drift apart.
+
 ### Testing task skill: test style and conventions
 
 The `tasks/testing.md` skill must include a **Test Style & Conventions** section that describes how tests are written in this repo. Derive this from reading the actual test files — look at patterns across multiple test files to identify the conventions.
@@ -689,6 +747,9 @@ For team-wide coverage, CI integration is recommended over local hooks.
 - Keep code DRY — search for existing implementations before writing new code
 - Follow existing patterns — read 2-3 examples of similar code first
 - Maintain quality — tests, types, complete implementations, no stubs
+- Document what is, not how it got there — comments, config `description` fields and
+  markdown state current behaviour. No line numbers, commit hashes or PR
+  numbers; name the symbol to look for, and leave history to the commit message
 
 ## New to This Repo?
 
@@ -867,6 +928,18 @@ For team-wide coverage, CI integration is recommended over local hooks.
 - Maintain quality — do not take shortcuts that create technical debt.
   If the codebase has tests, write tests. If it has types, use types.
 - Do not be lazy — write complete implementations, not stubs or TODOs.
+- Document what is, not how it got there — comments, config `description`
+  fields, READMEs and skill docs describe current behaviour. Leave out what a
+  value used to be, what was broken before, what an investigation measured, and
+  any reference to a commit hash, a PR number, or a PR's position in a stack.
+  A hash means nothing to a reader and goes stale on a rebase. Never cite a line
+  number either - `file.go:80` is wrong the moment a line is added above it, and
+  a drifted citation sends the reader somewhere wrong with no signal that it has
+  moved; name the function, key or block and let them search. Git holds the
+  history; the commit message and PR description are where it belongs. Keep a
+  "why" line only
+  where its absence would make the code look safe to delete, and state the
+  mechanism rather than the story it came from.
 
 ## Documentation
 
@@ -921,7 +994,7 @@ Every root file (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md) MU
 | **Before Committing** | Fix what this change falsified, and the drift command that finds it |
 | **Skill & Routing Maintenance** | Living docs guidance — when and how to update skills during use |
 | **Documentation** | Pointers to the full skill layer (orientation, modules, tasks, domain context) |
-| **Coding Standards** | DRY, follow patterns, maintain quality, no stubs |
+| **Coding Standards** | DRY, follow patterns, maintain quality, no stubs, document what is rather than how it got there |
 | **New to This Repo?** | Numbered onboarding steps for agents encountering the repo for the first time |
 
 **Every root file must be self-sufficient.** Each platform has its own compaction behaviour — CLAUDE.md survives in Claude Code, but copilot-instructions.md may be the only thing Copilot retains, and .cursorrules may be the only thing Cursor keeps. An agent reading ANY single root file must be able to navigate the codebase without needing the others. No root file should redirect to another root file — each one stands alone.
@@ -1111,7 +1184,7 @@ All four root files (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md
 - [ ] Before Committing (fix what the change falsified, drift command)
 - [ ] Skill & Routing Maintenance (living docs guidance, refactoring updates)
 - [ ] Documentation (pointers to skill layer: orientation, modules, tasks, domain context)
-- [ ] Coding Standards (DRY, follow patterns, maintain quality)
+- [ ] Coding Standards (DRY, follow patterns, maintain quality, document what is rather than how it got there)
 - [ ] New to This Repo? (numbered onboarding steps)
 - [ ] No root file redirects to another root file — each stands alone
 
@@ -1126,6 +1199,9 @@ All four root files (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md
 - [ ] `.ai/skills/` directory structure is clean: `orientation.md`, `modules/`, `tasks/`, `domain-context.md` (if exists)
 - [ ] No orphan files — every skill file is referenced from the routing tables in CLAUDE.md / AGENTS.md
 - [ ] No duplicate facts — each fact lives in exactly one canonical location
+  (Expand-stage exemption: `conventions.md` Standard commands deliberately duplicate
+  orientation's Quick Reference and `tasks/scripts.md` while module skills and unit READMEs
+  coexist. Do not strip either copy; removing the duplication is stage 2b's job.)
 - [ ] Module skill overrides reference task skills that exist
 
 Fix any issues found. Then:
@@ -1237,6 +1313,7 @@ Watch for these rationalizations and resist them:
 - **"This module is too complex for 1.5k tokens"** — Then you are including greppable information. Cut the WHAT, keep the WHY and the GOTCHAS.
 - **"I remember what the code does"** — You don't. Read the file. Every time.
 - **"This is probably right"** — Probably is not verified. Check it or mark it `<!-- TODO: verify -->`.
+- **"The reader will want to know how we got here"** — They will not. A skill describes the codebase as it is now. Drop the migration narrative, the superseded approach, and the incident that motivated the guardrail; keep the guardrail and the mechanism behind it.
 - **"I'll update state.md later"** — Update it now. If you don't, context recovery fails and work gets repeated.
 - **"The subagent will figure it out"** — Give the subagent complete context inline. Don't assume it can read your mind.
 - **"This module doesn't need a gotchas section"** — If you found no gotchas, say "None found." Don't silently omit the section — the agent needs to know you checked.

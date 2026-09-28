@@ -312,6 +312,8 @@ Check every file path referenced across all `.ai/skills/` files and platform glu
 
 Scan all skill files for facts stated in more than one place. If you find any, move the fact to its canonical location and replace duplicates with links. Every fact lives in exactly one place.
 
+**Expand-stage exemption:** while module skills and unit READMEs coexist, `conventions.md`'s Standard commands section deliberately duplicates `orientation.md`'s Quick Reference and `tasks/scripts.md`. Do not strip either copy; removing the duplication belongs to stage 2b.
+
 **All three gates must pass.** If you made fixes during this step, re-run the failed gate(s) to confirm they now pass.
 
 **Escalation:** If a gate fails after 3 fix-and-recheck cycles, stop looping. Log the failing gate and the specific failures to `state.md` as a known issue. Proceed to Phase 4 — the validation phase will catch remaining problems. Do not loop indefinitely.

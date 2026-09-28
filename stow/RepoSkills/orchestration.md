@@ -39,6 +39,26 @@ started: ISO-timestamp
 updated: ISO-timestamp
 update-mode: <fresh|targeted|diff|full>
 
+## Project System
+
+Recorded by Phase 0 Step 4a. Always present: a repo with no project system still records
+`none` values here rather than omitting the section, since Step 4's signal detection is
+then the whole answer.
+
+enumeration-query: <command listing every project the repo recognises, or "none">
+detail-query: <command returning one project's root and targets, or "none">
+deployability-predicate: <what distinguishes a unit that ships, or "none">
+exclusions: <paths that look like units but are deliberately outside the project system>
+authoritative-source: <which candidate query was confirmed, and the counterexample that ruled the others out>
+
+## Unit List
+
+Recorded by Phase 0 Step 4b: one block per boundary candidate, keys `path`, `name`, `signals`,
+`deployable` (yes/no), `readme` (exists | exists-miscased | absent), `action` (update | create |
+create-pending-confirmation | excluded), `nested-under` (closest enclosing unit path, or none) and
+`reason` (present only when `action: excluded`; `workspace-root`, or the project-system exclusion
+it fell under).
+
 ## Detected Platforms
 - [ ] Claude Code
 - [ ] Cursor
@@ -84,6 +104,12 @@ update-mode: <fresh|targeted|diff|full>
 |------|------|---------|--------|
 | ISO-timestamp | fresh | all | abc1234 |
 ```
+
+**Never-browse paths are never named in `state.md`.** A path inside a never-browse exclusion-list
+directory (`node_modules`, `dist`, `build`, `vendor`, `.git` and the rest) is not written into
+`state.md`, not as a unit, not in a file count, and not in an explanatory note about why it was
+excluded. Where a count needs to say what it left out, name the directory category rather than a
+specific path inside it. Any phase can write this file, so the rule binds all of them, not one.
 
 **After Phase 0 completes:** The orchestrator MUST extract the tier classification from `_triage.md` and write it to `state.md` in the `tier:` field and the `## Repo Size Tier` section. All subsequent phases rely on this value.
 
@@ -266,12 +292,15 @@ When running the full pipeline:
 
 **Between Phases 0 and 2 -- Phase 1 (Domain Interview) decision:** The orchestrator checks whether Phase 1 should run. If `.ai/skills/domain-context.md` exists AND Phase 0 scored it high-confidence AND its `Last interview` timestamp is within 6 months, skip Phase 1 and proceed to Phase 2. If the user invoked with `--interview` or `--redo-interview`, always run Phase 1 regardless. Otherwise, run Phase 1.
 
-**Between Phases 8 and 9 -- Phase 9 skip condition:** Phase 9 can be skipped if ALL THREE of the following are true:
+**Between Phases 8 and 9 -- Phase 9 skip condition:** Phase 9 can be skipped if ALL FIVE of the following are true:
 1. `_unresolved.md` contains zero issues (or does not exist)
 2. The Reverse Glossary finds zero new domain terms
 3. `_questions.md` contains no unanswered questions (no modules flagged with missing info)
+4. `state.md`'s `## Unit List` contains no `action: create-pending-confirmation` entry
+5. No induced pattern awaits confirmation (no generated artifact carries a `_not yet linked_` row
+   whose pattern was never presented to a human)
 
-If all three conditions are met, skip Phase 9, proceed directly to cleanup, and inform the user that no human input is needed.
+If all five conditions are met, skip Phase 9, proceed directly to cleanup, and inform the user that no human input is needed.
 
 ### Cleanup
 
@@ -407,11 +436,12 @@ Skills do NOT contain:
 ### Structure
 
 - `.ai/skills/` contains the detailed skill layer (orientation, modules, tasks, domain context). Root platform files (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md) are each self-sufficient — they contain all 13 required sections and do not redirect to each other. Root files intentionally overlap by design for compaction safety.
-- Within the skill layer, every fact lives in exactly one place. Root platform files are exempt from this rule — their overlap is by design.
+- Within the skill layer, every fact lives in exactly one place. Root platform files are exempt from this rule — their overlap is by design. Expand-stage exemption: while module skills and unit READMEs coexist, `conventions.md`'s Standard commands deliberately duplicate `orientation.md`'s Quick Reference and `tasks/scripts.md`. No phase may strip either copy; removing the duplication belongs to stage 2b.
 - Cross-link aggressively between skills. No orphan skills.
 - Module skills should map to real, coherent boundaries in the codebase -- not to directories.
 - Task skills should map to real workflows agents perform -- not to abstractions.
-- Content that would appear in `conventions.md`, `dependency-map.md`, or `workflows.md` as separate files instead lives in `orientation.md` and individual module skills. Do not generate these as standalone output files.
+- Content that would appear in `dependency-map.md` or `workflows.md` as separate files instead lives in `orientation.md`. Do not generate those as standalone output files.
+- `conventions.md` **is** generated as a standalone file at `.ai/skills/conventions.md`. The original rule forbade it because it was redundant with module skills; once unit READMEs replace those, the conventions document is what stops every README restating the same build commands. It is the single home for repo-wide structural facts.
 
 ### Exploration
 

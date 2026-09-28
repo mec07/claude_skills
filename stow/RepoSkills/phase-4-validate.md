@@ -195,6 +195,8 @@ Update `state.md`: mark step 4.7 complete.
 
 Scan for the same information appearing in multiple **skill files** (`.ai/skills/`). If found, keep it in the most appropriate location and replace the duplicates with links or remove them.
 
+**Expand-stage exemption:** while module skills and unit READMEs coexist, `conventions.md`'s Standard commands section deliberately duplicates `orientation.md`'s Quick Reference and `tasks/scripts.md`. Do not strip either copy or flag it as a finding; removing the duplication belongs to stage 2b.
+
 **Root platform files are exempt from this check.** CLAUDE.md, AGENTS.md, .cursorrules, and copilot-instructions.md intentionally contain the same required sections because each must be self-sufficient. This overlap is by design — do not remove it.
 
 Also verify that root platform files have preserved any project-specific content that existed before the skill pipeline ran. If a root file was rewritten and user-added content was lost, flag this as a finding.

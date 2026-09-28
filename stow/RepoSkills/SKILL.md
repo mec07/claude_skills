@@ -78,6 +78,8 @@ Phase 9: Human Checkpoint      → Reverse Glossary + unresolvable questions
 |------|---------|
 | `orientation.md` | System understanding — repo shape, tech stack, boundary map (NO routing — routing lives in root files) |
 | `domain-context.md` | Business domain, terminology, regulatory, architecture rationale |
+| `conventions.md` | Repo-wide structural facts, written once: what counts as a unit, standard layout and commands, the precedence rule, confirmed induced patterns |
+| `readme-template.md` | This repo's instantiation of the README grammar, used when authoring or updating a unit README |
 | `modules/<name>.md` | One per module — purpose, relationships, change impact, seams, gotchas, testing |
 | `tasks/<name>.md` | One per detected capability — how to do X in this specific repo |
 | `Tools/skill-drift.sh` | Drift detection — compares skill freshness against code changes, usable as CI check or git hook |
@@ -115,6 +117,7 @@ Each phase reads its instructions from a dedicated file in this skill directory:
 | 8 | `phase-8-clarity-review-2.md` |
 | 9 | `phase-9-human-checkpoint.md` |
 | DR | `phase-drift-resolve.md` |
+| grammar | `readme-grammar.md` |
 
 ### Templates
 
