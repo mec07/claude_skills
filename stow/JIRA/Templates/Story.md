@@ -44,15 +44,16 @@ deleted rather than filled.
 **`## What we want`** opens with a plain outcome sentence: what is true once this is done.
 Not "As a / I want / So that". That form is the textbook one, and it is deliberately not
 used here, because a large share of these tickets have no end user and the form then
-forces an invented persona. The reasoning is in the design spec, section 7.2.
+forces an invented persona onto infrastructure and tech debt work.
 
 **`## Why it matters`** carries what the As-a form is genuinely good at: who benefits and
 why. It is required for internal work as much as for customer-facing work. A number that
 already exists beats an adjective.
 
 **`## Acceptance criteria`** are an observable-outcome checklist. One line per criterion,
-each a binary observable fact. Not Given/When/Then, for the reason in the design spec,
-section 7.1.
+each a binary observable fact. Not Given/When/Then: it spends three lines on what the
+checklist says in one, and most criteria have no precondition worth naming. Where one
+genuinely does, fold it into the sentence, as in "A customer with a saved card can ...".
 
 A criterion is well formed when a person who did not write the ticket could look at the
 running system and say yes or no without asking anyone.

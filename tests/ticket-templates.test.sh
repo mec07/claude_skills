@@ -200,6 +200,16 @@ test_techdebt_uses_story_template() {
     assert_file_lacks    "TechDebt has no dangling expanded-text reference" "the expanded text" "$f"
 }
 
+test_no_dangling_spec_references() {
+    # Templates and references install to ~/.claude/skills/JIRA/ without the
+    # repo's docs/ tree, so a pointer at the design spec is unreachable there.
+    for f in "$JIRA/Templates/Story.md" "$JIRA/Templates/Bug.md" \
+             "$JIRA/Templates/Epic.md" "$JIRA/Reference/TicketRules.md" \
+             "$JIRA/Reference/RuleCheck.md" "$JIRA/Workflows/Create.md"; do
+        assert_file_lacks "$(basename "$f") has no design-spec pointer" "design spec" "$f"
+    done
+}
+
 # ---- runner ----
 
 test_ticket_rules_exist
@@ -209,6 +219,7 @@ test_epic_template
 test_rule_check
 test_create_workflow
 test_techdebt_uses_story_template
+test_no_dangling_spec_references
 
 printf "\n%d run, %d failed\n" "$TESTS_RUN" "$TESTS_FAILED"
 [ "$TESTS_FAILED" -eq 0 ]
