@@ -1,6 +1,7 @@
 # TechDebt — Create Workflow
 
-Log a tech debt ticket without breaking flow. Checks for duplicates, expands the description, creates the ticket, opens it.
+Log a tech debt ticket without breaking flow. Checks for duplicates, renders the Story
+template, creates the ticket, opens it.
 
 ---
 
@@ -38,7 +39,7 @@ Extract the description from the skill arguments.
 
 If no description provided, use AskUserQuestion:
 ```
-"What's the tech debt? (brief description — I'll expand it into a proper ticket)"
+"What's the tech debt? A sentence is enough; I will not pad it out."
 ```
 
 ---
@@ -146,6 +147,17 @@ exists between those two portals is kept.
 criteria are usually about behaviour that must not change: the same rows render, the same
 permissions apply, the existing tests still pass.
 
+**Where a failed rule check lands here.** `RuleCheck.md` says to run before showing the
+draft to the user, and this workflow deliberately never shows one: the whole point is not
+to break your flow. So the rule for TechDebt specifically is that a twice-failed item is
+reported alongside the created ticket, in the step 8 output, rather than blocking
+creation or inventing an interruption.
+
+That is the right trade here and not elsewhere. A tech debt ticket is internal, cheap to
+edit, and already opens in the browser at step 6, so you see the flagged line seconds
+later. The `JIRA` Create workflow, which can raise customer-visible tickets, keeps the
+blocking behaviour.
+
 ---
 
 ## Step 5 — Create the Jira Ticket
@@ -221,7 +233,12 @@ This makes the dependency chain visible in Jira. Do this for:
 
 After creating the ticket, assess whether there's enough context to fix it right now via a Worktree spin-up.
 
-**Score the description against these signals:**
+**Score the user's original note against these signals, not the rendered ticket.**
+R1 strips file paths and the approach out of the ticket body, so scoring the ticket would
+drive almost everything to Design needed and quietly stop the worktree offer firing. The
+note still holds what these signals measure.
+
+Signals:
 
 | Signal | Weight |
 |--------|--------|
@@ -287,6 +304,6 @@ Then output the fixability rating inline:
 | Situation | Action |
 |-----------|--------|
 | Jira API fails | Show the raw error response and the equivalent call the user can run manually |
-| Inference fails | Use the user's raw description as the ticket description (unformatted) |
+| Rule check fails twice on the same item | Quote the offending line and ask the user |
 | `open` not available | Print URL prominently with a reminder to open manually |
 | Duplicate found, user cancels | Report the existing ticket key and URL so they can add a comment instead |

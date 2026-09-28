@@ -85,21 +85,19 @@ Event timestamps are stored as UTC whatever timezone the host is set to.
 1. Put the host on a timezone that is not UTC, such as Europe/London in summer
 2. Run `bento blobl 'root = (1700000000000/1000000).ts_unix().ts_format("2006-01-02T15:04:05Z")'`
 3. Run the same command again with `TZ=UTC` in front
-4. Compare the two results
+4. Compare the two results: they differ by the host offset
 
 ## Where it was seen
 
-events-pipeline-infrastructure, the events insert mapping, bento 1.21.2.
-Not currently firing: the image runs with TZ=UTC and nothing in the Deployment sets TZ.
+events-pipeline-infrastructure, `events_insert_args.blobl`, bento 1.21.2.
+Observed on a Europe/London host: 1970-01-20T17:13:20Z, against 16:13:20Z under TZ=UTC.
 The two other Bento pipelines that write timestamps pass the timezone explicitly.
 
 ## Impact
 
-Nobody is affected today. It starts producing wrong rows silently the moment anything
-makes the host non-UTC, such as a TZ variable on the pod or a base image change. The
-columns have no time zone, so Postgres keeps whatever digits arrive and every reader
-treats them as UTC. There is no error and nothing to alert on, and CI pins TZ=UTC, so the
-test gate would not catch it either.
+Nobody is affected today, because the image happens to run on UTC. The moment anything
+changes that, every event row is silently wrong by the host offset, with no error to
+alert on and no test gate to catch it, since CI pins TZ=UTC too.
 ````
 
 ## 3. The numbers
@@ -110,11 +108,20 @@ markers while a raw count does not.
 | | Raw words | By the template's counting rule | Shape |
 |---|---|---|---|
 | Before | 239 | 229 | 4 headings plus an unheaded opening, 4 code blocks |
-| After | 204 | 182 | 5 headings, no code block outside the repro step |
-| Change | 15 percent shorter | 20 percent shorter | one screen, no scrolling |
+| After | 176 | 154 | 5 headings, no code block outside the repro step |
+| Change | 26 percent shorter | 33 percent shorter | one screen, no scrolling |
 
-**Twenty percent is a modest number and it is the honest one.** An earlier draft of this
-document claimed 27 percent against an unverified count; the figures above were measured.
+**Every figure above was measured, and the history is worth recording.** The first draft
+of this document asserted 27 percent without counting. Measuring gave 20 percent. A review
+then found that the `## Impact` section was four sentences against a cap of two and that
+the rewrite had dropped evidence it was entitled to keep. Fixing both produced the numbers
+above: cutting Impact to its cap saved more than restoring the filename and the two
+observed timestamps cost, so the ticket ended up shorter **and** more useful than the
+version that had quietly broken its own cap.
+
+That is the argument for hard caps in one paragraph. The padded section was not carrying
+information; it was carrying mechanism the reader could infer.
+
 The word reduction is real but it is not the main result. The main result is that the
 "after" contains no instruction about what to change, so the person who picks it up is
 free to decide whether the fix is a timezone argument, a pinned `TZ` in the Deployment, or
@@ -126,8 +133,8 @@ a column type change. The "before" had already chosen.
 |---|---|
 | The whole `## Fix` section, naming the file and the exact replacement call | R1. It is the solution, and it pre-empts three other valid fixes. |
 | `bento-late-model-runs-to-db.tf:233` and `bento-metrics-to-timescale.tf:402`, with their code | R1. The fact that the other pipelines differ is evidence and was kept; the line numbers and the code they contain are a pointer to the edit and were not. |
-| The opening code block showing the offending call | R1. Kept as prose: the mapping formats with no timezone. |
-| The `## Note` paragraph about `ci/bento-scripts/check.sh` | Cap on `## Impact`. The load-bearing half, that CI would not catch it, was folded into Impact in one clause. The half arguing about why the gate is pinned was cut. |
+| The opening code block, as a standalone block asserting the diagnosis | R1. The call itself was **not** removed: it survives inside repro step 2, where it is an instruction to the reader reproducing the bug rather than a claim about the cause. |
+| The `## Note` paragraph about `ci/bento-scripts/check.sh` | Cap on `## Impact`. The load-bearing half, that CI would not catch it, survives as one clause. The half arguing about why the gate is pinned was cut. |
 | The unit-tests-stay-green sentence | R1. It is a claim about the proposed fix, which no longer exists in the ticket. |
 | Priority `Lowest` and label `bug` | R2. Both are Jira fields and were already set. Neither was in the body, so this rule cost nothing here. |
 | No acceptance criteria section was added | Bug template. "What should happen" plus the repro is the criterion. |
@@ -145,22 +152,31 @@ a column type change. The "before" had already chosen.
 
 ## 6. What was lost, honestly
 
-**The exact call site is gone.** The before opened with the basename
-`events_insert_args.blobl` and gave the full path,
-`infrastructure/bento/mappings/events_insert_args.blobl`, inside `## Fix`. The after says
-"the events insert mapping" and gives neither. A developer now spends a minute finding it.
+**The first pass dropped the call site, and that was wrong.** It removed
+`events_insert_args.blobl` entirely, on the grounds that the full path
+`infrastructure/bento/mappings/events_insert_args.blobl` had appeared under `## Fix`. But
+the basename also appeared in the opening line, as a plain statement of where the problem
+lives, and R1's carve-out covers exactly that: a filename the reporter already holds is
+evidence, not instruction.
 
-This is the weakest call in the rewrite. R1's carve-out permits keeping a filename the
-reporter already holds, and the basename in the opening line was evidence, not
-instruction: dropping it was stricter than the rule requires. Keeping
-`events_insert_args.blobl` and dropping only the full path from `## Fix` would have been
-defensible and arguably better. It is recorded here rather than quietly fixed, because the
-point of this document is to show where the templates bite.
+Over-applying R1 here would have made this document demonstrate the rule doing the precise
+harm `../../../stow/JIRA/Reference/RuleCheck.md` warns about, in the one example meant to
+justify adopting the templates. The filename is now back, in `## Where it was seen`, which
+is where the Bug template says it belongs.
 
-**The `ts_format` snippet is gone.** Someone who does not know Bento now has to look up
-what the mapping does. This is the cost of the rule and it is real. The counter-argument,
-which is why the rule stands: the snippet is only useful if you have already accepted the
-ticket's diagnosis, and the ticket's job is to state the symptom.
+The near miss is left on the record because the failure mode is instructive: it is easy to
+read R1 as "strip anything that names the system" when it says "strip anything that directs
+the implementer". The rule check's verdict table exists to keep those apart.
+
+**The standalone `ts_format` block is gone, and this one is a genuine loss.** The before
+opened with the offending call quoted on its own, which told a reader who knows Bento what
+was wrong in one glance. The after carries the same call inside repro step 2, where it is
+a command to run rather than a diagnosis to accept. Someone who knows the codebase now
+reads four lines instead of one.
+
+That is the cost of the rule, and it is real. The reason the rule stands: the standalone
+block is only useful once you have accepted the reporter's diagnosis, and a ticket that
+leads with a diagnosis has pre-empted the judgement of whoever picks it up.
 
 **One judgement call worth flagging.** The after keeps "The two other Bento pipelines that
 write timestamps pass the timezone explicitly." That is evidence under R1's carve-out, and
@@ -173,11 +189,26 @@ here: when unsure, keep it and say so rather than deleting silently.
 
 ## 7. Verification
 
-- The "after" body was checked by hand against every item of
-  `stow/JIRA/Reference/RuleCheck.md`. All ten pass.
-- 182 words against the Bug template's cap of 200, measured by the template's counting
-  rule. That is close to the ceiling, and it is close because step 2 of the repro carries a
-  long command. Worth noting for the templates: a repro step containing a full command line
-  spends a disproportionate share of the cap.
-- Every required Bug section is present. `## Also true when fixed` is absent, correctly:
-  the bug has not fired, so there are no wrong rows to correct.
+**An earlier version of this section claimed "all ten pass" without checking, and item one
+did not pass.** `## Impact` was four sentences against a cap of two. A reviewer caught it.
+The claim is restated below as what was actually verified and how.
+
+| Check | Result | How |
+|---|---|---|
+| Every section within its stated cap | pass | Counted by hand, section by section, against the table in `../../../stow/JIRA/Templates/Bug.md`. `## Impact` is 2 sentences, `## Where it was seen` 3 lines, `## Steps to reproduce` 4 steps. |
+| Whole ticket within its word cap | pass | 154 words against 200, measured by script, not estimated. |
+| Every required section present and saying something real | pass | All five present. |
+| No optional section present with filler | pass | `## Also true when fixed` is absent, correctly: the bug has not fired, so there are no wrong rows to correct. |
+| No solution language | pass, with one call recorded | The pipelines-differ line is evidence under R1's carve-out. See section 6. |
+| Nothing belonging in a Jira field | pass | Priority and labels stay fields. |
+| No em dash or en dash | pass | Checked by `tests/ticket-templates.test.sh`. |
+| No emoji prefix, no bold severity label | pass | None present. |
+| Acceptance criteria observable and binary | n/a | A Bug has no acceptance criteria section by design. |
+| Acceptance criteria last | n/a | Same. |
+
+Eight pass, two do not apply to a Bug. That is the honest count, and it is not ten.
+
+**Regression cover.** `test_worked_example_obeys_the_bug_template` in
+`tests/ticket-templates.test.sh` now checks the "after" block automatically: the filename
+is present, the two observed timestamps are present, and `## Impact` is within two
+sentences. The cap violation this section once hid would now fail the suite.

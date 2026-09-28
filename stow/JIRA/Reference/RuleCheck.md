@@ -22,6 +22,14 @@ An item that fails twice on the same text is surfaced to the user with the offen
 quoted, rather than attempted a third time. Two failures mean the check and the draft
 disagree about something a person should settle.
 
+**A cap the user has been shown and has explicitly chosen to keep is not a failure.**
+The clearest case is a story where the workflow proposed a split at more than seven
+acceptance criteria and the user said keep it as one. The cap has done its job by making
+the choice visible, and the only ways to satisfy it now are truncating or merging, both
+of which the Create workflow forbids. Record it as a named judgement call when showing the
+ticket, and move on. Arguing with a decision the user has just made is worse than a long
+section.
+
 ## The solution-language false positive
 
 This is the check most likely to be wrong, and the way it goes wrong makes the skill worse

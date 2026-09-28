@@ -17,6 +17,12 @@ fail() {
     printf "       %s\n" "$2"
 }
 
+# A needle must sit on ONE line of the target file: grep -F matches within a
+# line, so a phrase straddling a wrap never matches. When reflowing prose breaks
+# an assertion, reflow the prose back or shorten the needle to a phrase that fits
+# one line. Do NOT weaken a needle to a word that would match anywhere: the whole
+# value of this suite is that its needles are distinctive enough to guard the
+# sentence they are named for.
 assert_file_contains() {
     # assert_file_contains <name> <needle> <file>
     if [ ! -f "$3" ]; then fail "$1" "no such file: $3"; return; fi
@@ -73,7 +79,7 @@ test_ticket_rules_exist() {
     assert_file_contains "TicketRules states R3 by name" "R3" "$f"
     assert_file_contains "R1 forbids stating the solution" "never states the solution" "$f"
     assert_file_contains "R1 carries the evidence carve-out" "evidence" "$f"
-    assert_file_contains "R2 names the Jira fields it excludes" "priority" "$f"
+    assert_file_contains "R2 names the Jira fields it excludes" "Priority, severity, labels" "$f"
     assert_file_contains "R3 points at the existing voice rules" "SKILL.md" "$f"
     assert_no_dashes "TicketRules obeys R3 itself" "$f"
 }
@@ -177,7 +183,7 @@ test_create_workflow() {
     # Review Focus 2
     assert_file_contains "Create proposes a split over the cap" "Propose the split" "$f"
     # Review Focus 3
-    assert_file_contains "Create invents no custom field value" "invent" "$f"
+    assert_file_contains "Create invents no custom field value" "Never invent a value for a required custom field" "$f"
     # Review Focus 4
     assert_file_contains "Create lets an epic stand alone" "stands alone" "$f"
     assert_no_dashes "Create obeys R3" "$f"
@@ -210,6 +216,42 @@ test_no_dangling_spec_references() {
     done
 }
 
+test_techdebt_has_no_stale_expansion() {
+    f="$TECHDEBT/Workflows/Create.md"
+    assert_file_lacks    "TechDebt header does not promise expansion" "expands the description" "$f"
+    assert_file_lacks    "TechDebt does not tell the user it will expand" "expand it into a proper ticket" "$f"
+    assert_file_lacks    "TechDebt has no inference-fails escape hatch" "Inference fails" "$f"
+    assert_file_contains "TechDebt says where a failed rule check lands" "alongside the created ticket" "$f"
+    assert_file_contains "TechDebt scores the original note not the ticket" "user's original note" "$f"
+}
+
+test_create_workflow_resolves_its_gaps() {
+    f="$JIRA/Workflows/Create.md"
+    # Review Focus 1, hard form: one ask that reads as both bug and story.
+    assert_file_contains "Create breaks a tie when both signals fire" "choose Bug" "$f"
+    r="$JIRA/Reference/RuleCheck.md"
+    assert_file_contains "RuleCheck exempts a cap the user explicitly kept" "explicitly chosen to keep" "$r"
+}
+
+test_worked_example_obeys_the_bug_template() {
+    f="$REPO_ROOT/docs/superpowers/specs/2026-09-28-jira-ticket-templates-worked-example.md"
+    if [ ! -f "$f" ]; then fail "worked example exists" "no such file: $f"; return; fi
+    # The second ````markdown block is the rewritten ticket.
+    after="$(awk '/^````markdown$/ { n++; if (n == 2) { g = 1; next } } /^````$/ { if (g) exit } g' "$f")"
+    case "$after" in
+        *events_insert_args.blobl*) pass "After keeps the call site as evidence" ;;
+        *) fail "After keeps the call site as evidence" "filename absent from the rewritten ticket" ;;
+    esac
+    case "$after" in
+        *17:13:20Z*) pass "After keeps the observed timestamps as evidence" ;;
+        *) fail "After keeps the observed timestamps as evidence" "the two observed values are absent" ;;
+    esac
+    impact="$(printf '%s\n' "$after" | awk '/^## Impact$/ { g = 1; next } /^## / { g = 0 } g')"
+    n="$(printf '%s' "$impact" | tr -cd '.' | wc -c | tr -d ' ')"
+    assert_at_most "After Impact is within its 2 sentence cap" 2 "$n"
+    assert_file_lacks "Worked example makes no unverified all-pass claim" "All ten pass." "$f"
+}
+
 # ---- runner ----
 
 test_ticket_rules_exist
@@ -220,6 +262,9 @@ test_rule_check
 test_create_workflow
 test_techdebt_uses_story_template
 test_no_dangling_spec_references
+test_techdebt_has_no_stale_expansion
+test_create_workflow_resolves_its_gaps
+test_worked_example_obeys_the_bug_template
 
 printf "\n%d run, %d failed\n" "$TESTS_RUN" "$TESTS_FAILED"
 [ "$TESTS_FAILED" -eq 0 ]

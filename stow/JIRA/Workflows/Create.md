@@ -17,6 +17,12 @@ Read first: `../Reference/TicketRules.md`. Everything below assumes R1, R2 and R
 Where two could apply, the workflow **names its choice in one line and continues**. It does
 not ask. A wrong guess costs one correction; a question costs an interruption every time.
 
+**When both signals fire on the same single ask, choose Bug.** "Search used to be fast and
+now it times out, we should paginate" is one request that reads as a regression and as new
+work, with nothing to separate. Bug is the narrower claim and the cheaper commitment to
+undo: if it turns out nothing regressed, the ticket becomes a story with its repro intact,
+whereas a story raised for a regression has already discarded the repro.
+
 **Worked case, an ambiguous request.** "The export used to include archived rows and now it
 does not, and while we are there it should also do CSV." That is a regression and a feature
 request. Say: "Raising this as a bug about the archived rows. The CSV request needs its own
@@ -46,6 +52,10 @@ one story. Do not truncate to seven, and do not merge two into one longer line.
 which criteria went where. The user approves, redraws the line, or says keep it as one.
 Over-specifying acceptance criteria erodes negotiability, and nine criteria is usually two
 stories that have not been separated yet.
+
+If the user says keep it as one, that settles it. The rule check does not then fail the
+ticket on the cap, per the explicit-keep clause in `../Reference/RuleCheck.md`. Name it as
+a judgement call at step 4 and create the ticket.
 
 ---
 
