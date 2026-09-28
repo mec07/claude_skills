@@ -282,10 +282,10 @@ README, and it must never be created or conformed by this pipeline. Record it as
 
 **1. Does the *authoritative* project system exclude it?** `action: excluded`, and this wins even
 when a README exists there: an excluded directory's README is its self-documentation of the
-exclusion, not an invitation to conform it. Record `readme: exists` so the writing phase knows the
-self-documentation is already present, and record excluded candidates rather than dropping them, so
-a later phase can give the ones without a README one that says they are deliberately outside the
-system.
+exclusion, not an invitation to conform it. Record `readme:` by question 2's test either way, so
+the writing phase knows whether that self-documentation is already present, and record excluded
+candidates rather than dropping them, so a later phase can give the ones recording `readme: absent`
+one that says they are deliberately outside the system.
 
 **Invisibility to a non-authoritative query is not exclusion.** Read the `authoritative-source` key
 Step 4a recorded and ask only that query. A directory the authoritative source can see and

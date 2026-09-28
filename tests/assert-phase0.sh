@@ -30,8 +30,8 @@ need "deployability predicate recorded"     "deployability-predicate:"
 need "exclusions recorded"                  "exclusions:"
 need "authoritative source recorded"        "authoritative-source:"
 need "the plausible-subset counterexample is recorded on the authoritative-source line" "authoritative-source:.*analytics/pipeline"
-need "workspace globs identified as the enumeration source" "workspaces"
-need "the excluded spike is named as an exclusion" "experiments/spike"
+need "workspace globs identified as the enumeration source" "enumeration-query:.*workspaces"
+need "the excluded spike is named as an exclusion" "exclusions:.*experiments/spike"
 absent "node_modules never appears as a unit" "node_modules/left-pad"
 
 unit_has() {
