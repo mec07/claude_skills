@@ -227,7 +227,7 @@ git commit -m "Add ticket rules reference and its test harness"
 - Modify: `tests/ticket-templates.test.sh`
 
 **Interfaces:**
-- Consumes: `assert_file_contains`, `assert_file_lacks`, `assert_no_dashes`, `example_words`, `assert_at_most` from Task 1.
+- Consumes: `assert_file_contains`, `assert_file_lacks`, `assert_no_dashes`, `example_words`, `assert_at_most`, `assert_at_least` from Task 1.
 - Produces: the heading set `## What we want`, `## Why it matters`, `## Out of scope`, `## Acceptance criteria`. Task 7 renders this file by path `~/.claude/skills/JIRA/Templates/Story.md`.
 
 - [ ] **Step 1: Write the failing test**
@@ -248,6 +248,7 @@ test_story_template() {
     assert_file_contains "Story says why it drops the As-a form" "invented persona" "$f"
     assert_file_lacks    "Story has no Suggested Approach" "Suggested Approach" "$f"
     assert_no_dashes     "Story obeys R3" "$f"
+    assert_at_least "Story has a worked example at all" 20 "$(example_words "$f")"
     assert_at_most "Story example is within 200 words" 200 "$(example_words "$f")"
 
     # Acceptance criteria must be the last heading in the worked example.
@@ -345,7 +346,7 @@ line to fit the count.
 
 Run: `sh tests/ticket-templates.test.sh`
 
-Expected: PASS. `21 run, 0 failed`.
+Expected: PASS. `22 run, 0 failed`.
 
 - [ ] **Step 5: Commit**
 
@@ -386,6 +387,7 @@ test_bug_template() {
     assert_file_lacks    "Bug has no acceptance criteria section" "## Acceptance criteria" "$f"
     assert_file_lacks    "Bug keeps severity out of the body" "## Severity" "$f"
     assert_no_dashes     "Bug obeys R3" "$f"
+    assert_at_least "Bug has a worked example at all" 20 "$(example_words "$f")"
     assert_at_most "Bug example is within 200 words" 200 "$(example_words "$f")"
 }
 ```
@@ -486,7 +488,7 @@ evidence and belongs here; a theory about the cause is not.
 
 Run: `sh tests/ticket-templates.test.sh`
 
-Expected: PASS. `35 run, 0 failed`.
+Expected: PASS. `37 run, 0 failed`.
 
 - [ ] **Step 5: Commit**
 
@@ -527,6 +529,7 @@ test_epic_template() {
     assert_file_contains "Epic keeps children out of the body" "Jira links" "$f"
     assert_file_contains "Epic refuses to fabricate a target" "fabricat" "$f"
     assert_no_dashes     "Epic obeys R3" "$f"
+    assert_at_least "Epic has a worked example at all" 20 "$(example_words "$f")"
     assert_at_most "Epic example is within 250 words" 250 "$(example_words "$f")"
 }
 ```
@@ -616,7 +619,7 @@ wrong as soon as a child is added.
 
 Run: `sh tests/ticket-templates.test.sh`
 
-Expected: PASS. `49 run, 0 failed`.
+Expected: PASS. `52 run, 0 failed`.
 
 - [ ] **Step 5: Commit**
 
@@ -727,7 +730,7 @@ evidence removed will stop using the skill, and that costs more than one extra q
 
 Run: `sh tests/ticket-templates.test.sh`
 
-Expected: PASS. `62 run, 0 failed`.
+Expected: PASS. `65 run, 0 failed`.
 
 - [ ] **Step 5: Commit**
 
@@ -950,7 +953,7 @@ field for; and keep the voice rules below. The templates are in `Templates/`.
 
 Run: `sh tests/ticket-templates.test.sh`
 
-Expected: PASS. `78 run, 0 failed`.
+Expected: PASS. `81 run, 0 failed`.
 
 - [ ] **Step 5: Commit**
 
@@ -1036,7 +1039,7 @@ check, the fixability assessment and the worktree offer all still work.
 
 Run: `sh tests/ticket-templates.test.sh`
 
-Expected: PASS. `84 run, 0 failed`.
+Expected: PASS. `87 run, 0 failed`.
 
 - [ ] **Step 5: Verify nothing else in TechDebt broke**
 
@@ -1098,7 +1101,7 @@ Then confirm the word count against the template's cap: 200 for a story or a bug
 
 Run: `sh tests/ticket-templates.test.sh && sh tests/install.test.sh`
 
-Expected: `84 run, 0 failed` then `28 run, 0 failed`.
+Expected: `87 run, 0 failed` then `28 run, 0 failed`.
 
 - [ ] **Step 5: Commit**
 
@@ -1118,7 +1121,7 @@ git commit -m "Add the worked before and after for the ticket templates"
 
 Run: `sh tests/ticket-templates.test.sh && sh tests/install.test.sh`
 
-Expected: `84 run, 0 failed` then `28 run, 0 failed`.
+Expected: `87 run, 0 failed` then `28 run, 0 failed`.
 
 - [ ] **Step 2: Verify the skill installs with the new directories**
 

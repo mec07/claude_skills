@@ -78,9 +78,35 @@ test_ticket_rules_exist() {
     assert_no_dashes "TicketRules obeys R3 itself" "$f"
 }
 
+test_story_template() {
+    f="$JIRA/Templates/Story.md"
+    assert_file_contains "Story has What we want"        "## What we want" "$f"
+    assert_file_contains "Story has Why it matters"      "## Why it matters" "$f"
+    assert_file_contains "Story has Out of scope"        "## Out of scope" "$f"
+    assert_file_contains "Story has Acceptance criteria" "## Acceptance criteria" "$f"
+    assert_file_contains "Story states its word cap"     "200 words" "$f"
+    assert_file_contains "Story caps criteria at 7"      "7 bullets" "$f"
+    assert_file_contains "Story marks a section optional" "optional" "$f"
+    assert_file_contains "Story calls overflow a split signal" "split signal" "$f"
+    assert_file_contains "Story says why it drops the As-a form" "invented persona" "$f"
+    assert_file_lacks    "Story has no Suggested Approach" "Suggested Approach" "$f"
+    assert_no_dashes     "Story obeys R3" "$f"
+    assert_at_least "Story has a worked example at all" 20 "$(example_words "$f")"
+    assert_at_most "Story example is within 200 words" 200 "$(example_words "$f")"
+
+    # Acceptance criteria must be the last heading in the worked example.
+    last="$(awk '/^```markdown$/ { f = 1; next } /^```$/ { if (f) exit } f && /^## / { h = $0 } END { print h }' "$f")"
+    if [ "$last" = "## Acceptance criteria" ]; then
+        pass "Story example ends with acceptance criteria"
+    else
+        fail "Story example ends with acceptance criteria" "last heading was [$last]"
+    fi
+}
+
 # ---- runner ----
 
 test_ticket_rules_exist
+test_story_template
 
 printf "\n%d run, %d failed\n" "$TESTS_RUN" "$TESTS_FAILED"
 [ "$TESTS_FAILED" -eq 0 ]
