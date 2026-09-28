@@ -103,10 +103,30 @@ test_story_template() {
     fi
 }
 
+test_bug_template() {
+    f="$JIRA/Templates/Bug.md"
+    assert_file_contains "Bug has What happens"          "## What happens" "$f"
+    assert_file_contains "Bug has What should happen"    "## What should happen" "$f"
+    assert_file_contains "Bug has Steps to reproduce"    "## Steps to reproduce" "$f"
+    assert_file_contains "Bug has Where it was seen"     "## Where it was seen" "$f"
+    assert_file_contains "Bug has Impact"                "## Impact" "$f"
+    assert_file_contains "Bug has Also true when fixed"  "## Also true when fixed" "$f"
+    assert_file_contains "Bug states its word cap"       "200 words" "$f"
+    assert_file_contains "Bug caps repro steps at 6"     "6 numbered steps" "$f"
+    assert_file_contains "Bug names the reproducibility bar" "follow-up question" "$f"
+    assert_file_contains "Bug says unknown is omitted not guessed" "omitted rather than guessed" "$f"
+    assert_file_lacks    "Bug has no acceptance criteria section" "## Acceptance criteria" "$f"
+    assert_file_lacks    "Bug keeps severity out of the body" "## Severity" "$f"
+    assert_no_dashes     "Bug obeys R3" "$f"
+    assert_at_least "Bug has a worked example at all" 20 "$(example_words "$f")"
+    assert_at_most "Bug example is within 200 words" 200 "$(example_words "$f")"
+}
+
 # ---- runner ----
 
 test_ticket_rules_exist
 test_story_template
+test_bug_template
 
 printf "\n%d run, %d failed\n" "$TESTS_RUN" "$TESTS_FAILED"
 [ "$TESTS_FAILED" -eq 0 ]
