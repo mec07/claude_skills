@@ -187,6 +187,19 @@ test_create_workflow() {
     assert_file_contains "SKILL links the ticket rules" "TicketRules.md" "$s"
 }
 
+test_techdebt_uses_story_template() {
+    f="$TECHDEBT/Workflows/Create.md"
+    assert_file_lacks    "TechDebt no longer prescribes an approach" "Suggested Approach" "$f"
+    assert_file_lacks    "TechDebt no longer uses its own headings"  "## Why It Matters" "$f"
+    assert_file_contains "TechDebt renders the Story template" "skills/JIRA/Templates/Story.md" "$f"
+    assert_file_contains "TechDebt runs the rule check" "skills/JIRA/Reference/RuleCheck.md" "$f"
+    assert_file_contains "TechDebt restates a complaint as an outcome" "not an outcome" "$f"
+    assert_file_contains "TechDebt keeps named files as evidence" "evidence" "$f"
+    # Step 5 used to hand createJiraIssue "the expanded text" produced by the
+    # step that has just been deleted. Nothing expands anything now.
+    assert_file_lacks    "TechDebt has no dangling expanded-text reference" "the expanded text" "$f"
+}
+
 # ---- runner ----
 
 test_ticket_rules_exist
@@ -195,6 +208,7 @@ test_bug_template
 test_epic_template
 test_rule_check
 test_create_workflow
+test_techdebt_uses_story_template
 
 printf "\n%d run, %d failed\n" "$TESTS_RUN" "$TESTS_FAILED"
 [ "$TESTS_FAILED" -eq 0 ]

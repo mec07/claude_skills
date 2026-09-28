@@ -120,30 +120,31 @@ Options: Create new | Link to existing and cancel
 
 ---
 
-## Step 4 — Expand Description with AI
+## Step 4 — Render the Story template
 
-Use inference to turn the user's quick note into a structured ticket description.
+Tech debt is a story. Render `~/.claude/skills/JIRA/Templates/Story.md` against the user's
+note, then run `~/.claude/skills/JIRA/Reference/RuleCheck.md` against the result.
 
-```bash
-EXPANDED=$(echo "Turn this brief tech debt note into a well-structured Jira ticket description.
+Do not expand the note. A one-line note becomes a short ticket, and that is the correct
+outcome. The old behaviour here was to grow a note into four headings, one of which
+proposed the fix; that is what made these tickets unreadable.
 
-Use this exact structure:
-## Problem
-[1-3 sentences: what is wrong, where it lives in the codebase]
+**`## What we want` needs the note restated as an end state.**
+Tech debt arrives as a complaint, and a complaint is not an outcome.
 
-## Why It Matters
-[1-2 sentences: impact on maintainability, reliability, or developer experience]
+- As reported: "The UsersTable in the PX portal duplicates logic from the SP portal."
+- As the ticket: "The PX portal users table uses the shared component, so a change to it
+  takes effect in both portals."
 
-## Suggested Approach
-[2-4 bullet points: concrete steps to address it]
+**Named files stay.** A tech debt note almost always names where the problem lives, and
+that is evidence the reporter already holds, not an instruction. R1's carve-out covers it.
+What goes is the direction about what to do: "should use the shared generic UsersTable
+from packages/ui" is an instruction and is dropped, while the fact that the duplication
+exists between those two portals is kept.
 
-## Context
-[Any relevant file paths, components, or patterns involved — or omit if not obvious from the note]
-
-Keep it concise and technical. Do not invent specifics not implied by the note.
-
-Note: ${USER_DESCRIPTION}" | bun ~/.claude/skills/PAI/Tools/Inference.ts standard)
-```
+**`## Acceptance criteria` is required**, as it is for any story. For tech debt the
+criteria are usually about behaviour that must not change: the same rows render, the same
+permissions apply, the existing tests still pass.
 
 ---
 
@@ -170,7 +171,7 @@ createJiraIssue
   projectKey:  {PROJECT}
   issueTypeName: {ISSUE_TYPE}
   summary:     first 255 chars of the description, first letter capitalised
-  description: the expanded text
+  description: the rendered Story template from step 4
   additional_fields:
     priority: {name: PRIORITY}
     assignee: {id: <account id from atlassianUserInfo>}
