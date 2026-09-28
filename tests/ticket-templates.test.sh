@@ -122,11 +122,31 @@ test_bug_template() {
     assert_at_most "Bug example is within 200 words" 200 "$(example_words "$f")"
 }
 
+test_epic_template() {
+    f="$JIRA/Templates/Epic.md"
+    assert_file_contains "Epic has Goal"          "## Goal" "$f"
+    assert_file_contains "Epic has Why now"       "## Why now" "$f"
+    assert_file_contains "Epic has In scope"      "## In scope" "$f"
+    assert_file_contains "Epic has Out of scope"  "## Out of scope" "$f"
+    assert_file_contains "Epic has Done when"     "## Done when" "$f"
+    assert_file_contains "Epic has Risks and dependencies" "## Risks and dependencies" "$f"
+    assert_file_contains "Epic states its word cap" "250 words" "$f"
+    assert_file_contains "Epic requires Out of scope" "required here" "$f"
+    assert_file_contains "Epic wants an outcome not a deliverable" "not a deliverable" "$f"
+    assert_file_contains "Epic requires one measurable bullet" "measurable" "$f"
+    assert_file_contains "Epic keeps children out of the body" "Jira links" "$f"
+    assert_file_contains "Epic refuses to fabricate a target" "fabricat" "$f"
+    assert_no_dashes     "Epic obeys R3" "$f"
+    assert_at_least "Epic has a worked example at all" 20 "$(example_words "$f")"
+    assert_at_most "Epic example is within 250 words" 250 "$(example_words "$f")"
+}
+
 # ---- runner ----
 
 test_ticket_rules_exist
 test_story_template
 test_bug_template
+test_epic_template
 
 printf "\n%d run, %d failed\n" "$TESTS_RUN" "$TESTS_FAILED"
 [ "$TESTS_FAILED" -eq 0 ]
