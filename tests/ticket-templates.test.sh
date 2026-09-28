@@ -141,12 +141,33 @@ test_epic_template() {
     assert_at_most "Epic example is within 250 words" 250 "$(example_words "$f")"
 }
 
+test_rule_check() {
+    f="$JIRA/Reference/RuleCheck.md"
+    assert_file_contains "RuleCheck checks section caps"    "within its stated cap" "$f"
+    assert_file_contains "RuleCheck checks the word cap"    "word cap" "$f"
+    assert_file_contains "RuleCheck checks required sections" "required section" "$f"
+    assert_file_contains "RuleCheck checks for filler"      "filler" "$f"
+    assert_file_contains "RuleCheck checks solution language" "solution language" "$f"
+    assert_file_contains "RuleCheck checks R2"              "Jira field" "$f"
+    assert_file_contains "RuleCheck checks dashes"          "em dash" "$f"
+    assert_file_contains "RuleCheck checks criteria are observable" "observable" "$f"
+    assert_file_contains "RuleCheck never creates on failure" "never means create anyway" "$f"
+    assert_file_contains "RuleCheck surfaces a twice-failed item" "twice" "$f"
+    assert_file_contains "RuleCheck handles the evidence false positive" "false positive" "$f"
+    assert_no_dashes "RuleCheck obeys R3" "$f"
+
+    # The checklist itself must have at least ten items.
+    n="$(grep -c '^- \[ \] ' "$f" 2>/dev/null || echo 0)"
+    assert_at_least "RuleCheck has at least ten checklist items" 10 "$n"
+}
+
 # ---- runner ----
 
 test_ticket_rules_exist
 test_story_template
 test_bug_template
 test_epic_template
+test_rule_check
 
 printf "\n%d run, %d failed\n" "$TESTS_RUN" "$TESTS_FAILED"
 [ "$TESTS_FAILED" -eq 0 ]
