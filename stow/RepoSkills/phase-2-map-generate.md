@@ -750,6 +750,10 @@ For team-wide coverage, CI integration is recommended over local hooks.
 - Document what is, not how it got there — comments, config `description` fields and
   markdown state current behaviour. No line numbers, commit hashes or PR
   numbers; name the symbol to look for, and leave history to the commit message
+- A comment earns its lines — most code needs none. Write one only for a
+  constraint, a trap, or why the obvious alternative is wrong, and prefer a
+  single line. Cut anything restating the line below it. Check the comments you
+  read against the code as you go — a drifted one is worse than none
 
 ## New to This Repo?
 
@@ -940,6 +944,19 @@ For team-wide coverage, CI integration is recommended over local hooks.
   "why" line only
   where its absence would make the code look safe to delete, and state the
   mechanism rather than the story it came from.
+- A comment earns its lines — most code should carry none. A well-named function
+  and a clear signature read better than a sentence describing them, and
+  self-documenting code is the goal. Write a comment only for what the code
+  cannot show: a constraint, a trap, or the reason the obvious alternative is
+  wrong. Prefer a single line. Cut anything that restates the line below it,
+  narrates what the block plainly does, or explains a language feature. A header
+  longer than the config it introduces, or a paragraph above a one-line
+  function, is the signal to cut. If an explanation genuinely needs a paragraph,
+  it belongs in the README, not above the code. Treat every comment you read as
+  a claim to verify: one that has drifted from the code is worse than none,
+  because humans and agents both believe it. Correct the ones that are now wrong
+  and shorten the ones that are merely long — whether they arrived with a file
+  you copied in or were already sitting in a file you are editing.
 
 ## Documentation
 
