@@ -24,5 +24,10 @@ Read-only PR context fetch. `ReviewPR` is the WRITE companion that creates pendi
    show it, wait. It goes out under their name.
 3. **Approval to change code is approval to change code.** It does not extend to
    replying or resolving. Neither does an option label you wrote yourself.
+4. **Read the spec and plan before judging a comment.** A reviewer's point can be a bug,
+   or it can be a fair case for a different decision than the one already taken. Those
+   need different conversations, and you cannot tell them apart from the code alone.
+   Reviewers are entitled to change the plan; the plan's job is to make the cost of
+   changing course visible, not to win the argument.
 
 Full detail in `Workflows/Comments.md`.
