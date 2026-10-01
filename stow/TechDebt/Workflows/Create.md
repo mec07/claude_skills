@@ -1,6 +1,7 @@
 # TechDebt — Create Workflow
 
-Log a tech debt ticket without breaking flow. Checks for duplicates, expands the description, creates the ticket, opens it.
+Log a tech debt ticket without breaking flow. Checks for duplicates, renders the Story
+template, creates the ticket, opens it.
 
 ---
 
@@ -38,7 +39,7 @@ Extract the description from the skill arguments.
 
 If no description provided, use AskUserQuestion:
 ```
-"What's the tech debt? (brief description — I'll expand it into a proper ticket)"
+"What's the tech debt? A sentence is enough; I will not pad it out."
 ```
 
 ---
@@ -120,30 +121,42 @@ Options: Create new | Link to existing and cancel
 
 ---
 
-## Step 4 — Expand Description with AI
+## Step 4 — Render the Story template
 
-Use inference to turn the user's quick note into a structured ticket description.
+Tech debt is a story. Render `~/.claude/skills/JIRA/Templates/Story.md` against the user's
+note, then run `~/.claude/skills/JIRA/Reference/RuleCheck.md` against the result.
 
-```bash
-EXPANDED=$(echo "Turn this brief tech debt note into a well-structured Jira ticket description.
+Do not expand the note. A one-line note becomes a short ticket, and that is the correct
+outcome. The old behaviour here was to grow a note into four headings, one of which
+proposed the fix; that is what made these tickets unreadable.
 
-Use this exact structure:
-## Problem
-[1-3 sentences: what is wrong, where it lives in the codebase]
+**`## What we want` needs the note restated as an end state.**
+Tech debt arrives as a complaint, and a complaint is not an outcome.
 
-## Why It Matters
-[1-2 sentences: impact on maintainability, reliability, or developer experience]
+- As reported: "The UsersTable in the PX portal duplicates logic from the SP portal."
+- As the ticket: "The PX portal users table uses the shared component, so a change to it
+  takes effect in both portals."
 
-## Suggested Approach
-[2-4 bullet points: concrete steps to address it]
+**Named files stay.** A tech debt note almost always names where the problem lives, and
+that is evidence the reporter already holds, not an instruction. R1's carve-out covers it.
+What goes is the direction about what to do: "should use the shared generic UsersTable
+from packages/ui" is an instruction and is dropped, while the fact that the duplication
+exists between those two portals is kept.
 
-## Context
-[Any relevant file paths, components, or patterns involved — or omit if not obvious from the note]
+**`## Acceptance criteria` is required**, as it is for any story. For tech debt the
+criteria are usually about behaviour that must not change: the same rows render, the same
+permissions apply, the existing tests still pass.
 
-Keep it concise and technical. Do not invent specifics not implied by the note.
+**Where a failed rule check lands here.** `RuleCheck.md` says to run before showing the
+draft to the user, and this workflow deliberately never shows one: the whole point is not
+to break your flow. So the rule for TechDebt specifically is that a twice-failed item is
+reported alongside the created ticket, in the step 8 output, rather than blocking
+creation or inventing an interruption.
 
-Note: ${USER_DESCRIPTION}" | bun ~/.claude/skills/PAI/Tools/Inference.ts standard)
-```
+That is the right trade here and not elsewhere. A tech debt ticket is internal, cheap to
+edit, and already opens in the browser at step 6, so you see the flagged line seconds
+later. The `JIRA` Create workflow, which can raise customer-visible tickets, keeps the
+blocking behaviour.
 
 ---
 
@@ -170,7 +183,7 @@ createJiraIssue
   projectKey:  {PROJECT}
   issueTypeName: {ISSUE_TYPE}
   summary:     first 255 chars of the description, first letter capitalised
-  description: the expanded text
+  description: the rendered Story template from step 4
   additional_fields:
     priority: {name: PRIORITY}
     assignee: {id: <account id from atlassianUserInfo>}
@@ -220,7 +233,12 @@ This makes the dependency chain visible in Jira. Do this for:
 
 After creating the ticket, assess whether there's enough context to fix it right now via a Worktree spin-up.
 
-**Score the description against these signals:**
+**Score the user's original note against these signals, not the rendered ticket.**
+R1 strips file paths and the approach out of the ticket body, so scoring the ticket would
+drive almost everything to Design needed and quietly stop the worktree offer firing. The
+note still holds what these signals measure.
+
+Signals:
 
 | Signal | Weight |
 |--------|--------|
@@ -286,6 +304,6 @@ Then output the fixability rating inline:
 | Situation | Action |
 |-----------|--------|
 | Jira API fails | Show the raw error response and the equivalent call the user can run manually |
-| Inference fails | Use the user's raw description as the ticket description (unformatted) |
+| Rule check fails twice on the same item | Quote the offending line and ask the user |
 | `open` not available | Print URL prominently with a reminder to open manually |
 | Duplicate found, user cancels | Report the existing ticket key and URL so they can add a comment instead |
