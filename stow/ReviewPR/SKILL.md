@@ -47,6 +47,7 @@ Comprehensive pull request review that creates a **pending GitHub review with in
 ## Key Design Decisions
 
 - **Collaborative tone** — comments read like spoken English from a teammate, not a report. No headings, no bold severity labels, no em dashes. Questions and suggestions, never demands.
+- **Short** — two or three sentences per comment, one is often enough. Investigation is exhaustive; the comment reporting it is not. Long comments are the failure mode this skill guards against hardest.
 - **Emoji intent signals** — each comment starts with an emoji (💭 ❓ 👍 🔧 ⛏️ etc.) per the code review emoji guide convention, so the author instantly knows the intent.
 - **Confidence scoring** filters noise — no pedantic nits, no false positives, no pre-existing issues
 - **CLAUDE.md awareness** — checks changes against project-specific rules, not just generic quality

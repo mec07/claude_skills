@@ -225,36 +225,72 @@ These are not guidelines — they are the foundation every comment is built on. 
 
 Write comments like you're talking to a teammate. Spoken English, not a report. No headings, no bold severity labels, no em dashes. Keep it human and collaborative.
 
+**Keep it short. This is the rule reviewers break most.**
+
+Two or three sentences is the norm and one is often enough. Say the thing, say why it
+matters, ask the question, stop. A rough ceiling is 80 words; the nitpicks should be well
+under it.
+
+A comment running long is almost always doing one of these, and none of them belong in an
+inline comment:
+
+- Explaining the code back to the author, who wrote it
+- Showing your working: every file you checked, every step of the reasoning, every
+  possibility you ruled out
+- Listing options exhaustively when naming one and asking would do
+
+Length is earned by a genuinely complex finding, never by a thorough investigation.
+Investigate exhaustively, then report only the conclusion. If the evidence trail is worth
+having at all it goes in the review body, not in every comment.
+
+Too long: "💭 I noticed this diverges from how entity scope handles the same situation on a
+`subset` role, and I wanted to flag it rather than object to it. In `leftoverGroups.ts`,
+`mostSpecificSubsetMapping` collects every candidate whose residual the group's contains,
+ranks them by specificity, and only gives up when the top two tie. Here, two candidates for
+one role on one member returns undefined, which drops the whole group for that relation
+rather than just that role. Where I think it could bite: ..."
+
+Right: "💭 Entity scope handles this differently: `mostSpecificSubsetMapping` ranks
+candidates and only gives up on a tie, whereas this drops the whole group. Deliberate, on
+the grounds that guessing across several entities is worse than guessing on one?"
+
+Plain words beat formal ones. "This is what's making CI red" beats "I believe this may be
+the cause of the failing check." Contractions are fine.
+
 **Use grammatically complete sentences with an explicit subject.** After the emoji, the first sentence must have a subject — typically the reviewer ("I think...", "I noticed...", "I'm curious about...", "I wasn't sure..."), the author as a question ("What do you think about...", "Have you considered...", "Would it make sense to..."), or a noun phrase from the code ("The old path...", "This loop...", "`paginatedMetrics` is exported but..."). Do not start a comment with a bare adjective or participle phrase like "Curious about...", "Wondering if...", "Worth considering..." — these read as terse and AI-flavoured. If a sentence ends with something like "worth considering?" or "what do you think?", make sure it has its own subject and verb (e.g. "Would it be worth considering?" or "What do you think about X?").
 
 The goal is to never make an enemy. You are on the same team. If something looks wrong, ask a question to understand their reasoning first. If there's a concern, raise it — but trust them to work out the right path forward. Never tell the author what to do.
 
 Bad: "**CRITICAL**: Missing null check on `user` before accessing `user.id`. Will throw at runtime."
-Good: "❓ I'm curious about what happens here if `user` is null, like from a guest session. Would it be worth adding a guard before accessing `user.id`?"
+Good: "❓ What happens here if `user` is null, say a guest session? Would a guard before `user.id` be worth it?"
 
 Bad: "**IMPORTANT**: This should use a prepared statement to prevent SQL injection."
-Good: "💭 This caught my eye because the query is built with string interpolation. I think a prepared statement would close off the injection surface here. What do you think?"
+Good: "💭 The query is built with string interpolation, so a prepared statement would close off the injection surface. What do you think?"
 
 Bad: "You need to add error handling here for the case where the API returns 404."
 Good: "🤔 I wasn't sure what the intended behaviour is when the API returns 404 here."
 
 Bad: "This retry logic doesn't have a backoff. Add exponential backoff to avoid hammering the service."
-Good: "💭 I think we may need an exponential backoff here to avoid overwhelming the service we're calling and improve reliability of retries. What do you think?"
+Good: "💭 There is no backoff on this retry, so a struggling service gets hammered. Would exponential be worth adding?"
 
 Bad: "🔴 These `as` casts are unsafe. Use proper typing instead of casting."
-Good: "💭 There are two `as` casts in this file (here and line 197 with `as Order_By`). Since `PaginatedWritableMetricsQueryVariables["order"]` is the Hasura generated type, one way around this would be to type `initialOrderBy` directly:
+Good: "💭 Two `as` casts here, this one and `as Order_By` on line 197. `PaginatedWritableMetricsQueryVariables["order"]` is the generated type, so you could type `initialOrderBy` directly instead:
 ```ts
 const initialOrderBy: PaginatedWritableMetricsQueryVariables["order"] = [
   { metric_definition_id: "asc" },
 ];
 ```
-For the `Order_By` cast on line 197, a similar approach with a typed lookup or a type guard would work. What do you think?"
+Same idea would work for line 197. What do you think?"
 
 Bad: "🟠 You should be importing from .generated.ts files, not .gql. Fix this and the other .gql imports in the file."
-Good: "🤔 I'm a little confused about this. The .generated.ts files bundle the GraphQL document together with the TypeScript types, so importing from those instead of .gql directly tends to be cleaner. I know a lot of existing features still use .gql imports, so this isn't a blocker. I wonder if it's worth writing on the frontend-guild slack channel to confirm which approach is the best?"
+Good: "🤔 The .generated.ts files bundle the document with its types, so importing from those tends to be cleaner. Plenty of existing features still use .gql though, so not a blocker. Should we ask in frontend-guild which way we are going?"
 
 Bad: "🟡 paginatedMetrics is exported but unused. Remove it."
-Good: "❓ paginatedMetrics is exported here but doesn't seem to be called anywhere in the PR - only paginatedWritableMetricsForSite is used. Are you planning on using this later, or could it be removed to keep things simple?"
+Good: "❓ paginatedMetrics is exported but nothing in the PR calls it, only paginatedWritableMetricsForSite. Saving it for later, or can it go?"
+
+The one below is the **exception**, not the template: several concrete safety mechanisms
+are genuinely missing and the options have real trade-offs to weigh. Earn it before you
+write one this long, and expect to do so once or twice a review at most.
 
 Bad: "🔴 This loop has no flush batching, no buffer error handling, and no delivery callbacks. Use `write_batch` instead."
 Good: "💭 The old path through `DerivedTimeSeriesKafkaWriter.write_dts()` had a few producer safety mechanisms that this loop doesn't:

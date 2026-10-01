@@ -2,6 +2,25 @@
 
 Focused on review feedback. Use when the user asks "what did <reviewer> say", "pull the review comments", "any unresolved threads", "fetch CodeRabbit's nitpicks", etc.
 
+## Never resolve a human's thread
+
+Two rules that outrank everything else in this file. They are stated here, at the top,
+because they were previously only stated 200 lines down and got missed.
+
+1. **A human reviewer's thread is never yours to resolve.** Not after you fix the code,
+   not after a reply is posted, not when the principal says "looks good". The reviewer
+   resolves it themselves once they have seen the fix and judged it answers them.
+   Resolving on their behalf closes the loop for them and is bad manners. Bot threads
+   (`coderabbitai`, `github-copilot`, `github-actions`, anything `[bot]`) are the sole
+   exception - resolve those once actioned.
+
+2. **Reply text belongs to the principal.** Draft it, show it, wait. The reply goes out
+   under their name on their PR, so they approve the wording or write their own. "Go
+   ahead and fix it" is not approval to speak for them.
+
+If you ever find yourself reasoning that some earlier approval covered resolving or
+replying, it did not. Make the code change, draft the reply, stop.
+
 ## Why a separate workflow
 
 Three distinct GitHub surfaces hold review feedback, and missing any one leads to wrong answers:
@@ -46,33 +65,100 @@ The script pulls all three.
 - Quote `path:line` verbatim. The line numbers are load-bearing for navigation.
 - For each comment, give: author, location, severity tier (if the body has one — CodeRabbit uses 🔴/🟠/🟡; humans don't), and your assessment.
 - For each comment, write an explicit **action plan** + **justification** before the user reads them. Don't just dump the comment text and ask the user.
+- Say whether the decision record already settled the point, and what the reviewer's fix would knock on to. A finding nobody considered and a finding somebody considered and deferred read identically on GitHub, and they call for different conversations.
+- Give each comment room to breathe: a blank line between fields, a `---` between comments. These are scanned, not read.
 
 ## Default behaviour for new+unresolved comments (REQUIRED)
 
 When the principal asks you to fetch PR comments — whether they say it explicitly or just "look at the comments / coderabbit feedback / review feedback" — assume they want the following workflow unless they say otherwise:
 
 1. **Pull JIRA context first.** Scan the PR title, body, branch name, and commit messages for any pattern matching `[A-Z]+-\d+` (e.g. `ABC-313`, `ABC-1234`, `ABC-2`). For each reference, invoke the **JIRA skill** to fetch ticket details — summary, description, acceptance criteria, comments. If the ticket has an epic, fetch that too. Use this to scope what is and isn't relevant before reading the review comments. The principal has more context about scope than you do; the ticket helps close that gap.
-2. **Fetch unresolved threads** with the script (default `--all` is OFF, so unresolved-only is the default).
-3. **Filter to "new" comments** — threads where the principal (= the PR author) has NOT yet replied. A thread the author has already replied to is considered handled; skip it unless the principal asks for resolved/handled threads. The fetch JSON includes the comment chain per thread; check comment authors to determine whether the principal has already engaged.
-4. **For each new+unresolved comment, present in order:**
+2. **Load the decision record.** Before reading a single comment, find what was already decided and why. Look for, in this order: a spec or design doc (`docs/superpowers/specs/*<ticket>*`, `docs/**/design*.md`, an ADR), an implementation plan (`docs/superpowers/plans/*<ticket>*`), an execution ledger (`.superpowers/sdd/*/progress.md` or equivalent), and the PR body's own reasoning sections. Read the parts that bear on the changed files.
+
+   **If none exists, say so in one line before the comments** - "no spec or plan found; assessments below are against the code only". An absent decision record must be visible, not silent, because every "Plan status" line beneath it is then guesswork.
+3. **Fetch unresolved threads** with the script (default `--all` is OFF, so unresolved-only is the default).
+4. **Filter to "new" comments** — threads where the principal (= the PR author) has NOT yet replied. A thread the author has already replied to is considered handled; skip it unless the principal asks for resolved/handled threads. The fetch JSON includes the comment chain per thread; check comment authors to determine whether the principal has already engaged.
+5. **For each new+unresolved comment, present in order:**
    - Comment location: `path:line` and reviewer.
    - Severity (if the body has one) and a one-sentence summary of what the reviewer is asking.
    - **Verification**: read the cited file at the cited line yourself and state what the code actually does today. Comments age; do not assume the comment is still accurate. If you cannot verify a claim with grep / file reads / the JIRA ticket / linked docs, say so explicitly and ask the principal — see "OK to fail" below.
-   - **Recommendation**: ACTION / NO-ACTION / REPLY-ONLY (see options below).
+   - **Plan status**: whether the decision record already settled this. See "Plan status" below. Quote the deciding line.
+   - **Knock-on effects**: what else breaks if we do what the reviewer asks. See "Knock-on effects" below.
+   - **Recommendation**: ACTION / NO-ACTION / REPLY-ONLY / REVISIT (see options below).
    - **Reasoning**: 1–3 sentences explaining the recommendation, citing what you saw in the file or in the surrounding context.
-5. **Wait for per-comment approval before doing any work.** The principal replies approving/declining each. Do NOT batch-edit code on your initiative. Do NOT mark anything resolved on the principal's behalf.
-6. **After the principal has approved a batch**, action each approved item with a precise, minimal edit. Match the principal's preferred surface (`SendMessage` to a teammate, an `Edit` to the file, a thread reply, etc.). Stop and re-confirm if a recommended edit grows beyond what was approved.
+6. **Wait for per-comment approval before doing any work.** The principal replies approving/declining each. Do NOT batch-edit code on your initiative. Do NOT mark anything resolved on the principal's behalf.
+
+   **Approval to ACTION a comment is approval to change the code, and nothing else.** It is not approval to post a reply, and never approval to resolve a thread. Reply text needs its own approval round (see "Surface the drafts to the principal for approval before posting"), and human threads are not yours to resolve at all. If you wrote the words "and reply" or "and resolve" into the option you offered, that is your text, not the principal's instruction - offering yourself permission is not receiving it. When in doubt, make the code change, draft the reply, and stop.
+7. **After the principal has approved a batch**, action each approved item with a precise, minimal edit. Match the principal's preferred surface (`SendMessage` to a teammate, an `Edit` to the file, a thread reply, etc.). Stop and re-confirm if a recommended edit grows beyond what was approved.
 
 This is a **standing preference**, not a per-PR ask. If the principal volunteers extra context (e.g. "ignore the nits", "just the criticals", "approve everything as-is"), follow that for the current PR but do not unset the default.
+
+### Plan status
+
+Verification answers "is this comment still accurate?". It does not answer "did we already
+think about this?". Those are different questions and the second one changes the
+conversation completely, so give every comment one of these four:
+
+- **Not covered** — the decision record never considered this. Most likely to be a genuine
+  defect, and the one to lead with.
+- **Covered, implemented as written** — the plan decided it and the code does what the plan
+  said. The reviewer is proposing a **change of decision**, not reporting a bug. Quote the
+  deciding line so the principal can weigh it.
+- **Covered, implementation departed** — the code does something the plan did not ask for.
+  Quote the plan, and quote the ledger entry recording why it was overruled if there is one.
+  If there is no such entry, the departure was unrecorded and that is worth saying.
+- **Contradicts the plan** — the fix the reviewer wants would break something the plan
+  depends on elsewhere. Rare, and the only status where pushing back is the default.
+
+**A plan is not an authority.** It records what was decided with the information available
+at the time, and a reviewer routinely holds information it did not: a working test
+environment, production row counts, the deploy mechanics, the two years before this ticket
+existed. Reviewers are entitled to change the plan - evaluating the code in front of them is
+the job. The point of this line is never to win the argument. It is to make the **cost of
+changing course** visible, so the decision is made with the original reasoning in view
+rather than rediscovered from scratch or silently discarded.
+
+### Weighting
+
+Not every finding deserves the same alarm, and the plan status is what sets it:
+
+- A **Not covered** finding outranks a **Covered** one of the same apparent severity. The
+  first found a hole; the second found a disagreement.
+- A deliberate deferral that two independent reviewers both flag (a human and a bot, or two
+  humans) is a signal the deferral is uncomfortable - **not** a signal it was wrong. Say the
+  convergence out loud and leave it as a deferral unless the principal decides otherwise.
+- Resist upgrading a documented trade-off to a bug because a reviewer phrased it forcefully,
+  and resist downgrading a real defect because the plan happens to mention the area.
+
+### Knock-on effects
+
+"Can we do what the reviewer asks?" is rarely the hard question. "What else does it break?"
+usually is. Before recommending, trace the change outward and state what you found:
+
+- **Other code**: who else calls this, reads this type, depends on this ordering. A nullable
+  type or a changed sentinel may touch test helpers and fixtures as well as source.
+- **Other decisions**: does this undo something an earlier task in the same plan relied on?
+- **Scope**: does it pull in work the plan deliberately deferred to another ticket? Say which
+  ticket.
+- **Cost of the fix**: can the test actually be run here, does a migration need re-applying,
+  does a PR database need dropping.
+
+If tracing it would take more than a few minutes of reading, say that instead of guessing.
+"I have not traced the consumers of X" is a useful sentence; a confident wrong answer is not.
 
 ### Recommendation options
 
 - **ACTION** — code change required. Spell out the precise edit (file:line + the diff/snippet) so the principal can sanity-check before approving. **Reply policy: draft a reply for human reviewers; do NOT draft a reply for bot reviewers when we're taking action — the commit/diff is what the bot learns from, and a "we applied your fix" reply adds noise without teaching the bot anything new.**
 - **NO-ACTION** — recommend leaving the code as-is. Always pair this with a draft thread reply (whether the reviewer is human or bot) so the reviewer learns *why* and the resolution is recorded. For bots, see REPLY-BOT voice rules below.
 - **REPLY-ONLY** — the right response is a discussion comment, not a code change (e.g. clarifying intent, pointing to existing infrastructure, deferring to a follow-up ticket). Applies to both human and bot reviewers.
+- **REVISIT** — the plan status is "covered, implemented as written" and the reviewer is
+  making a fair case for a different decision. This is not yours to recommend either way:
+  present the original decision, the reviewer's case, the knock-on effects of switching, and
+  let the principal choose. Do not dress a REVISIT up as an ACTION because the reviewer
+  sounded confident, and do not dress one up as a NO-ACTION because the plan said so.
 - **REPLY-BOT** — voice marker, not a separate recommendation. When you do reply to a bot (i.e. NO-ACTION or REPLY-ONLY against a bot reviewer), address by handle (`@coderabbitai`, `@github-copilot`, …) and be concrete enough for the bot to learn the pattern: "this is incorrect because <xyz>", "deferred to <follow-up>", "out of scope because <reason>". Reply only after the principal approves; the principal may edit before posting.
 
-**Why no bot reply on ACTION?** Humans appreciate the acknowledgement; bots index the conversation but learn far more from the commit itself than from "thanks, fixed". A "we applied your suggestion" reply to a bot is noise both for the bot and for any future reader skimming the thread. The auto-resolve step at the end of the workflow still happens, so the thread closes cleanly.
+**Why no bot reply on ACTION?** Humans appreciate the acknowledgement; bots index the conversation but learn far more from the commit itself than from "thanks, fixed". A "we applied your suggestion" reply to a bot is noise both for the bot and for any future reader skimming the thread. The auto-resolve step at the end of the workflow still happens **for bot threads only**, so the bot thread closes cleanly. Human threads are never resolved by you - see "Never resolve a human's thread" below.
 
 ## Drafting reply text — voice and quality
 
@@ -97,7 +183,7 @@ Replies follow most of the same rules as new review comments (see the ReviewPR s
 
 **ACTION (we changed code based on the comment):**
 - **Human reviewers: draft a reply.** Acknowledge the point. Default to NOT describing the fix - the commit/diff already shows what changed. Only describe the fix when the change is non-obvious from the diff or when there's a subtle reason worth recording for future readers.
-- **Bot reviewers: do NOT draft a reply.** The commit/diff is what the bot indexes; a "thanks, applied" reply is noise for both the bot and human skim-readers. The auto-resolve step closes the thread cleanly.
+- **Bot reviewers: do NOT draft a reply.** The commit/diff is what the bot indexes; a "thanks, applied" reply is noise for both the bot and human skim-readers. The auto-resolve step closes the **bot** thread cleanly. It does not apply to human threads.
 - Don't paste commit SHAs into the reply. Humans don't do that — GitHub's UI auto-links new commits to the PR, and reviewers see them in the commit list. Pasting a SHA reads as machine-generated.
 - **Owning a real mistake is fine, even with enthusiasm.** When the reviewer actually caught a bug, "excellent point! Thanks! Well spotted! My bad!" reads as genuine, not sycophantic. The sycophancy rule applies to gushing over routine suggestions, not to acknowledging real catches. Match the size of the thanks to the size of the catch.
 - For routine nits where the principal agreed and applied the change, "Thanks! Good point!" alone is often the entire reply. Resist the urge to add "moved X to Y and reused it in Z" - the diff says that.
@@ -222,17 +308,36 @@ When the principal pushes code addressing a comment (or you've staged the fix on
 
 ### Output shape (use this layout per comment)
 
+**Put a blank line between every bold field.** A comment rendered as an unbroken block of
+bold-prefixed lines is a wall of text, and these get skimmed, not read. The principal needs
+to find "Recommendation" in one glance without reading the three lines above it. This is not
+cosmetic; a dense block hides the one line that needed a decision.
+
 ```
 ### Comment N — <reviewer> on <path>:<line> [severity tag — see Severity tags below]
+
 **Reviewer asks:** <one sentence>
+
 **Verification:** <what the file actually shows now, with file:line refs>
-**Recommendation:** ACTION | NO-ACTION | REPLY-ONLY
+
+**Plan status:** Not covered | Covered, implemented as written | Covered, implementation departed | Contradicts the plan
+   <the deciding line from the spec/plan/ledger, quoted, when it is one of the Covered cases>
+
+**Knock-on effects:** <what else the reviewer's fix touches, or "none traced" / "not traced">
+
+**Recommendation:** ACTION | NO-ACTION | REPLY-ONLY | REVISIT
+
 **Reasoning:** <1–3 sentences>
+
 **Draft edit:** (when ACTION — always)
    <the proposed diff/snippet>
+
 **Draft reply:** (per reply policy below)
    <the proposed reply text>
 ```
+
+Separate comments with a `---` rule as well. Ranked most-severe first, and within equal
+severity, "Not covered" before "Covered".
 
 **Draft reply policy:**
 - Human reviewer + ACTION → draft reply (short acknowledgement).
@@ -241,6 +346,9 @@ When the principal pushes code addressing a comment (or you've staged the fix on
 - Bot reviewer + NO-ACTION / REPLY-ONLY → draft reply (so the bot can learn the pattern).
 
 After all comments are listed, end with: "Awaiting your approval per comment."
+
+If any comment came back REVISIT, name those separately in the closing line: they need a
+decision from the principal, not an approval of yours.
 
 ### Severity tags
 
