@@ -100,7 +100,12 @@ bun ~/.claude/skills/JIRA/Tools/Jira.ts link DEV-6345 blocks DEV-5230
 | **Search** | "find tickets", "search jira", "my tickets" | Use MCP `searchJiraIssuesUsingJql` |
 | **Sprint** | "current sprint", "sprint board" | Use MCP search with `sprint in openSprints()` JQL |
 | **Link** | "link tickets", "DEV-X blocks DEV-Y" | Use CLI fallback `Jira.ts link` |
+| **Create** | "create a ticket", "raise a bug", "new story", "create an epic" | Render a template, run the rule check, then MCP `createJiraIssue`. See Create Workflow |
 | **Comment** | "comment on DEV-XXXX", "reply to the reporter", "update the ticket" | Draft in chat, get approval, then MCP `addCommentToJiraIssue`. See Comment Workflow |
+
+Everything written into a ticket body follows `Reference/TicketRules.md`: state the
+outcome and the acceptance criteria, never the solution; keep out anything Jira has a
+field for; and keep the voice rules below. The templates are in `Templates/`.
 
 ## Comment Workflow
 
