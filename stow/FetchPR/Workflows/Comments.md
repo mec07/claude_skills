@@ -2,6 +2,25 @@
 
 Focused on review feedback. Use when the user asks "what did <reviewer> say", "pull the review comments", "any unresolved threads", "fetch CodeRabbit's nitpicks", etc.
 
+## Never resolve a human's thread
+
+Two rules that outrank everything else in this file. They are stated here, at the top,
+because they were previously only stated 200 lines down and got missed.
+
+1. **A human reviewer's thread is never yours to resolve.** Not after you fix the code,
+   not after a reply is posted, not when the principal says "looks good". The reviewer
+   resolves it themselves once they have seen the fix and judged it answers them.
+   Resolving on their behalf closes the loop for them and is bad manners. Bot threads
+   (`coderabbitai`, `github-copilot`, `github-actions`, anything `[bot]`) are the sole
+   exception - resolve those once actioned.
+
+2. **Reply text belongs to the principal.** Draft it, show it, wait. The reply goes out
+   under their name on their PR, so they approve the wording or write their own. "Go
+   ahead and fix it" is not approval to speak for them.
+
+If you ever find yourself reasoning that some earlier approval covered resolving or
+replying, it did not. Make the code change, draft the reply, stop.
+
 ## Why a separate workflow
 
 Three distinct GitHub surfaces hold review feedback, and missing any one leads to wrong answers:
@@ -61,6 +80,8 @@ When the principal asks you to fetch PR comments — whether they say it explici
    - **Recommendation**: ACTION / NO-ACTION / REPLY-ONLY (see options below).
    - **Reasoning**: 1–3 sentences explaining the recommendation, citing what you saw in the file or in the surrounding context.
 5. **Wait for per-comment approval before doing any work.** The principal replies approving/declining each. Do NOT batch-edit code on your initiative. Do NOT mark anything resolved on the principal's behalf.
+
+   **Approval to ACTION a comment is approval to change the code, and nothing else.** It is not approval to post a reply, and never approval to resolve a thread. Reply text needs its own approval round (see "Surface the drafts to the principal for approval before posting"), and human threads are not yours to resolve at all. If you wrote the words "and reply" or "and resolve" into the option you offered, that is your text, not the principal's instruction - offering yourself permission is not receiving it. When in doubt, make the code change, draft the reply, and stop.
 6. **After the principal has approved a batch**, action each approved item with a precise, minimal edit. Match the principal's preferred surface (`SendMessage` to a teammate, an `Edit` to the file, a thread reply, etc.). Stop and re-confirm if a recommended edit grows beyond what was approved.
 
 This is a **standing preference**, not a per-PR ask. If the principal volunteers extra context (e.g. "ignore the nits", "just the criticals", "approve everything as-is"), follow that for the current PR but do not unset the default.
@@ -72,7 +93,7 @@ This is a **standing preference**, not a per-PR ask. If the principal volunteers
 - **REPLY-ONLY** — the right response is a discussion comment, not a code change (e.g. clarifying intent, pointing to existing infrastructure, deferring to a follow-up ticket). Applies to both human and bot reviewers.
 - **REPLY-BOT** — voice marker, not a separate recommendation. When you do reply to a bot (i.e. NO-ACTION or REPLY-ONLY against a bot reviewer), address by handle (`@coderabbitai`, `@github-copilot`, …) and be concrete enough for the bot to learn the pattern: "this is incorrect because <xyz>", "deferred to <follow-up>", "out of scope because <reason>". Reply only after the principal approves; the principal may edit before posting.
 
-**Why no bot reply on ACTION?** Humans appreciate the acknowledgement; bots index the conversation but learn far more from the commit itself than from "thanks, fixed". A "we applied your suggestion" reply to a bot is noise both for the bot and for any future reader skimming the thread. The auto-resolve step at the end of the workflow still happens, so the thread closes cleanly.
+**Why no bot reply on ACTION?** Humans appreciate the acknowledgement; bots index the conversation but learn far more from the commit itself than from "thanks, fixed". A "we applied your suggestion" reply to a bot is noise both for the bot and for any future reader skimming the thread. The auto-resolve step at the end of the workflow still happens **for bot threads only**, so the bot thread closes cleanly. Human threads are never resolved by you - see "Never resolve a human's thread" below.
 
 ## Drafting reply text — voice and quality
 
@@ -97,7 +118,7 @@ Replies follow most of the same rules as new review comments (see the ReviewPR s
 
 **ACTION (we changed code based on the comment):**
 - **Human reviewers: draft a reply.** Acknowledge the point. Default to NOT describing the fix - the commit/diff already shows what changed. Only describe the fix when the change is non-obvious from the diff or when there's a subtle reason worth recording for future readers.
-- **Bot reviewers: do NOT draft a reply.** The commit/diff is what the bot indexes; a "thanks, applied" reply is noise for both the bot and human skim-readers. The auto-resolve step closes the thread cleanly.
+- **Bot reviewers: do NOT draft a reply.** The commit/diff is what the bot indexes; a "thanks, applied" reply is noise for both the bot and human skim-readers. The auto-resolve step closes the **bot** thread cleanly. It does not apply to human threads.
 - Don't paste commit SHAs into the reply. Humans don't do that — GitHub's UI auto-links new commits to the PR, and reviewers see them in the commit list. Pasting a SHA reads as machine-generated.
 - **Owning a real mistake is fine, even with enthusiasm.** When the reviewer actually caught a bug, "excellent point! Thanks! Well spotted! My bad!" reads as genuine, not sycophantic. The sycophancy rule applies to gushing over routine suggestions, not to acknowledging real catches. Match the size of the thanks to the size of the catch.
 - For routine nits where the principal agreed and applied the change, "Thanks! Good point!" alone is often the entire reply. Resist the urge to add "moved X to Y and reused it in Z" - the diff says that.

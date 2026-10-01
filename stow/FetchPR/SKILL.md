@@ -14,3 +14,15 @@ Read-only PR context fetch. `ReviewPR` is the WRITE companion that creates pendi
 | "brief me on PR", "fetch PR details", "what's the state of PR", "show me everything" | `Workflows/Full.md` |
 | "what did <reviewer> say", "pull review comments", "any unresolved threads", "fetch coderabbit comments" | `Workflows/Comments.md` |
 | "show me the diff", "what changed in PR", "diff file X", "list changed files" | `Workflows/Diff.md` |
+
+## Hard rules (apply to every workflow)
+
+1. **Never resolve a human reviewer's thread.** They resolve it themselves, once they
+   have seen the fix and judged it answers them. Bot threads (`coderabbitai`,
+   `github-copilot`, anything `[bot]`) are the only ones you may resolve.
+2. **Never post a reply without the principal's approval of the wording.** Draft it,
+   show it, wait. It goes out under their name.
+3. **Approval to change code is approval to change code.** It does not extend to
+   replying or resolving. Neither does an option label you wrote yourself.
+
+Full detail in `Workflows/Comments.md`.
