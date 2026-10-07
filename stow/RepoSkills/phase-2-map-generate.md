@@ -543,6 +543,8 @@ document, and duplicating them there and here is how the two drift apart.
 
 The `tasks/testing.md` skill must include a **Test Style & Conventions** section that describes how tests are written in this repo. Derive this from reading the actual test files — look at patterns across multiple test files to identify the conventions.
 
+**If Phase 0 found a written testing standard** (a doc marked `normative: yes` that sets rules for tests, e.g. under `docs/` or in `CONTRIBUTING.md`), it is the authority. Link it at the top of this section and from the testing routing row, and state its rules first. Derive from the test files only what the standard leaves unsaid; where existing tests break the standard, say so rather than describing the break as the convention.
+
 Cover:
 - **Test philosophy:** What level do tests operate at? (unit, integration, end-to-end, or a mix?) What do they verify — behaviour/outputs or internal implementation?
 - **Patterns in use:** Table-driven tests, golden file comparison, mocking style, fixture patterns, assertion library
@@ -658,11 +660,14 @@ USE WHEN format: backtick-wrapped directory paths with trailing slash (e.g., `` 
 
 USE WHEN format: backtick-wrapped directory paths with trailing slash (e.g., `` `tests/` ``) are parsed by drift detection. Plain-text keywords (e.g., "debugging") are for agent routing only and ignored by the drift script.
 
+Each task row's USE WHEN covers three forms of the task: doing it, authoring it (writing the test, the migration, the script), and planning or reviewing work that includes it (a spec, an implementation plan, a design). Paths alone only fire while an agent is already editing those files; a planning agent edits none of them, so name the intents too.
+
 | I need to... | Load these skills | USE WHEN |
 |--------------|-------------------|----------|
 | Fix a bug in [module] | Module skill + dependency module skills | debugging, troubleshooting |
 | Set up locally | `.ai/skills/tasks/local-dev.md` | working in `docker/`, `scripts/setup/`, local environment |
-| Run or add tests | `.ai/skills/tasks/testing.md` + relevant module skill | working in `tests/`, `*_test.go`, test configuration |
+| Write or change tests, or plan or design work that includes them | `.ai/skills/tasks/testing.md` + the repo's written testing standard, if Phase 0 found one | writing a test, adding a test case, TDD, red-green, implementation plan or spec with tests, what should this test assert, assertions, fixtures, mocks, exporting a function only to test it |
+| Run tests | `.ai/skills/tasks/testing.md` + relevant module skill | working in `tests/`, `*_test.go`, test configuration, running a single test |
 [... same 8-10 sampler entries as CLAUDE.md]
 
 ## Key Rules
@@ -696,8 +701,10 @@ Domain context: `.ai/skills/domain-context.md`
 1. Read the relevant module skill from the routing table above
 2. Check the Change Impact checklist in the module skill
 3. Read `.ai/skills/orientation.md` for system-wide context if needed
-4. If you are writing a spec or a plan, the documentation change belongs in it, named
-   as work alongside the code. A plan that ships code and leaves the docs for later has
+4. If you are writing a spec or a plan, load the task skills and guideline docs that govern
+   the work it schedules (tests, migrations, endpoints) before you write it: a plan is held
+   to the same rules as the code it describes. The documentation change belongs in it too,
+   named as work alongside the code. A plan that ships code and leaves the docs for later has
    scoped the doc work out, and scope added at commit time is scope that gets dropped.
 
 ## Before Committing
@@ -842,12 +849,15 @@ USE WHEN format: backtick-wrapped directory paths with trailing slash (e.g., `` 
 
 USE WHEN format: backtick-wrapped directory paths with trailing slash (e.g., `` `tests/` ``) are parsed by drift detection. Plain-text keywords (e.g., "debugging") are for agent routing only and ignored by the drift script.
 
+Each task row's USE WHEN covers three forms of the task: doing it, authoring it (writing the test, the migration, the script), and planning or reviewing work that includes it (a spec, an implementation plan, a design). Paths alone only fire while an agent is already editing those files; a planning agent edits none of them, so name the intents too.
+
 | I need to... | Load these skills | USE WHEN |
 |--------------|-------------------|----------|
 | Fix a bug in [module] | Module skill + dependency module skills | debugging, troubleshooting |
 | Add a new handler/endpoint | Relevant task skill + module skill + test with conventions | new feature, endpoint, handler |
 | Set up locally | `.ai/skills/tasks/local-dev.md` | working in `docker/`, `scripts/setup/`, local environment |
-| Run or add tests | `.ai/skills/tasks/testing.md` + relevant module skill | working in `tests/`, `*_test.go`, test configuration |
+| Write or change tests, or plan or design work that includes them | `.ai/skills/tasks/testing.md` + the repo's written testing standard, if Phase 0 found one | writing a test, adding a test case, TDD, red-green, implementation plan or spec with tests, what should this test assert, assertions, fixtures, mocks, exporting a function only to test it |
+| Run tests | `.ai/skills/tasks/testing.md` + relevant module skill | working in `tests/`, `*_test.go`, test configuration, running a single test |
 | Deploy or understand CI | `.ai/skills/tasks/deployment.md` | working in `.github/workflows/`, `ci/`, deployment config |
 | Change the data model | `.ai/skills/tasks/database.md` + data layer module skill | working in `migrations/`, `db/`, schema changes |
 | Understand the domain | `.ai/skills/domain-context.md` | domain terminology, business logic rationale |
@@ -863,8 +873,10 @@ USE WHEN format: backtick-wrapped directory paths with trailing slash (e.g., `` 
 1. Read the relevant module skill from the routing table above
 2. Check the Change Impact checklist in that skill
 3. Read `.ai/skills/orientation.md` for system-wide context if needed
-4. If you are writing a spec or a plan, the documentation change belongs in it, named
-   as work alongside the code. A plan that ships code and leaves the docs for later has
+4. If you are writing a spec or a plan, load the task skills and guideline docs that govern
+   the work it schedules (tests, migrations, endpoints) before you write it: a plan is held
+   to the same rules as the code it describes. The documentation change belongs in it too,
+   named as work alongside the code. A plan that ships code and leaves the docs for later has
    scoped the doc work out, and scope added at commit time is scope that gets dropped.
 
 ## Before Committing
@@ -1169,6 +1181,7 @@ Run through this checklist before marking Phase 2 complete. Do not skip this ste
 - [ ] Every routing entry points to a skill file that exists on disk
 - [ ] Routing tables are IDENTICAL across all four root platform files
 - [ ] USE WHEN keywords in the routing table are task-oriented, not technical jargon
+- [ ] Each Task Routing row's USE WHEN covers doing the task, authoring it, and planning or reviewing work that includes it; test writing has its own row, separate from running tests
 - [ ] Module Routing USE WHEN column lists ALL directory paths each module covers (backtick-wrapped with trailing slash) — drift detection parses these to map code changes to skills
 - [ ] Task Routing USE WHEN column lists relevant directory paths each task covers (backtick-wrapped with trailing slash) — drift detection also tracks task skill freshness
 

@@ -149,6 +149,8 @@ Assign confidence:
 - **low:** <50% verified, unmaintained, significant disconnect from codebase
 - **unscored:** Few verifiable claims (conceptual overview, changelog, ADR)
 
+Also record **normative: yes/no** for each doc. A normative doc sets rules for how work is done here (a testing standard, coding guidelines, a migration policy, contribution rules) rather than describing what exists. Phase 2 routes to normative docs from the task skills and routing rows they govern; the rest are context for understanding the code.
+
 **Toxic docs warning:** Any document scored `low-confidence` should be flagged with an additional `TOXIC` marker in `_triage.md`. Toxic docs are not just unreliable -- they may be actively misleading. Phase 2 agents must treat toxic docs with the same suspicion as having NO docs: verify every claim independently from source code. Do not let toxic docs anchor your understanding of the codebase architecture.
 
 ### Module-level READMEs at scale
