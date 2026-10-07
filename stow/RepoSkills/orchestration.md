@@ -570,7 +570,7 @@ Fast path for updating a single skill:
 2. Read the existing skill file for the specified module/task
 3. Re-explore the relevant codebase area (the module's directory, or the task's relevant files)
 4. Regenerate the skill file
-5. Update the manifest
+5. Update the manifest. If a root platform file lacks the "Before you report a task done" checklist in Skill & Routing Maintenance, or the Key Rule pointing at it, add both from the `phase-2-map-generate.md` templates
 
 #### ⛔ VALIDATION GATE — must pass before finalising
 
@@ -600,6 +600,7 @@ When skills already exist and `--fresh` is not specified:
    - Task skills: if relevant config/scripts changed (e.g., CI config change triggers deployment-ci.md update)
    - Core skills: if project-wide config changed (e.g., `package.json`, `go.mod`, `Cargo.toml`, `pyproject.toml` change triggers orientation.md update)
    - orientation.md: if any module was added or removed
+   - Root platform files: if any lacks the "Before you report a task done" checklist in Skill & Routing Maintenance, or the Key Rule pointing at it, add both from the `phase-2-map-generate.md` templates
 8. For each skill that needs updating, run the targeted update path (steps 1-5 of the targeted update above — do NOT run individual validation gates yet)
 
 #### ⛔ VALIDATION GATE — must pass before finalising

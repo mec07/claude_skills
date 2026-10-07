@@ -1,5 +1,5 @@
 #!/bin/sh
-# Asserts on the grammar artifacts generated into a target repo.
+# Asserts on the grammar artifacts and root platform files generated into a target repo.
 # Usage: assert-artifacts.sh <repo-root>
 set -u
 REPO="${1:?usage: assert-artifacts.sh <repo-root>}"
@@ -50,6 +50,11 @@ file_has "has a USE WHEN line"               ".ai/skills/tasks/navigate-unit.md"
 file_has "links the conventions doc"         ".ai/skills/tasks/navigate-unit.md" "conventions.md"
 file_has "states precedence by reference"    ".ai/skills/tasks/navigate-unit.md" "conventions"
 file_has "does not restate the layout"       ".ai/skills/tasks/navigate-unit.md" "procedure"
+
+for root in AGENTS.md CLAUDE.md .github/copilot-instructions.md .cursorrules; do
+    file_has "$root carries the done checklist"   "$root" "Before you report a task done"
+    file_has "$root has the Key Rule pointing at it" "$root" "Propose doc and skill updates yourself"
+done
 
 printf "\n%s\n" "$([ "$FAILED" -eq 0 ] && echo PASS || echo FAIL)"
 [ "$FAILED" -eq 0 ]
