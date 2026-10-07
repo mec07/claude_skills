@@ -667,7 +667,11 @@ USE WHEN format: backtick-wrapped directory paths with trailing slash (e.g., `` 
 
 ## Key Rules
 [Top 5-7 critical rules — things that will cause real problems if violated.
-NOT generic advice. Repo-specific guardrails.]
+NOT generic advice. Repo-specific guardrails. Then this rule, verbatim, numbered last:]
+N. **Propose doc and skill updates yourself before you report a task done.** A workaround,
+   an environment limit, a command that did not work as written, or a skill that was wrong
+   or missing is a doc update to make, not a note for the user. Run the checklist under
+   Skill & Routing Maintenance; do not wait to be asked.
 
 ## Key Commands
 | Command | Purpose | Source |
@@ -705,6 +709,21 @@ candidates, and the accuracy rule.
 ## Skill & Routing Maintenance
 These skills are LIVING — they evolve with the codebase.
 
+### Before you report a task done
+Propose the doc and skill updates yourself; do not wait to be asked. Before the final
+report, check whether the task hit any of these:
+- a command, plan step or skill instruction that did not work as written, or needed a workaround;
+- a failure that took more than one attempt to understand, or an environment limit (memory,
+  network, VPN, credentials, tooling) that blocked a step;
+- a skill, README or routing entry that was wrong, missing, or not found when it should have been;
+- a convention the user or a reviewer taught you.
+
+For each hit, write the fix into the skill or README that would have prevented it: in the
+same PR when it concerns the code you changed, otherwise in a separate docs PR. State in the
+final report what you updated, or why nothing needed updating. "No docs needed" is a claim
+to check against this list, not a default.
+
+### When to update
 **When you changed code.** The ordinary case, and the one that gets skipped, because
 nothing about it announces itself. Ask whether the change made a claim in the docs for
 that area false. Not whether an update would be nice: whether something is now wrong.
@@ -800,7 +819,11 @@ Module-specific commands: check the relevant module skill's Overrides section.]
 
 ## Key Rules
 [Top 5-7 critical rules — things that will cause real problems if violated.
-NOT generic advice. Repo-specific guardrails.]
+NOT generic advice. Repo-specific guardrails. Then this rule, verbatim, numbered last:]
+N. **Propose doc and skill updates yourself before you report a task done.** A workaround,
+   an environment limit, a command that did not work as written, or a skill that was wrong
+   or missing is a doc update to make, not a note for the user. Run the checklist under
+   Skill & Routing Maintenance; do not wait to be asked.
 
 ## Module Routing
 
@@ -853,6 +876,24 @@ candidates, and the accuracy rule.
 ## Skill & Routing Maintenance
 
 These skills are LIVING — they evolve with the codebase.
+
+### Before you report a task done
+
+Propose the doc and skill updates yourself; do not wait to be asked. Before the final
+report, check whether the task hit any of these:
+
+- a command, plan step or skill instruction that did not work as written, or needed a workaround;
+- a failure that took more than one attempt to understand, or an environment limit (memory,
+  network, VPN, credentials, tooling) that blocked a step;
+- a skill, README or routing entry that was wrong, missing, or not found when it should have been;
+- a convention the user or a reviewer taught you.
+
+For each hit, write the fix into the skill or README that would have prevented it: in the
+same PR when it concerns the code you changed, otherwise in a separate docs PR. State in the
+final report what you updated, or why nothing needed updating. "No docs needed" is a claim
+to check against this list, not a default.
+
+### When to update
 
 **When you changed code, which is the ordinary case and the one that gets skipped:**
 → Ask whether the change made a claim in the docs for that area false. Not whether an
@@ -1003,13 +1044,13 @@ Every root file (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md) MU
 | **Tech Stack** | Language, framework, version pinning sources |
 | **Architecture** | System shape + boundary list |
 | **Key Commands** | Quick reference of daily commands + pointer to scripts task skill for full reference |
-| **Key Rules** | Repo-specific critical rules (things that cause real problems if violated) |
+| **Key Rules** | Repo-specific critical rules (things that cause real problems if violated), ending with the rule to propose doc updates before reporting a task done |
 | **Module Routing** | Table mapping work areas to module skills — the primary discovery mechanism |
 | **Task Routing** | Table mapping agent intents to skill combinations |
 | **Context Window Discipline** | Directories to never browse, generated file guidance |
 | **Before Modifying Code** | Read module skill → check Change Impact → read orientation → plan the doc change with the code |
 | **Before Committing** | Fix what this change falsified, and the drift command that finds it |
-| **Skill & Routing Maintenance** | Living docs guidance — when and how to update skills during use |
+| **Skill & Routing Maintenance** | Living docs guidance — the "Before you report a task done" checklist, then when and how to update skills during use |
 | **Documentation** | Pointers to the full skill layer (orientation, modules, tasks, domain context) |
 | **Coding Standards** | DRY, follow patterns, maintain quality, no stubs, document what is rather than how it got there |
 | **New to This Repo?** | Numbered onboarding steps for agents encountering the repo for the first time |
@@ -1193,13 +1234,13 @@ All four root files (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md
 - [ ] Tech Stack (language, framework, version pinning sources)
 - [ ] Architecture (system shape + boundary list)
 - [ ] Key Commands (build, test, lint, dev commands with sources)
-- [ ] Key Rules (repo-specific critical rules — things that break if violated)
+- [ ] Key Rules (repo-specific critical rules — things that break if violated), the last one pointing at the "Before you report a task done" checklist
 - [ ] Module Routing (table with USE WHEN keywords)
 - [ ] Task Routing (table mapping intents to skill combinations, with USE WHEN keywords)
 - [ ] Context Window Discipline (directories to never browse, generated file guidance)
 - [ ] Before Modifying Code (read module skill, check Change Impact, read orientation, plan the doc change)
 - [ ] Before Committing (fix what the change falsified, drift command)
-- [ ] Skill & Routing Maintenance (living docs guidance, refactoring updates)
+- [ ] Skill & Routing Maintenance ("Before you report a task done" checklist, living docs guidance, refactoring updates)
 - [ ] Documentation (pointers to skill layer: orientation, modules, tasks, domain context)
 - [ ] Coding Standards (DRY, follow patterns, maintain quality, document what is rather than how it got there)
 - [ ] New to This Repo? (numbered onboarding steps)

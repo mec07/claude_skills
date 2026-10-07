@@ -161,13 +161,13 @@ Check ALL of the following:
 - [ ] Tech Stack
 - [ ] Architecture
 - [ ] Key Commands
-- [ ] Key Rules
+- [ ] Key Rules (the last one points at the "Before you report a task done" checklist)
 - [ ] Module Routing (table with USE WHEN keywords)
 - [ ] Task Routing (table mapping intents to skill combinations, with USE WHEN keywords)
 - [ ] Context Window Discipline
 - [ ] Before Modifying Code
 - [ ] Before Committing
-- [ ] Skill & Routing Maintenance
+- [ ] Skill & Routing Maintenance (opens with the "Before you report a task done" checklist)
 - [ ] Documentation (pointers to skill layer)
 - [ ] Coding Standards
 - [ ] New to This Repo?
