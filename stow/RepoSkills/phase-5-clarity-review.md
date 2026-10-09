@@ -51,15 +51,15 @@ Do not batch state updates. If context is lost between steps, the recovery proto
 
 Read `state.md` to determine the repo's size tier. Select simulations accordingly:
 
-- **Tier A (small repos):** Run simulations 1 and 2 only
-- **Tier B/C (standard+ repos):** Run all 5 simulations
-- **Tier D (monorepos):** Run all 5 simulations + simulation 6 (cross-project change)
+- **Tier A (small repos):** Run simulations 1, 2 and 7
+- **Tier B/C (standard+ repos):** Run simulations 1 to 5 and 7
+- **Tier D (monorepos):** Run simulations 1 to 5, 6 (cross-project change) and 7
 
 Update `state.md`: mark step 5.1 complete. Record which simulations will run.
 
 ---
 
-## The 6 Standard Simulations
+## The 7 Standard Simulations
 
 ### Simulation 1: New Developer Onboarding
 **Task:** You just cloned this repo. Get it running locally, understand its architecture, and identify where you would start working on a bug in the most critical module.
@@ -121,6 +121,19 @@ The agent must:
 4. Plan the change including version bumps or protocol
 5. Know how to test across project boundaries
 
+### Simulation 7: Plan Work That Includes Tests (Routing Check)
+**Task:** Write an implementation plan for [a feature in a core module], including the tests each step adds. Do not write code.
+
+This simulation tests routing, not content. Its brief gives the agent only the root platform file (CLAUDE.md or AGENTS.md); the agent may open another skill or doc only when a routing row or a link it has already read points there, and must record which row led it there.
+
+The agent must:
+1. Reach `tasks/testing.md` through a routing row whose USE WHEN matches planning or writing tests, not running them
+2. Reach the repo's written testing standard, if Phase 0 found one
+3. Reach the module skill for the module the plan changes
+4. Shape the plan's tests by the rules those docs state
+
+Fail the simulation (verdict: insufficient) if the agent writes the plan without having loaded the testing skill or the testing standard.
+
 ---
 
 ## Subagent Dispatch Protocol (Steps 5.2-5.3)
@@ -130,7 +143,7 @@ The agent must:
 For each simulation to run, prepare a brief that includes:
 
 1. **Task description:** The simulation scenario adapted to this specific repo (replace generic descriptions with actual module names, actual functionality, actual file patterns from the skill files)
-2. **Skill files to read:** List every file under `.ai/skills/` plus `CLAUDE.md`, `.github/copilot-instructions.md`, and any local context files
+2. **Skill files to read:** List every file under `.ai/skills/` plus `CLAUDE.md`, `.github/copilot-instructions.md`, and any local context files. Simulation 7 is the exception: list only the root platform file, as its section describes
 3. **Constraint:** "You have access ONLY to the skill files listed above. You must NOT read any source code files. Plan your task entirely from the documentation. Record every point where you get stuck, confused, or would need to guess."
 4. **Output format:** The simulation findings format (see below)
 5. **Output location:** `~/.claude/MEMORY/RepoSkills/<repo-slug>/_sim_N.md`

@@ -695,7 +695,7 @@ Phase 2 estimates token counts for every generated file. The self-review step at
 
 Phase 5 is the quality gate. It tests whether the generated skills actually help an agent complete real tasks. The simulation agent has access ONLY to the skills in `.ai/skills/` and the platform glue files -- it does NOT read source code directly.
 
-### The 6 standard scenarios
+### The 7 standard scenarios
 
 | # | Scenario | Tests |
 |---|----------|-------|
@@ -705,13 +705,14 @@ Phase 5 is the quality gate. It tests whether the generated skills actually help
 | 4 | **Add Tests** | Test framework knowledge, pattern discovery, fixture/helper awareness |
 | 5 | **Refactor Across Boundaries** | Dependency graph accuracy, consumer identification, safe refactor ordering |
 | 6 | **Cross-Project** (monorepos only) | Monorepo structure, shared package consumers, cross-project build pipeline |
+| 7 | **Plan Work That Includes Tests** | Routing for authoring and planning, not only running: given only the root file, does the agent reach the testing skill and the repo's testing standard? |
 
 ### Tier-specific simulation rules
 
-- **Tier A:** Run scenarios 1 and 2 only (New Developer Onboarding + Bug Fix in Core Module). Skip 3, 4, 5, 6.
-- **Tier B:** Run scenarios 1 through 5.
-- **Tier C:** Run scenarios 1 through 5 + 1 custom scenario targeting the most complex module.
-- **Tier D:** Run scenarios 1 through 5 + scenario 6 (Cross-Project).
+- **Tier A:** Run scenarios 1, 2 and 7 (New Developer Onboarding, Bug Fix in Core Module, Plan Work That Includes Tests). Skip 3, 4, 5, 6.
+- **Tier B:** Run scenarios 1 through 5, and 7.
+- **Tier C:** Run scenarios 1 through 5, 7, and 1 custom scenario targeting the most complex module.
+- **Tier D:** Run scenarios 1 through 5, 6 (Cross-Project) and 7.
 
 ### Simulation protocol
 
