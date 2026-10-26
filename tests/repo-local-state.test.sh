@@ -189,6 +189,11 @@ else
     if printf "%s\n" "$OUT" | grep -q '^src/a$'; then pass "trust: changed source listed"; else fail "trust: changed source listed" "output: $OUT"; fi
 fi
 
+extract_section "$O" '### Targeted update' > "$TMP/targeted.md"
+need "targeted: trust rule applies to every matching entry" "$TMP/targeted.md" 'every stored entry the changed-paths set matches, not only this module'
+extract_section "$O" '### Diff-based update' > "$TMP/diffupdate.md"
+need "diff update: trust rule not applied twice" "$TMP/diffupdate.md" 'step 1 is skipped because step 3 here already applied the trust rule'
+
 echo
 echo "$TESTS_RUN run, $TESTS_FAILED failed"
 [ "$TESTS_FAILED" -eq 0 ] || exit 1

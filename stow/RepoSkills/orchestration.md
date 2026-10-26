@@ -626,7 +626,7 @@ Stored `_boundaries.md` rows and `state.md` `## Unit List` entries are a snapsho
 
 Fast path for updating a single skill:
 
-1. Read `state.md` to get the stored commit hash and tier. If `commit:` differs from HEAD, apply the [trust rule](#trust-rule-for-stored-state) to this module's entry
+1. Read `state.md` to get the stored commit hash and tier. If `commit:` differs from HEAD, apply the [trust rule](#trust-rule-for-stored-state) once to every stored entry the changed-paths set matches, not only this module's. Step 8 advances `commit:` for the whole repo, so every matching entry must be re-checked first
 2. Read the existing skill file for the specified module/task
 3. Re-explore the relevant codebase area (the module's directory, or the task's relevant files)
 4. Regenerate the skill file
@@ -661,7 +661,7 @@ When skills already exist and `--fresh` is not specified:
    - Core skills: if project-wide config changed (e.g., `package.json`, `go.mod`, `Cargo.toml`, `pyproject.toml` change triggers orientation.md update)
    - orientation.md: if any module was added or removed
    - Root platform files: if any lacks the "Before you report a task done" checklist in Skill & Routing Maintenance, or the Key Rule pointing at it, add both from the `phase-2-map-generate.md` templates
-8. For each skill that needs updating, run the targeted update path (steps 1-5 of the targeted update above — do NOT run individual validation gates yet)
+8. For each skill that needs updating, run the targeted update path (steps 2-5 of the targeted update above; step 1 is skipped because step 3 here already applied the trust rule — do NOT run individual validation gates yet)
 
 #### ⛔ VALIDATION GATE — must pass before finalising
 
