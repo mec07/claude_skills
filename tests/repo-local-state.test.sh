@@ -191,6 +191,8 @@ need "trust: match rule" "$TMP/trust.md" "a changed path equals the entry's path
 need "trust: Unit List" "$TMP/trust.md" 'Unit List'
 need "trust: Path" "$TMP/trust.md" 'Path'
 need "trust: ? row always re-checked" "$TMP/trust.md" 'a row whose Path is `?` is always re-checked'
+need "trust: ? row triggers the rule" "$TMP/trust.md" 'Trigger:\*\* `state.md` `commit:` differs from HEAD, or any `_boundaries.md` row has Path `?`'
+need "trust: empty reuse only without ? rows" "$TMP/trust.md" 'An empty result with no `?` rows means reuse'
 need "trust: signal detection" "$TMP/trust.md" 'Phase 0 Step 4'
 need "trust: human confirms" "$TMP/trust.md" 'only after the human confirms'
 need "trust: gone from disk" "$TMP/trust.md" 'no longer exists on disk'

@@ -625,11 +625,11 @@ Complete pipeline (all phases 0-9). Ignores all existing skills. Regenerates eve
 
 Stored `_boundaries.md` rows and `state.md` `## Unit List` entries are a snapshot. Before reusing them, check them against what changed since the snapshot.
 
-1. **Trigger:** `state.md` `commit:` differs from HEAD. Find the changed paths with:
+1. **Trigger:** `state.md` `commit:` differs from HEAD, or any `_boundaries.md` row has Path `?`. Find the changed paths with:
 
    `git -C "$(git rev-parse --show-toplevel)" diff --name-only <commit>..HEAD -- . ':!.ai'`
 
-   Run it from any directory in the repo. An empty result means reuse the stored state as is.
+   Run it from any directory in the repo. An empty result with no `?` rows means reuse the stored state as is.
 2. **What to re-check:** each `_boundaries.md` row (by its `Path` column) and each `## Unit List` entry (by its `path` field) where a changed path equals the entry's path or lies under it. "Lies under" means the changed path starts with the entry's path followed by `/`, so `services/orders/x.go` is under `services/orders` and `services/orders-v2/x.go` is not. The workspace root is never a unit or boundary, so root files such as `CLAUDE.md` match nothing. Also, a row whose Path is `?` is always re-checked; find its directory from its Boundary and Entry Point.
 3. **How:** run Phase 0 Step 4 signal detection on that path, then update the entry.
 4. **No longer qualifies:** if the path no longer qualifies as a boundary or unit, flag it. Run the Module Deletion Cascade only after the human confirms. If the directory no longer exists on disk, the cascade runs automatically.
