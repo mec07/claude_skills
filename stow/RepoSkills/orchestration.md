@@ -22,17 +22,60 @@ Phase agents: read your phase instruction file for WHAT to do. Read this file fo
 
 ## State Management
 
-All working files and state live in `~/.claude/MEMORY/RepoSkills/<repo-slug>/`, where `<repo-slug>` is the repository directory name (e.g., `my-project`). This keeps working files out of the target repo and enables context recovery.
+All working files and state live in `.ai/RepoSkills/` at the target repo root, never inside `.ai/skills/`. Find the root with `git rev-parse --show-toplevel`. In this file, "the RepoSkills directory" means `.ai/RepoSkills/`.
+
+The state lives in the repo so that GUI clients, which cannot reach `~/.claude`, can see it; so that two repos with the same directory name cannot collide; and so that a teammate or CI job can re-run the pipeline from the same state.
+
+### Commit mode
+
+The developer chooses once, on the first run, whether the state is committed. Ask: *"Commit RepoSkills state? (recommended)"*. Then write `.ai/RepoSkills/.gitignore` with the matching block.
+
+Commit mode ignores the scratch files and keeps `state.md`, `_boundaries.md` and `_manifest.md` for the developer to commit:
+
+```
+# RepoSkills state: commit mode
+_*
+!_boundaries.md
+!_manifest.md
+```
+
+No-commit mode ignores everything except the `.gitignore` itself:
+
+```
+# RepoSkills state: no-commit mode
+*
+!.gitignore
+```
+
+The `.gitignore` is the record of the choice. If it exists, the pipeline never re-asks and never rewrites it.
+
+Detect the mode with this command: exit 0 means no-commit mode, exit 1 means commit mode. `--no-index` is required, because without it a tracked `state.md` is never reported as ignored.
+
+```
+git -C "$(git rev-parse --show-toplevel)" check-ignore -q --no-index .ai/RepoSkills/state.md
+```
+
+Fresh clone: when `.gitignore` exists but `state.md` does not, the choice is already made. Do not ask again; proceed as a first run.
+
+The pipeline never runs `git add` or `git commit`. It writes every persisted file before reporting a run finished.
 
 ### State file: `state.md`
+
+The first line of `state.md`, `_boundaries.md` and `_manifest.md` is this header, with `<commit>` set to the recorded `commit:` hash:
+
+```
+Snapshot at <commit>. Pipeline bookkeeping, not documentation. Verify against code before trusting.
+```
+
+`commit:` is the HEAD recorded at the start of the run, never the HEAD at the end. Every place that writes `commit:` writes that recorded value and rewrites the three headers with the same hash. The repo root is not stored; derive it with `git rev-parse --show-toplevel`.
 
 The template below shows Phase 2's sub-steps as an example. **When each phase agent starts, it must expand its phase entry** by copying the checklist from its phase instruction file into `state.md`. This ensures recovery can resume at the exact sub-step.
 
 ```markdown
+Snapshot at <commit>. Pipeline bookkeeping, not documentation. Verify against code before trusting.
+
 # RepoSkills State
 
-repo: /absolute/path/to/repo
-slug: repo-directory-name
 commit: <git-commit-hash-at-start>
 tier: <A|B|C|D>
 started: ISO-timestamp
@@ -128,14 +171,14 @@ Phase 8: Clarity Review 2
 Phase 9: Human Checkpoint
 ```
 
-### Working files in MEMORY
+### Working files in `.ai/RepoSkills/`
 
 | File | Created by | Used by | Deleted | Purpose |
 |---|---|---|---|---|
-| `state.md` | Orchestrator | All phases | Never (permanent record) | Phase progress, repo path, tier, platforms |
+| `state.md` | Orchestrator | All phases | Never (permanent record) | Phase progress, commit, tier, platforms |
 | `_triage.md` | Phase 0 | Phases 1, 2 | Phase 9 cleanup | Repo classification, existing skill assessment |
-| `_boundaries.md` | Phase 2 | Phases 2, 3 | Phase 9 cleanup | Confirmed module boundaries with evidence |
-| `_manifest.md` | Phase 2 | Phases 3, 4, 5, 6, 7, 8, 9 | Phase 9 cleanup | File disposition: generated vs preserved vs skipped |
+| `_boundaries.md` | Phase 2 | Phases 2, 3 | Never (preserved for re-runs) | Confirmed module boundaries with evidence |
+| `_manifest.md` | Phase 2 | Phases 3, 4, 5, 6, 7, 8, 9 | Never (preserved for re-runs) | File disposition: generated vs preserved vs skipped |
 | `_simulation_report.md` | Phase 5 | Phases 6, 8, 9 | Phase 9 cleanup | Simulation results: gaps, failures, missing routing |
 | `_unresolved.md` | Phase 6 | Phase 9 | Phase 9 cleanup | Issues that require human judgment |
 | `_questions.md` | Phase 2 | Phase 9 | Phase 9 cleanup | Questions flagged during generation for human review |
@@ -145,7 +188,7 @@ Phase 9: Human Checkpoint
 | `_skill_<name>.md` | Phase 2 subagents | Phase 2 merge | End of Phase 2 | Per-skill draft output |
 | `_sim_<scenario>.md` | Phase 5 subagents | Phase 5 merge | End of Phase 5 | Per-scenario simulation output |
 
-**Repo output file:** `.ai/skills/domain-context.md` -- written by Phase 1, consumed by all subsequent phases. Lives in the target repo, not MEMORY. Treated as a trusted baseline by Phase 0 on re-runs. Phase 1 reads `domain-context.md` directly from the repo (there is no separate `_domain.md` working file).
+**Repo output file:** `.ai/skills/domain-context.md` -- written by Phase 1, consumed by all subsequent phases. Lives in the target repo, not `.ai/RepoSkills/`. Treated as a trusted baseline by Phase 0 on re-runs. Phase 1 reads `domain-context.md` directly from the repo (there is no separate `_domain.md` working file).
 
 ### Manifest format (`_manifest.md`)
 
@@ -212,8 +255,8 @@ All phases that read the manifest expect this exact format:
 
 When resuming after a context clear:
 
-1. **List projects.** Read `~/.claude/MEMORY/RepoSkills/` -- list subdirectories to find the active project.
-2. **Read state.** Read `state.md` in the project directory.
+1. **Read state.** Read `.ai/RepoSkills/state.md` in the current repo.
+2. **Check the mode.** Run the mode-detection command from [Commit mode](#commit-mode) if you need to know whether the state is committed.
 3. **Validate state.md integrity** before proceeding:
    - All `completed` timestamps are chronological (no phase completed before its predecessor)
    - No phase is marked both complete and in-progress
@@ -232,7 +275,7 @@ When resuming after a context clear:
 
 ## Pipeline Execution Protocol
 
-The full pipeline has **10 phases** (Phase 0 through Phase 9). **Each phase MUST run in its own context window.** Spawn a new agent for each phase. State passes between phases exclusively via files on disk -- the working files in `~/.claude/MEMORY/RepoSkills/<repo-slug>/` and the skill files in the target repo's `.ai/skills/` directory plus root platform glue files.
+The full pipeline has **10 phases** (Phase 0 through Phase 9). **Each phase MUST run in its own context window.** Spawn a new agent for each phase. State passes between phases exclusively via files on disk -- the working files in `.ai/RepoSkills/` and the skill files in the target repo's `.ai/skills/` directory plus root platform glue files.
 
 ```
 Phase 0: Discover & Triage       -> classify repo, detect platforms, find boundaries, assess existing skills
@@ -253,32 +296,32 @@ Each phase reads its instructions from a dedicated file in this skill directory:
 
 | Phase | Instruction file | Input (on disk) | Output (on disk) |
 |---|---|---|---|
-| 0 | `phase-0-discover.md` | Codebase, existing skills/docs | `MEMORY: _triage.md` |
+| 0 | `phase-0-discover.md` | Codebase, existing skills/docs | `RS: _triage.md` |
 | 1 | `phase-1-domain-interview.md` | `_triage.md` + human input | `.ai/skills/domain-context.md` |
-| 2 | `phase-2-map-generate.md` | `_triage.md` + `domain-context.md` (from repo) + codebase | `.ai/skills/**`, platform glue, `MEMORY: _boundaries.md`, `_questions.md` |
+| 2 | `phase-2-map-generate.md` | `_triage.md` + `domain-context.md` (from repo) + codebase | `.ai/skills/**`, platform glue, `RS: _boundaries.md`, `_questions.md` |
 | 3 | `phase-3-refine.md` | All Phase 2 output + `_triage.md` + `_boundaries.md` + codebase | All skills restructured and expanded |
-| 4 | `phase-4-validate.md` | All skills + codebase | Skills with errors fixed, `MEMORY: _audit.md` |
-| 5 | `phase-5-clarity-review.md` | All skills + codebase | `MEMORY: _simulation_report.md` |
-| 6 | `phase-6-self-resolve.md` | `_simulation_report.md` + all skills + codebase | Skills updated, `MEMORY: _unresolved.md` |
-| 7 | `phase-7-validate-2.md` | All skills + `_simulation_report.md` + codebase | `MEMORY: _audit.md` rebuilt |
+| 4 | `phase-4-validate.md` | All skills + codebase | Skills with errors fixed, `RS: _audit.md` |
+| 5 | `phase-5-clarity-review.md` | All skills + codebase | `RS: _simulation_report.md` |
+| 6 | `phase-6-self-resolve.md` | `_simulation_report.md` + all skills + codebase | Skills updated, `RS: _unresolved.md` |
+| 7 | `phase-7-validate-2.md` | All skills + `_simulation_report.md` + codebase | `RS: _audit.md` rebuilt |
 | 8 | `phase-8-clarity-review-2.md` | All skills + `_simulation_report.md` + codebase | `_simulation_report.md` updated |
-| 9 | `phase-9-human-checkpoint.md` | `_unresolved.md` + `_questions.md` + all skills | Final skill updates, MEMORY cleanup |
-| DR | `phase-drift-resolve.md` | `state.md`, `_boundaries.md`, `_manifest.md`, drift JSON, codebase | Updated/new skills, `MEMORY: _drift_report.md` |
+| 9 | `phase-9-human-checkpoint.md` | `_unresolved.md` + `_questions.md` + all skills | Final skill updates, RepoSkills directory cleanup |
+| DR | `phase-drift-resolve.md` | `state.md`, `_boundaries.md`, `_manifest.md`, drift JSON, codebase | Updated/new skills, `RS: _drift_report.md` |
 
-`MEMORY:` prefix means the file lives in `~/.claude/MEMORY/RepoSkills/<repo-slug>/`.
+The `RS:` prefix means the file lives in `.ai/RepoSkills/`.
 
 ### Phase execution
 
 When running the full pipeline:
 
-1. **Create the MEMORY directory:** `mkdir -p ~/.claude/MEMORY/RepoSkills/<repo-slug>/`
-2. **Record the current git commit hash:** `git rev-parse HEAD` -- store in `state.md` as `commit:`
-3. **Write initial `state.md`** with the repo path, commit hash, and all phases unchecked
+1. **Create the RepoSkills directory:** `mkdir -p .ai/RepoSkills/`. If `.ai/RepoSkills/.gitignore` is absent, ask the commit-mode question and write the chosen block (see [Commit mode](#commit-mode)); if it exists, leave it alone.
+2. **Record the current git commit hash:** `git rev-parse HEAD` -- store in `state.md` as `commit:`. This is the only place the start HEAD is recorded; every later write of `commit:` reuses it.
+3. **Write initial `state.md`** with the persisted header, commit hash, and all phases unchecked
 4. **For each phase:**
    a. **For Tier A repos, check the fast path rules** (see [Tier A Fast Path](#tier-a-small-repos-50-files)) **before dispatching each phase.** Skip or collapse phases as specified.
    b. Spawn a new agent **at maximum effort**
    c. Pass it the phase instruction file AND the global rules section from this file
-   d. Tell the agent the MEMORY directory path and target repo path
+   d. Tell the agent the target repo path; the RepoSkills directory is `.ai/RepoSkills/` inside it
    e. The agent reads the instruction file and executes thoroughly
    f. The agent updates `state.md` -- marks the phase complete with timestamp
    g. On completion, the agent reports a summary of what was done
@@ -306,10 +349,10 @@ If all five conditions are met, skip Phase 9, proceed directly to cleanup, and i
 
 When the pipeline completes (after Phase 9, or after Phase 8 if Phase 9 is skipped):
 
-1. Delete all `_` prefixed working files from `~/.claude/MEMORY/RepoSkills/<repo-slug>/` **except** `_boundaries.md` and `_manifest.md` -- these are preserved for diff-based re-runs
+1. Delete all `_` prefixed working files from `.ai/RepoSkills/` **except** `_boundaries.md` and `_manifest.md` -- these are preserved for diff-based re-runs
 2. Update `state.md` to mark all phases complete
-3. Update `state.md` `commit:` field to the current HEAD (in case commits happened during the run)
-4. Report the final summary to the user including: number of skills generated, token budget compliance, platforms configured, and any known limitations
+3. Write the HEAD recorded at the start of the run to the `state.md` `commit:` field, and rewrite the headers of `state.md`, `_boundaries.md` and `_manifest.md` with it
+4. Report the final summary to the user including: number of skills generated, token budget compliance, platforms configured, and any known limitations. In commit mode, name `.ai/RepoSkills/` among the files to commit
 
 ---
 
@@ -332,7 +375,7 @@ When the pipeline completes (after Phase 9, or after Phase 8 if Phase 9 is skipp
 
 1. **Define tasks:** List the independent work units (areas to explore, skills to write, scenarios to simulate)
 2. **Write task context inline:** Each subagent prompt must include ALL context it needs -- the full task description, relevant file paths, rules to follow, and output file path. Do NOT reference other files the subagent would need to read for instructions (except the codebase itself).
-3. **Assign output files:** Each subagent writes to a unique file in the MEMORY directory (e.g., `_explore_backend.md`, `_skill_auth.md`, `_sim_new_feature.md`)
+3. **Assign output files:** Each subagent writes to a unique file in the RepoSkills directory (e.g., `_explore_backend.md`, `_skill_auth.md`, `_sim_new_feature.md`)
 4. **Dispatch in parallel:** Use the Agent tool with `run_in_background: true` for all subagents simultaneously
 5. **Collect and merge:** When all subagents complete, read their output files and integrate the results
 
@@ -455,11 +498,12 @@ Skills do NOT contain:
   - **High-confidence** skills should be preserved and updated incrementally.
   - **Medium-confidence** skills provide useful starting points but their claims should be verified.
   - **Low-confidence** skills should be regenerated from scratch.
+- Nothing generated may link to `.ai/RepoSkills/`: no skill, README or platform glue file routes agents there.
 - Do not assume any particular file is the most reliable. Let the Phase 0 assessment guide you.
 
 ### Scratchpad discipline
 
-- Use the working files in `~/.claude/MEMORY/RepoSkills/<repo-slug>/` as your scratchpad. Log findings as you go. **Do not rely on memory** -- these files are how state passes between context windows.
+- Use the working files in `.ai/RepoSkills/` as your scratchpad. Log findings as you go. **Do not rely on memory** -- these files are how state passes between context windows.
 - **Update `state.md` after every completed step.** This is mandatory. Mark the step `[x]` immediately when done.
 
 ---
@@ -581,7 +625,7 @@ Fast path for updating a single skill:
 
 **Gate failure:** If after 2 fix-and-retry cycles the simulation still fails, STOP. Report the failures to the user and ask for guidance. Do not update `state.md` — the update is incomplete.
 
-8. Update `state.md` commit hash — **only after the validation gate passes**
+8. Write the HEAD recorded at the start of the run to `state.md` `commit:` and rewrite the three headers with it — **only after the validation gate passes**
 
 **Expected time: 3-5 minutes.** No domain interview, no full simulation, no human checkpoint.
 
@@ -612,7 +656,7 @@ When skills already exist and `--fresh` is not specified:
 
 **Gate failure:** If after 2 fix-and-retry cycles simulations still fail, STOP. Report the failures to the user and ask for guidance. Do not update `state.md` — the update is incomplete.
 
-11. Update manifest and `state.md` commit hash — **only after the validation gate passes**
+11. Update the manifest. Write the HEAD recorded at the start of the run to `state.md` `commit:` and rewrite the three headers with it — **only after the validation gate passes**
 
 **Expected time: 5-15 minutes** depending on scope of changes.
 
@@ -640,8 +684,8 @@ Targeted repair of skills flagged by drift detection. Runs in a **single context
 6. Cross-reference check: propagate relationship changes to related skills
 7. Update routing tables in all platform glue files
 8. Three-stage accuracy verification: claim-by-claim source verification, structural integrity checks (Phase 4 checks 1, 3, 9, 10, 11), relationship symmetry audit
-9. Commit updated/new skill files (advances anchors automatically)
-10. Update `state.md` commit hash and drift resolution history
+9. List the updated/new skill files for the developer to commit
+10. Write the HEAD recorded at the start of the run to `state.md` `commit:`, rewrite the three headers with it, and update the drift resolution history
 
 **Expected time: 3-10 minutes** depending on number of drifted skills and unmapped directories.
 **Prerequisite:** At least one completed pipeline run (`state.md` must exist).
