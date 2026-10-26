@@ -136,6 +136,8 @@ need "phase 0 writes only to RepoSkills dir" "$PHASES/phase-0-discover.md" 'writ
 need "boundaries Path column" "$PHASES/phase-2-map-generate.md" '^| Path | Boundary | Type | Entry Point | Evidence |'
 need "boundaries header" "$PHASES/phase-2-map-generate.md" 'Snapshot at <commit>. Pipeline bookkeeping'
 need "phase 2 writes the manifest" "$PHASES/phase-2-map-generate.md" 'Write `.ai/RepoSkills/_manifest.md`'
+extract_section "$O" '### State file' > "$TMP/statefile.md"
+need "state template lists step 2.7" "$TMP/statefile.md" '^  - \[ \] 2\.7: Write _manifest.md and delete the _explore_ and _skill_ working files$'
 need "phase 2 deletes its working files" "$PHASES/phase-2-map-generate.md" 'delete every `_explore_\*.md` and `_skill_\*.md`'
 extract_section "$O" '### Manifest format' > "$TMP/manifest.md"
 need "manifest header" "$TMP/manifest.md" 'Snapshot at <commit>. Pipeline bookkeeping'

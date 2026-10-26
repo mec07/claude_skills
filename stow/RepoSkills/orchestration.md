@@ -123,6 +123,7 @@ it fell under).
   - [ ] 2.5: Generate platform glue (AGENTS.md, CLAUDE.md, .cursorrules, copilot-instructions.md, per-module routing)
   - [ ] GATE: All skills pass token budget check
   - [ ] 2.6: Self-review checklist
+  - [ ] 2.7: Write _manifest.md and delete the _explore_ and _skill_ working files
 - [ ] 3: Refine
 - [ ] 4: Validate
 - [ ] 5: Clarity Review
