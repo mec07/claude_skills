@@ -141,6 +141,54 @@ for f in phase-9-human-checkpoint.md phase-drift-resolve.md; do
 done
 absent "phase 9 has no commit_hash" "$PHASES/phase-9-human-checkpoint.md" 'commit_hash:'
 
+echo "trust rule"
+
+S="$(extract_section "$O" '### Trust rule for stored state')"
+printf "%s\n" "$S" > "$TMP/trust.md"
+if [ -z "$S" ]; then fail "trust rule section exists" "no '### Trust rule for stored state' in $O"; else pass "trust rule section exists"; fi
+need "trust: changed-paths command" "$TMP/trust.md" "-- \. ':!\.ai'"
+need "trust: match rule" "$TMP/trust.md" "a changed path equals the entry's path or lies under it"
+need "trust: Unit List" "$TMP/trust.md" 'Unit List'
+need "trust: Path" "$TMP/trust.md" 'Path'
+need "trust: signal detection" "$TMP/trust.md" 'Phase 0 Step 4'
+need "trust: human confirms" "$TMP/trust.md" 'only after the human confirms'
+need "trust: gone from disk" "$TMP/trust.md" 'no longer exists on disk'
+need "trust: record line" "$TMP/trust.md" 'Re-checked:'
+need "drift links trust rule" "$PHASES/phase-drift-resolve.md" 'Trust rule for stored state'
+need "drift uses changed-paths command" "$PHASES/phase-drift-resolve.md" "':!\.ai'"
+
+CMD="$(printf "%s\n" "$S" | grep 'diff --name-only' | head -1 | sed -n 's/^[^`]*`\([^`]*\)`.*$/\1/p')"
+if [ -z "$CMD" ]; then
+    fail "trust: extracted command runs" "no backticked diff --name-only command in the section"
+else
+    T="$TMP/trustrepo"
+    mkdir -p "$T/src"
+    git -C "$T" init -q
+    git -C "$T" config user.name test
+    git -C "$T" config user.email test@example.com
+    echo 1 > "$T/src/a"
+    git -C "$T" add . && git -C "$T" commit -q -m one
+    C="$(git -C "$T" rev-parse HEAD)"
+    mkdir -p "$T/.ai/RepoSkills" "$T/.ai/skills/modules" "$T/.cursor/rules"
+    echo s > "$T/.ai/RepoSkills/state.md"
+    echo m > "$T/.ai/skills/modules/x.md"
+    echo c > "$T/CLAUDE.md"
+    echo r > "$T/.cursor/rules/x.mdc"
+    git -C "$T" add . && git -C "$T" commit -q -m two
+    RUN="$(printf "%s" "$CMD" | sed "s/<commit>/$C/g")"
+    OUT="$(cd "$T/src" && sh -c "$RUN" 2>&1)"
+    if printf "%s\n" "$OUT" | grep -q '^\.ai/'; then fail "trust: .ai excluded" "output: $OUT"; else pass "trust: .ai excluded"; fi
+    if printf "%s\n" "$OUT" | grep -q '^CLAUDE.md$' && printf "%s\n" "$OUT" | grep -q '^\.cursor/rules/x\.mdc$'; then
+        pass "trust: root files listed from subdirectory"
+    else
+        fail "trust: root files listed from subdirectory" "output: $OUT"
+    fi
+    echo 2 > "$T/src/a"
+    git -C "$T" commit -q -am three
+    OUT="$(cd "$T/src" && sh -c "$RUN" 2>&1)"
+    if printf "%s\n" "$OUT" | grep -q '^src/a$'; then pass "trust: changed source listed"; else fail "trust: changed source listed" "output: $OUT"; fi
+fi
+
 echo
 echo "$TESTS_RUN run, $TESTS_FAILED failed"
 [ "$TESTS_FAILED" -eq 0 ] || exit 1

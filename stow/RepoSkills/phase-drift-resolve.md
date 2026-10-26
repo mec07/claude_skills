@@ -176,6 +176,7 @@ Verify prerequisites before running drift detection:
 2. **Verify skill files exist** in the target repo under `.ai/skills/`. If the directory is empty or missing, abort.
 3. **Verify `skill-drift.sh` exists** at `.ai/skills/Tools/skill-drift.sh` in the target repo. If missing, abort with: "Drift detection script not found. Run the full RepoSkills pipeline to generate it."
 4. **Record the current HEAD commit** for later use: `git rev-parse HEAD`. This is the HEAD recorded at the start of the run.
+5. **Apply the trust rule:** if `state.md` `commit:` differs from HEAD, apply the [Trust rule for stored state](orchestration.md#trust-rule-for-stored-state) before DR.1. Its changed-paths command excludes `.ai` (`-- . ':!.ai'`).
 
 Update `state.md`: mark step DR.0 complete.
 
@@ -424,7 +425,7 @@ For directories that qualify:
 
 1. **Read every source file** in the directory (apply the large file strategy from orchestration.md: first 50 lines + last 20 for files over 500 lines)
 2. **Identify:** purpose, entry point, key exports, dependencies (imports), dependents (who imports it), communication with external systems
-3. **Read `_boundaries.md`** to understand where this module sits relative to existing boundaries
+3. **Read `_boundaries.md`** to understand where this module sits relative to existing boundaries. If it is stale, apply the [Trust rule for stored state](orchestration.md#trust-rule-for-stored-state) first
 
 ### 6c. Draft the skill file
 

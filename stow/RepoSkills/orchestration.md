@@ -608,11 +608,25 @@ This brings Tier A from 10 phases to 4-6 phases, ~15 minutes total.
 
 Complete pipeline (all phases 0-9). Ignores all existing skills. Regenerates everything from scratch.
 
+### Trust rule for stored state
+
+Stored `_boundaries.md` rows and `state.md` `## Unit List` entries are a snapshot. Before reusing them, check them against what changed since the snapshot.
+
+1. **Trigger:** `state.md` `commit:` differs from HEAD. Find the changed paths with:
+
+   `git -C "$(git rev-parse --show-toplevel)" diff --name-only <commit>..HEAD -- . ':!.ai'`
+
+   Run it from any directory in the repo. An empty result means reuse the stored state as is.
+2. **What to re-check:** each `_boundaries.md` row (by its `Path` column) and each `## Unit List` entry (by its `path` field) where a changed path equals the entry's path or lies under it. "Lies under" means the changed path starts with the entry's path followed by `/`, so `services/orders/x.go` is under `services/orders` and `services/orders-v2/x.go` is not. The workspace root is never a unit or boundary, so root files such as `CLAUDE.md` match nothing.
+3. **How:** run Phase 0 Step 4 signal detection on that path, then update the entry.
+4. **No longer qualifies:** if the path no longer qualifies as a boundary or unit, flag it. Run the Module Deletion Cascade only after the human confirms. If the directory no longer exists on disk, the cascade runs automatically.
+5. **Record:** append one line to `state.md` per run: `Re-checked: <n> entries at <commit>..<HEAD>: <paths>`
+
 ### Targeted update (`--update <module-or-task>`)
 
 Fast path for updating a single skill:
 
-1. Read `state.md` to get the stored commit hash and tier
+1. Read `state.md` to get the stored commit hash and tier. If `commit:` differs from HEAD, apply the [trust rule](#trust-rule-for-stored-state) to this module's entry
 2. Read the existing skill file for the specified module/task
 3. Re-explore the relevant codebase area (the module's directory, or the task's relevant files)
 4. Regenerate the skill file
@@ -636,8 +650,8 @@ Fast path for updating a single skill:
 When skills already exist and `--fresh` is not specified:
 
 1. Read `state.md` to get the stored commit hash
-2. Run `git diff --name-only <stored-commit>..HEAD` to find changed files
-3. Map changed files to modules using `_boundaries.md` (or regenerate boundaries if the file is missing)
+2. Find changed files with the changed-paths command in the [trust rule](#trust-rule-for-stored-state)
+3. Apply the trust rule to the changed paths. Map them to modules using `_boundaries.md` (or regenerate boundaries if the file is missing)
 4. **Detect new modules:** Check if any changed files are in directories that have NO entry in the stored `_boundaries.md`. If so, run boundary detection (Phase 0 Step 4 signals) on those directories. If they qualify as boundaries, generate new module skills and add routing entries to all platform glue files.
 5. **Detect deleted modules:** Check if any stored boundaries in `_boundaries.md` have directories that no longer exist on disk. If so, trigger the Module Deletion Cascade (see below).
 6. **Detect renamed modules:** Check if a boundary directory was moved (appears in diff as delete + add in new location). Treat as: delete old module (full deletion cascade) + create new module (full generation). Do not attempt to "rename in place" -- the cascade ensures all references are cleaned up.
@@ -664,7 +678,7 @@ When skills already exist and `--fresh` is not specified:
 
 ### Module Deletion Cascade
 
-When a module is detected as deleted (its boundary directory no longer exists on disk), execute all of the following steps in order:
+When a module is detected as deleted (its boundary directory no longer exists on disk, or the human confirmed under the [trust rule](#trust-rule-for-stored-state) that it no longer qualifies), execute all of the following steps in order:
 
 1. **Delete the module's skill file:** Remove `.ai/skills/modules/<name>.md`
 2. **Remove from ALL routing tables:** Remove the module's entry from every root platform file that contains routing (CLAUDE.md, AGENTS.md, copilot-instructions.md, .cursorrules, .windsurfrules, .clinerules -- whichever exist in this repo)
