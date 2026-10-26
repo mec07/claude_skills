@@ -616,7 +616,7 @@ Update `state.md`: mark step DR.10 complete.
 ## Step 11: Completion (DR.11)
 
 1. **Update `state.md`:**
-   - Update the `commit:` field to the HEAD recorded at the start of the run (DR.0 step 4), not the HEAD now. Rewrite the first line of `state.md`, `_boundaries.md` and `_manifest.md` with that hash:
+   - Update the `commit:` field to the HEAD recorded at the start of the run (DR.0 step 5), not the HEAD now. Rewrite the first line of `state.md`, `_boundaries.md` and `_manifest.md` with that hash:
      ```
      Snapshot at <commit>. Pipeline bookkeeping, not documentation. Verify against code before trusting.
      ```
