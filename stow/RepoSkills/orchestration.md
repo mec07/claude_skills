@@ -57,7 +57,19 @@ git -C "$(git rev-parse --show-toplevel)" check-ignore -q --no-index .ai/RepoSki
 
 Fresh clone: when `.gitignore` exists but `state.md` does not, the choice is already made. Do not ask again; proceed as a first run.
 
-The pipeline never runs `git add` or `git commit`. It writes every persisted file before reporting a run finished.
+To switch from commit mode to no-commit mode, the developer replaces `.ai/RepoSkills/.gitignore` with the no-commit block, untracks the state files, and commits:
+
+```
+git -C "$(git rev-parse --show-toplevel)" rm --cached --ignore-unmatch .ai/RepoSkills/state.md .ai/RepoSkills/_boundaries.md .ai/RepoSkills/_manifest.md
+```
+
+The pipeline never runs `git add`, `git rm` or `git commit`. It writes every persisted file before reporting a run finished.
+
+The end-of-run summary names the RepoSkills files to commit:
+
+- In commit mode, name `.ai/RepoSkills/` among the files to commit.
+- In no-commit mode, name `.ai/RepoSkills/.gitignore` among the files to commit when this run created it, so the choice survives a fresh clone.
+- In no-commit mode, check for tracked state files with `git -C "$(git rev-parse --show-toplevel)" ls-files .ai/RepoSkills/state.md .ai/RepoSkills/_boundaries.md .ai/RepoSkills/_manifest.md`. If it prints anything, name the `git rm --cached` step above, then the commit.
 
 ### State file: `state.md`
 
@@ -318,7 +330,7 @@ The `RS:` prefix means the file lives in `.ai/RepoSkills/`.
 When running the full pipeline:
 
 1. **Create the RepoSkills directory:** `mkdir -p .ai/RepoSkills/`. If `.ai/RepoSkills/.gitignore` is absent, ask the commit-mode question and write the chosen block (see [Commit mode](#commit-mode)); if it exists, leave it alone.
-2. **Record the current git commit hash:** `git rev-parse HEAD` -- store in `state.md` as `commit:`. This is the only place the start HEAD is recorded; every later write of `commit:` reuses it.
+2. **Record the current git commit hash:** `git rev-parse HEAD` -- store in `state.md` as `commit:`. This is the run's start HEAD; every later write of `commit:` reuses it. Targeted and diff-based updates record it in their step 0, and drift resolution in DR.0.
 3. **Write initial `state.md`** with the persisted header, commit hash, and all phases unchecked
 4. **For each phase:**
    a. **For Tier A repos, check the fast path rules** (see [Tier A Fast Path](#tier-a-small-repos-50-files)) **before dispatching each phase.** Skip or collapse phases as specified.
@@ -355,7 +367,7 @@ When the pipeline completes (after Phase 9, or after Phase 8 if Phase 9 is skipp
 1. Delete all `_` prefixed working files from `.ai/RepoSkills/` **except** `_boundaries.md` and `_manifest.md` -- these are preserved for diff-based re-runs
 2. Update `state.md` to mark all phases complete
 3. Write the HEAD recorded at the start of the run to the `state.md` `commit:` field, and rewrite the headers of `state.md`, `_boundaries.md` and `_manifest.md` with it
-4. Report the final summary to the user including: number of skills generated, token budget compliance, platforms configured, and any known limitations. List the files to commit: every file the run wrote or changed outside the RepoSkills directory, by path (`.ai/skills/`, each root platform file, each per-module routing file). In commit mode, name `.ai/RepoSkills/` among the files to commit
+4. Report the final summary to the user including: number of skills generated, token budget compliance, platforms configured, and any known limitations. List the files to commit: every file the run wrote or changed outside the RepoSkills directory, by path (`.ai/skills/`, each root platform file, each per-module routing file). Then name the RepoSkills files to commit, as set out in [Commit mode](#commit-mode)
 
 ---
 
@@ -627,6 +639,7 @@ Stored `_boundaries.md` rows and `state.md` `## Unit List` entries are a snapsho
 
 Fast path for updating a single skill:
 
+0. **Record the start HEAD:** `git rev-parse HEAD`. Step 8 writes this value to `commit:`
 1. Read `state.md` to get the stored commit hash and tier. If `commit:` differs from HEAD, apply the [trust rule](#trust-rule-for-stored-state) once to every stored entry the changed-paths set matches, not only this module's. Step 8 advances `commit:` for the whole repo, so every matching entry must be re-checked first
 2. Read the existing skill file for the specified module/task
 3. Re-explore the relevant codebase area (the module's directory, or the task's relevant files)
@@ -650,6 +663,7 @@ Fast path for updating a single skill:
 
 When skills already exist and `--fresh` is not specified:
 
+0. **Record the start HEAD:** `git rev-parse HEAD`. Step 11 writes this value to `commit:`
 1. Read `state.md` to get the stored commit hash
 2. Find changed files with the changed-paths command in the [trust rule](#trust-rule-for-stored-state)
 3. Apply the trust rule to the changed paths. Map them to modules using `_boundaries.md` (or regenerate boundaries if the file is missing)
@@ -719,6 +733,7 @@ Older runs kept state outside the repo. This section moves it in.
 4. **On yes:**
    - Drop the `repo:` and `slug:` fields from the moved `state.md`.
    - Add the persisted header to the first line of all three files, using the `commit:` hash from `state.md`.
+   - If the moved `_boundaries.md` tables have no `Path` column, add a `Path` column as the first column. Fill each row's Path with the boundary's repo-relative directory: use the Entry Point's directory when that is clearly the boundary, or else re-run Phase 0 Step 4 signal detection to find it. If a row's directory still can't be settled, write `?`. A `?` row is never trusted: the trust rule re-checks it, found by its Boundary and Entry Point, whatever the changed paths are.
    - Ask the commit-mode question and write the chosen block (see [Commit mode](#commit-mode)).
    - The moved state then goes through the [Trust rule for stored state](#trust-rule-for-stored-state).
 5. **Cleanup:** ask once whether to remove the old directory. Never remove it without a yes.

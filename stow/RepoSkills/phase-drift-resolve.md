@@ -635,7 +635,7 @@ Update `state.md`: mark step DR.10 complete.
    - Accuracy verification results (claims verified vs removed)
    - Whether any skills failed the 20% verification threshold and were flagged for `--update`
    - Whether any deep structural issues were found (recommend full pipeline re-run if so)
-   - In commit mode, name `.ai/RepoSkills/` among the files to commit
+   - The RepoSkills files to commit, as set out in [Commit mode](orchestration.md#commit-mode). In commit mode, name `.ai/RepoSkills/` among the files to commit
 
 ---
 

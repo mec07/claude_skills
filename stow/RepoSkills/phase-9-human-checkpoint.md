@@ -301,7 +301,7 @@ warnings unless they also install the hook. CI integration covers everyone.
 
 ### Handling CI responses
 
-- **Yes (GitHub Actions):** Read the CI workflow template from the RepoSkills skill directory (`templates/skill-drift-ci.yml`). Write it to `.github/workflows/skill-drift.yml` in the target repo. Verify the file is valid YAML. If the `.github/workflows/` directory does not exist, create it.
+- **Yes (GitHub Actions):** Read the CI workflow template from this skill's directory (`templates/skill-drift-ci.yml`). Write it to `.github/workflows/skill-drift.yml` in the target repo. Verify the file is valid YAML. If the `.github/workflows/` directory does not exist, create it.
 - **Different platform:** Adapt the CI workflow template for the specified platform. The core logic is: run `skill-drift.sh --json`, parse the JSON output, post a PR/MR comment with the drift details. Adapt the trigger, API calls, and workflow syntax for the target CI platform.
 - **No:** Skip CI. Note that CI can be added later by running `skill-drift.sh --json` in any CI pipeline.
 
@@ -377,7 +377,7 @@ Pipeline complete.
 - Deferred gaps (marked in docs): N
 - Commit recorded: [short SHA]
 - Files to commit: [every file the run wrote or changed outside the RepoSkills directory, by path: `.ai/skills/`, each root platform file, each per-module routing file]
-- In commit mode: `.ai/RepoSkills/` among the files to commit
+- RepoSkills files to commit: [per orchestration.md#commit-mode; in commit mode, `.ai/RepoSkills/` among the files to commit]
 - Working files cleaned from the RepoSkills directory. State preserved in state.md.
 ```
 

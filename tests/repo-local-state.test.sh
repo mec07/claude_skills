@@ -88,6 +88,18 @@ absent "no slug field" "$TMP/outside.md" '^slug:'
 absent "no repo field" "$TMP/outside.md" '^repo:'
 absent "no MEMORY working-files heading" "$TMP/outside.md" '^### Working files in MEMORY'
 
+extract_section "$O" '### Commit mode' > "$TMP/commitmode.md"
+need "switch: replace gitignore" "$TMP/commitmode.md" 'replaces `.ai/RepoSkills/.gitignore` with the no-commit block'
+need "switch: untrack state files" "$TMP/commitmode.md" 'rm --cached --ignore-unmatch .ai/RepoSkills/state.md .ai/RepoSkills/_boundaries.md .ai/RepoSkills/_manifest.md'
+need "switch: pipeline never runs git rm" "$TMP/commitmode.md" 'never runs `git add`, `git rm` or `git commit`'
+need "no-commit summary: gitignore" "$TMP/commitmode.md" 'name `.ai/RepoSkills/.gitignore` among the files to commit when this run created it'
+need "no-commit summary: tracked check" "$TMP/commitmode.md" 'ls-files .ai/RepoSkills/state.md .ai/RepoSkills/_boundaries.md .ai/RepoSkills/_manifest.md'
+need "no-commit summary: names rm step" "$TMP/commitmode.md" 'name the `git rm --cached` step'
+need "commit-mode summary in Commit mode" "$TMP/commitmode.md" '`.ai/RepoSkills/` among the files to commit'
+extract_section "$O" '### Cleanup' > "$TMP/cleanup.md"
+need "cleanup links commit mode summary" "$TMP/cleanup.md" '(#commit-mode)'
+absent "cleanup does not repeat summary" "$TMP/cleanup.md" 'among the files to commit'
+
 echo "commit-mode gitignore behaviour"
 
 COMMIT_BLOCK="$(extract_block "$O" '# RepoSkills state: commit mode')"
@@ -122,6 +134,18 @@ printf "%s\n" "$NOCOMMIT_BLOCK" > "$R/.ai/RepoSkills/.gitignore"
 detect "$R/src"; rc=$?
 assert_rc "mode detection says no-commit mode from subdirectory, state.md tracked" "$rc" 0
 
+TRACKED_CMD="$(grep 'ls-files' "$TMP/commitmode.md" | head -1 | sed -n 's/^[^`]*`\([^`]*\)`.*$/\1/p')"
+RM_CMD="$(grep '^git .*rm --cached' "$TMP/commitmode.md" | head -1)"
+OUT="$(cd "$R/src" && sh -c "$TRACKED_CMD" 2>&1)"
+if [ -n "$OUT" ]; then pass "tracked check lists state after switch"; else fail "tracked check lists state after switch" "no output from [$TRACKED_CMD]"; fi
+(cd "$R/src" && sh -c "$RM_CMD" >/dev/null 2>&1)
+OUT="$(cd "$R/src" && sh -c "$TRACKED_CMD" 2>&1)"
+if [ -n "$TRACKED_CMD" ] && [ -n "$RM_CMD" ] && [ -z "$OUT" ] && [ -f "$R/.ai/RepoSkills/state.md" ]; then
+    pass "rm step untracks state and keeps it on disk"
+else
+    fail "rm step untracks state and keeps it on disk" "cmd [$RM_CMD], tracked: [$OUT]"
+fi
+
 echo "phase files"
 
 PHASES="$REPO_ROOT/stow/RepoSkills"
@@ -130,10 +154,19 @@ for f in "$PHASES"/phase-*.md; do
     without_migration_links < "$f" > "$TMP/$b"
     absent "$b: no MEMORY" "$TMP/$b" 'MEMORY'
     absent "$b: no slug" "$f" 'slug'
+    absent "$b: no RepoSkills skill directory" "$f" 'RepoSkills skill directory'
 done
 
 need "phase 0 writes only to RepoSkills dir" "$PHASES/phase-0-discover.md" 'writes only to `.ai/RepoSkills/`'
-need "boundaries Path column" "$PHASES/phase-2-map-generate.md" '^| Path | Boundary | Type | Entry Point | Evidence |'
+extract_section "$PHASES/phase-2-map-generate.md" '### Produce Confirmed Boundary Map' > "$TMP/bmap.md"
+for t in 1 2; do
+    h="$(grep -A1 "^## Boundaries (Tier $t" "$TMP/bmap.md" | sed -n 2p)"
+    if [ "$h" = '| Path | Boundary | Type | Entry Point | Evidence |' ]; then
+        pass "boundaries template: Tier $t has Path column"
+    else
+        fail "boundaries template: Tier $t has Path column" "header line: [$h]"
+    fi
+done
 need "boundaries header" "$PHASES/phase-2-map-generate.md" 'Snapshot at <commit>. Pipeline bookkeeping'
 need "phase 2 writes the manifest" "$PHASES/phase-2-map-generate.md" 'Write `.ai/RepoSkills/_manifest.md`'
 extract_section "$O" '### State file' > "$TMP/statefile.md"
@@ -143,6 +176,7 @@ extract_section "$O" '### Manifest format' > "$TMP/manifest.md"
 need "manifest header" "$TMP/manifest.md" 'Snapshot at <commit>. Pipeline bookkeeping'
 for f in phase-9-human-checkpoint.md phase-drift-resolve.md; do
     need "$f: commit-mode summary" "$PHASES/$f" '`.ai/RepoSkills/` among the files to commit'
+    need "$f: links commit-mode summary" "$PHASES/$f" 'orchestration.md#commit-mode'
     need "$f: start HEAD" "$PHASES/$f" 'HEAD recorded at the start of the run'
 done
 absent "phase 9 has no commit_hash" "$PHASES/phase-9-human-checkpoint.md" 'commit_hash:'
@@ -199,6 +233,9 @@ extract_section "$O" '### Targeted update' > "$TMP/targeted.md"
 need "targeted: trust rule applies to every matching entry" "$TMP/targeted.md" 'every stored entry the changed-paths set matches, not only this module'
 extract_section "$O" '### Diff-based update' > "$TMP/diffupdate.md"
 need "diff update: trust rule not applied twice" "$TMP/diffupdate.md" 'step 1 is skipped because step 3 here already applied the trust rule'
+need "targeted: records start HEAD first" "$TMP/targeted.md" '^0\. \*\*Record the start HEAD:\*\* `git rev-parse HEAD`'
+need "diff update: records start HEAD first" "$TMP/diffupdate.md" '^0\. \*\*Record the start HEAD:\*\* `git rev-parse HEAD`'
+absent "full run is not the only start HEAD" "$O" 'the only place the start HEAD is recorded'
 
 echo "migration"
 
@@ -215,6 +252,9 @@ need "migration: persisted header" "$TMP/migration.md" 'persisted header'
 need "migration: commit-mode question" "$TMP/migration.md" '#commit-mode'
 need "migration: trust rule" "$TMP/migration.md" '#trust-rule-for-stored-state'
 need "migration: remove old dir" "$TMP/migration.md" 'remove the old directory'
+need "migration: adds Path column" "$TMP/migration.md" 'add a `Path` column'
+need "migration: Path from Phase 0 Step 4" "$TMP/migration.md" 'Path.*Phase 0 Step 4'
+need "migration: unsettled row not trusted" "$TMP/migration.md" 'A `?` row is never trusted'
 extract_section "$O" '### Detecting update mode' > "$TMP/detect.md"
 need "detect mode: step 0 migrates" "$TMP/detect.md" '^0\. .*Migrating from ~/.claude/MEMORY'
 need "drift links migration" "$PHASES/phase-drift-resolve.md" 'Migrating from ~/.claude/MEMORY'

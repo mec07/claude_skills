@@ -1139,7 +1139,7 @@ Write three files to `.ai/skills/Tools/` in the target repo:
 
 #### 1. `skill-drift.sh` — the drift detection script
 
-Read the template from the RepoSkills skill directory (`templates/skill-drift.sh`) and customise it:
+Read the template from this skill's directory (`templates/skill-drift.sh`) and customise it:
 
 1. Populate the `CROSS_CUTTING` array from `_boundaries.md` (optional) — use the directories listed under "Cross-Cutting (not boundaries)". This array ONLY affects the unmapped directory report, not the core drift detection. If the repo has few cross-cutting directories (under ~5), leave the array empty — the unmapped report will be manageable without it. Populate it for repos with many shared packages (like a Go repo with 20+ utility packages in `pkg/`) where the unmapped report would otherwise be too noisy to act on.
 2. Populate the `SCAN_DIRS` array based on the repo's module structure — use the top-level directory patterns where modules live (e.g., `'src/*/'`, `'pkg/*/'`, `'cmd/*/'`). Derive these from the confirmed boundaries: look at the common parent directories of the boundary entry points.
