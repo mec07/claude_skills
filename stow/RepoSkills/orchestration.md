@@ -640,7 +640,7 @@ Stored `_boundaries.md` rows and `state.md` `## Unit List` entries are a snapsho
 Fast path for updating a single skill:
 
 0. **Record the start HEAD:** `git rev-parse HEAD`. Step 8 writes this value to `commit:`
-1. Read `state.md` to get the stored commit hash and tier. If `commit:` differs from HEAD, apply the [trust rule](#trust-rule-for-stored-state) once to every stored entry the changed-paths set matches, not only this module's. Step 8 advances `commit:` for the whole repo, so every matching entry must be re-checked first
+1. Read `state.md` to get the stored commit hash and tier. If the [trust rule's trigger](#trust-rule-for-stored-state) holds, apply it once to every stored entry the changed-paths set matches, not only this module's. Step 8 advances `commit:` for the whole repo, so every matching entry must be re-checked first
 2. Read the existing skill file for the specified module/task
 3. Re-explore the relevant codebase area (the module's directory, or the task's relevant files)
 4. Regenerate the skill file

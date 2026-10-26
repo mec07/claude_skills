@@ -235,6 +235,8 @@ fi
 extract_section "$O" '### Targeted update' > "$TMP/targeted.md"
 need "targeted: trust rule applies to every matching entry" "$TMP/targeted.md" 'every stored entry the changed-paths set matches, not only this module'
 extract_section "$O" '### Diff-based update' > "$TMP/diffupdate.md"
+need "targeted: trust rule gated on its own trigger" "$TMP/targeted.md" "If the \[trust rule's trigger\](#trust-rule-for-stored-state) holds, apply it"
+need "drift: trust rule gated on its own trigger" "$PHASES/phase-drift-resolve.md" "if the \[Trust rule for stored state\](orchestration.md#trust-rule-for-stored-state)'s trigger holds, apply it"
 need "diff update: trust rule not applied twice" "$TMP/diffupdate.md" 'step 1 is skipped because step 3 here already applied the trust rule'
 need "targeted: records start HEAD first" "$TMP/targeted.md" '^0\. \*\*Record the start HEAD:\*\* `git rev-parse HEAD`'
 need "diff update: records start HEAD first" "$TMP/diffupdate.md" '^0\. \*\*Record the start HEAD:\*\* `git rev-parse HEAD`'
