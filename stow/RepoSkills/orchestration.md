@@ -708,10 +708,25 @@ Targeted repair of skills flagged by drift detection. Runs in a **single context
 
 For the full instruction set, see `phase-drift-resolve.md`.
 
+### Migrating from ~/.claude/MEMORY
+
+Older runs kept state outside the repo. This section moves it in.
+
+1. **Trigger:** `~/.claude/MEMORY/RepoSkills/<dir-name>/state.md` exists and `.ai/RepoSkills/` does not. `<dir-name>` is the repo directory's basename: `basename "$(git rev-parse --show-toplevel)"`.
+2. **Guard:** the old `state.md` has a `repo:` value. It must equal the output of `git rev-parse --show-toplevel`. On a mismatch, say so and don't offer. Two repos can share a directory name.
+3. **Offer** to move `state.md`, `_boundaries.md` and `_manifest.md` into `.ai/RepoSkills/`. If the human says no, continue as a first run.
+4. **On yes:**
+   - Drop the `repo:` and `slug:` fields from the moved `state.md`.
+   - Add the persisted header to the first line of all three files, using the `commit:` hash from `state.md`.
+   - Ask the commit-mode question and write the chosen block (see [Commit mode](#commit-mode)).
+   - The moved state then goes through the [Trust rule for stored state](#trust-rule-for-stored-state).
+5. **Cleanup:** ask once whether to remove the old directory. Never remove it without a yes.
+
 ### Detecting update mode
 
 The orchestrator determines the update mode at startup:
 
+0. Run [Migrating from ~/.claude/MEMORY](#migrating-from-claudememory), so every mode below sees migrated state
 1. Check if `--fresh` flag is present -> Full run
 2. Check if `--update <name>` flag is present -> Targeted update
 3. Check if `--drift` or `--resolve-drift` flag is present -> Drift resolution

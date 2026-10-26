@@ -172,11 +172,12 @@ Format:
 
 Verify prerequisites before running drift detection:
 
-1. **Read `state.md`** from `.ai/RepoSkills/`. If it does not exist, abort with: "No prior pipeline run found. Run the full RepoSkills pipeline first."
-2. **Verify skill files exist** in the target repo under `.ai/skills/`. If the directory is empty or missing, abort.
-3. **Verify `skill-drift.sh` exists** at `.ai/skills/Tools/skill-drift.sh` in the target repo. If missing, abort with: "Drift detection script not found. Run the full RepoSkills pipeline to generate it."
-4. **Record the current HEAD commit** for later use: `git rev-parse HEAD`. This is the HEAD recorded at the start of the run.
-5. **Apply the trust rule:** if `state.md` `commit:` differs from HEAD, apply the [Trust rule for stored state](orchestration.md#trust-rule-for-stored-state) before DR.1. Its changed-paths command excludes `.ai` (`-- . ':!.ai'`).
+1. **Run the migration check** in [Migrating from ~/.claude/MEMORY](orchestration.md#migrating-from-claudememory) before reading `state.md`.
+2. **Read `state.md`** from `.ai/RepoSkills/`. If it does not exist, abort with: "No prior pipeline run found. Run the full RepoSkills pipeline first."
+3. **Verify skill files exist** in the target repo under `.ai/skills/`. If the directory is empty or missing, abort.
+4. **Verify `skill-drift.sh` exists** at `.ai/skills/Tools/skill-drift.sh` in the target repo. If missing, abort with: "Drift detection script not found. Run the full RepoSkills pipeline to generate it."
+5. **Record the current HEAD commit** for later use: `git rev-parse HEAD`. This is the HEAD recorded at the start of the run.
+6. **Apply the trust rule:** if `state.md` `commit:` differs from HEAD, apply the [Trust rule for stored state](orchestration.md#trust-rule-for-stored-state) before DR.1. Its changed-paths command excludes `.ai` (`-- . ':!.ai'`).
 
 Update `state.md`: mark step DR.0 complete.
 

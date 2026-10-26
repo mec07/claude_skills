@@ -194,6 +194,44 @@ need "targeted: trust rule applies to every matching entry" "$TMP/targeted.md" '
 extract_section "$O" '### Diff-based update' > "$TMP/diffupdate.md"
 need "diff update: trust rule not applied twice" "$TMP/diffupdate.md" 'step 1 is skipped because step 3 here already applied the trust rule'
 
+echo "migration"
+
+M="$(extract_section "$O" '### Migrating from ~/.claude/MEMORY')"
+printf "%s\n" "$M" > "$TMP/migration.md"
+if [ -z "$M" ]; then fail "migration section exists" "no '### Migrating from ~/.claude/MEMORY' in $O"; else pass "migration section exists"; fi
+need "migration: offer" "$TMP/migration.md" 'offer'
+need "migration: boundaries" "$TMP/migration.md" '_boundaries.md'
+need "migration: manifest" "$TMP/migration.md" '_manifest.md'
+need "migration: repo guard" "$TMP/migration.md" 'repo:'
+need "migration: toplevel" "$TMP/migration.md" 'git rev-parse --show-toplevel'
+need "migration: dir-name" "$TMP/migration.md" 'basename'
+need "migration: persisted header" "$TMP/migration.md" 'persisted header'
+need "migration: commit-mode question" "$TMP/migration.md" '#commit-mode'
+need "migration: trust rule" "$TMP/migration.md" '#trust-rule-for-stored-state'
+need "migration: remove old dir" "$TMP/migration.md" 'remove the old directory'
+extract_section "$O" '### Detecting update mode' > "$TMP/detect.md"
+need "detect mode: step 0 migrates" "$TMP/detect.md" '^0\. .*Migrating from ~/.claude/MEMORY'
+need "drift links migration" "$PHASES/phase-drift-resolve.md" 'Migrating from ~/.claude/MEMORY'
+grep -q '(orchestration.md#migrating-from-claudememory)\|(#migrating-from-claudememory)' "$TMP/detect.md" \
+    && pass "detect mode: migration anchor" || fail "detect mode: migration anchor" "anchor missing"
+
+echo "helper self-test"
+
+cat > "$TMP/fixture.md" <<'FIX'
+### Migrating from ~/.claude/MEMORY
+MEMORY inside section
+### Other
+kept line
+See [Migrating from ~/.claude/MEMORY](x) link
+plain MEMORY mention
+FIX
+outside_section "$TMP/fixture.md" '### Migrating from ~/.claude/MEMORY' > "$TMP/fx-out.md"
+absent "outside_section drops section body" "$TMP/fx-out.md" 'MEMORY inside section'
+need "outside_section keeps later section" "$TMP/fx-out.md" '^### Other'
+without_migration_links < "$TMP/fx-out.md" > "$TMP/fx-filtered.md"
+absent "filter drops link line" "$TMP/fx-filtered.md" 'link'
+need "filter keeps plain MEMORY line" "$TMP/fx-filtered.md" 'plain MEMORY mention'
+
 echo
 echo "$TESTS_RUN run, $TESTS_FAILED failed"
 [ "$TESTS_FAILED" -eq 0 ] || exit 1
