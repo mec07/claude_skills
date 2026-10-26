@@ -190,6 +190,7 @@ need "trust: changed-paths command" "$TMP/trust.md" "-- \. ':!\.ai'"
 need "trust: match rule" "$TMP/trust.md" "a changed path equals the entry's path or lies under it"
 need "trust: Unit List" "$TMP/trust.md" 'Unit List'
 need "trust: Path" "$TMP/trust.md" 'Path'
+need "trust: ? row always re-checked" "$TMP/trust.md" 'a row whose Path is `?` is always re-checked'
 need "trust: signal detection" "$TMP/trust.md" 'Phase 0 Step 4'
 need "trust: human confirms" "$TMP/trust.md" 'only after the human confirms'
 need "trust: gone from disk" "$TMP/trust.md" 'no longer exists on disk'
