@@ -30,15 +30,15 @@ Copy this checklist into `state.md` under the Phase 3 entry. Mark each item `[x]
 
 | Direction | File | Location | Description |
 |---|---|---|---|
-| **Input** | `state.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Repo path, slug, tier, phase progress |
-| **Input** | `_triage.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Phase 0 triage assessment |
-| **Input** | `_boundaries.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Confirmed boundary map from Phase 2 |
+| **Input** | `state.md` | `.ai/RepoSkills/` | Tier, phase progress |
+| **Input** | `_triage.md` | `.ai/RepoSkills/` | Phase 0 triage assessment |
+| **Input** | `_boundaries.md` | `.ai/RepoSkills/` | Confirmed boundary map from Phase 2 |
 | **Input** | All skill files | Target repo: `.ai/skills/` | Skills produced by Phase 2 |
 | **Input** | Platform glue files | Target repo root | `AGENTS.md`, `CLAUDE.md`, `.cursorrules`, `.github/copilot-instructions.md` |
 | **Input** | Codebase | Target repo on disk | For verifying new content added during expansion |
 | **Output** | Updated skill files | Target repo: `.ai/skills/` | Restructured, expanded, deduplicated skills |
 | **Output** | Updated platform glue | Target repo root | Updated if orientation or module skills changed |
-| **Output** | `_boundaries.md` (updated) | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Updated after any module boundary changes |
+| **Output** | `_boundaries.md` (updated) | `.ai/RepoSkills/` | Updated after any module boundary changes |
 
 ---
 
@@ -64,8 +64,8 @@ Do not batch state updates. If context is lost between steps, the recovery proto
 ## Step 0: Read Inputs (Step 3.0)
 
 Read all of the following:
-1. `~/.claude/MEMORY/RepoSkills/<repo-slug>/_triage.md` — Phase 0's boundary candidates and assessment
-2. `~/.claude/MEMORY/RepoSkills/<repo-slug>/_boundaries.md` — confirmed boundary map from Phase 2
+1. `.ai/RepoSkills/_triage.md` — Phase 0's boundary candidates and assessment
+2. `.ai/RepoSkills/_boundaries.md` — confirmed boundary map from Phase 2
 3. All skill files in `.ai/skills/` (orientation, modules, tasks)
 4. Platform glue files (`AGENTS.md`, `CLAUDE.md`, `.cursorrules`, `.github/copilot-instructions.md`)
 5. `state.md` — current progress
@@ -262,7 +262,7 @@ If there are 15+ module skills to review, dispatch parallel subagents to avoid o
    - The duplication rules (from above)
    - Instructions to apply the quality bar to each assigned skill and record findings
 3. **Each subagent applies the 14-question quality bar** to its assigned skills, checking structure, coverage, and verbosity. It does NOT perform cross-skill checks (those require repo-wide view).
-4. **Each subagent writes findings to `_refine_batch_N.md`** in the MEMORY directory (e.g., `_refine_batch_1.md`, `_refine_batch_2.md`). Format: per-skill findings with proposed changes.
+4. **Each subagent writes findings to `_refine_batch_N.md`** in the RepoSkills directory (e.g., `_refine_batch_1.md`, `_refine_batch_2.md`). Format: per-skill findings with proposed changes.
 5. **After all subagents complete, the orchestrating agent:**
    - Reads all `_refine_batch_N.md` files
    - Performs the CROSS-SKILL checks that require repo-wide view: duplication across skills, routing consistency, coverage gaps, relationship symmetry

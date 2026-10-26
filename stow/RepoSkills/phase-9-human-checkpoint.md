@@ -38,7 +38,7 @@ Copy this checklist into `state.md` under the Phase 9 entry. Mark each item `[x]
 - [ ] 9.4: Incorporate human answers into skill files and domain-context.md
 - [ ] 9.5: Post-answer validation — verify all changes, re-check routing, spot-check 5 claims
 - [ ] 9.6: Offer drift detection integration (CI + local hook)
-- [ ] 9.7: Cleanup — delete working _ prefixed files from MEMORY (preserve _boundaries.md, _manifest.md)
+- [ ] 9.7: Cleanup — delete working _ prefixed files from the RepoSkills directory (preserve _boundaries.md, _manifest.md)
 - [ ] 9.8: Store git commit hash in state.md
 - [ ] 9.9: Update state.md — mark Phase 9 and pipeline complete
 ```
@@ -49,16 +49,16 @@ Copy this checklist into `state.md` under the Phase 9 entry. Mark each item `[x]
 
 | Direction | File | Location | Description |
 |---|---|---|---|
-| **Input** | `state.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Repo path, slug, phase progress, Phase 2 flags |
-| **Input** | `_unresolved.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Unresolvable issues from Phase 6 |
-| **Input** | `_simulation_report.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Full simulation history (for context when presenting questions) |
+| **Input** | `state.md` | `.ai/RepoSkills/` | Phase progress, Phase 2 flags |
+| **Input** | `_unresolved.md` | `.ai/RepoSkills/` | Unresolvable issues from Phase 6 |
+| **Input** | `_simulation_report.md` | `.ai/RepoSkills/` | Full simulation history (for context when presenting questions) |
 | **Input** | All skill files | Target repo: `.ai/skills/` | Documentation to update with human answers |
 | **Input** | `domain-context.md` | Target repo: `.ai/skills/` | Existing domain context (if it exists) |
 | **Input** | Codebase | Target repo on disk | For Reverse Glossary code mining |
 | **Input** | Human input | Interactive | Answers to questions |
 | **Output** | Updated skill files | Target repo: `.ai/skills/` | Final documentation with human input incorporated |
 | **Output** | Updated `domain-context.md` | Target repo: `.ai/skills/` | New glossary terms added |
-| **Output** | `state.md` (updated) | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Pipeline complete, git hash stored |
+| **Output** | `state.md` (updated) | `.ai/RepoSkills/` | Pipeline complete, git hash stored |
 
 ---
 
@@ -135,7 +135,7 @@ Update `state.md`: mark step 9.1 complete. Record how many terms were found and 
 
 ## Step 2: Present Unresolvable Issues (Step 9.2)
 
-Read `~/.claude/MEMORY/RepoSkills/<repo-slug>/_unresolved.md`. Present each unresolvable issue to the human with full context.
+Read `.ai/RepoSkills/_unresolved.md`. Present each unresolvable issue to the human with full context.
 
 ### Presentation format
 
@@ -301,7 +301,7 @@ warnings unless they also install the hook. CI integration covers everyone.
 
 ### Handling CI responses
 
-- **Yes (GitHub Actions):** Read the CI workflow template from the RepoSkills skill directory (`templates/skill-drift-ci.yml`). Write it to `.github/workflows/skill-drift.yml` in the target repo. Verify the file is valid YAML. If the `.github/workflows/` directory does not exist, create it.
+- **Yes (GitHub Actions):** Read the CI workflow template from this skill's directory (`templates/skill-drift-ci.yml`). Write it to `.github/workflows/skill-drift.yml` in the target repo. Verify the file is valid YAML. If the `.github/workflows/` directory does not exist, create it.
 - **Different platform:** Adapt the CI workflow template for the specified platform. The core logic is: run `skill-drift.sh --json`, parse the JSON output, post a PR/MR comment with the drift details. Adapt the trigger, API calls, and workflow syntax for the target CI platform.
 - **No:** Skip CI. Note that CI can be added later by running `skill-drift.sh --json` in any CI pipeline.
 
@@ -315,7 +315,7 @@ Update `state.md`: mark step 9.6 complete.
 
 ## Step 7: Cleanup (Step 9.7)
 
-Delete working `_` prefixed files from `~/.claude/MEMORY/RepoSkills/<repo-slug>/`:
+Delete working `_` prefixed files from `.ai/RepoSkills/`:
 
 - `_simulation_report.md`
 - `_unresolved.md`
@@ -338,10 +338,10 @@ Update `state.md`: mark step 9.7 complete.
 
 ## Step 8: Store Git Commit Hash (Step 9.8)
 
-Record the current HEAD commit hash in `state.md` for future diff-based updates:
+Write the HEAD recorded at the start of the run (Phase execution step 2) to the `commit:` field of `state.md`, not the HEAD now. Commits made during the run then show up as changes at the next diff. Rewrite the first line of `state.md`, `_boundaries.md` and `_manifest.md` with that hash:
 
-```bash
-git -C <repo-path> rev-parse HEAD
+```
+Snapshot at <commit>. Pipeline bookkeeping, not documentation. Verify against code before trusting.
 ```
 
 Add to `state.md`:
@@ -349,7 +349,6 @@ Add to `state.md`:
 ```markdown
 ## Pipeline Record
 - completed: [ISO timestamp]
-- commit_hash: [full SHA]
 - branch: [current branch name]
 ```
 
@@ -366,7 +365,7 @@ Update `state.md`:
 - Mark Phase 9 complete with timestamp
 - Mark ALL phases as `[x]` complete
 - Update the `updated:` timestamp to the final completion time
-- Ensure the Pipeline Record section (from Step 9.8) is present
+- Ensure the `commit:` field and the Pipeline Record section (from Step 9.8) are present
 
 Report to the orchestrator:
 
@@ -376,11 +375,13 @@ Pipeline complete.
 - Domain terms added to domain-context.md: N
 - Unresolvable issues answered by human: N
 - Deferred gaps (marked in docs): N
-- Commit hash recorded: [short SHA]
-- Working files cleaned from MEMORY. State preserved in state.md.
+- Commit recorded: [short SHA]
+- Files to commit: [every file the run wrote or changed outside the RepoSkills directory, by path: `.ai/skills/`, each root platform file, each per-module routing file]
+- RepoSkills files to commit: [per orchestration.md#commit-mode; in commit mode, `.ai/RepoSkills/` among the files to commit]
+- Working files cleaned from the RepoSkills directory. State preserved in state.md.
 ```
 
-The `state.md` file at `~/.claude/MEMORY/RepoSkills/<repo-slug>/state.md` now serves as the permanent record that this repo's skill files have been generated, simulated, resolved, and reviewed.
+The `state.md` file at `.ai/RepoSkills/state.md` now serves as the permanent record that this repo's skill files have been generated, simulated, resolved, and reviewed.
 
 ---
 

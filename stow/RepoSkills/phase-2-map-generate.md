@@ -21,6 +21,7 @@ Copy this checklist into `state.md` under the Phase 2 entry. Mark each item `[x]
 - [ ] 2.4: Generate task skills (.ai/skills/tasks/<name>.md, conditional)
 - [ ] 2.5: Generate platform glue and maintenance tools (AGENTS.md, CLAUDE.md, .cursorrules, copilot-instructions.md, per-module routing, skill-drift.sh)
 - [ ] 2.6: Self-review checklist
+- [ ] 2.7: Write _manifest.md and delete the _explore_ and _skill_ working files
 ```
 
 ---
@@ -28,8 +29,8 @@ Copy this checklist into `state.md` under the Phase 2 entry. Mark each item `[x]
 ## Inputs and Outputs
 
 **Inputs (read from disk):**
-- `~/.claude/MEMORY/RepoSkills/<repo-slug>/_triage.md` — Phase 0's boundary candidates, detected platforms, repo classification, task skill flags
-- `~/.claude/MEMORY/RepoSkills/<repo-slug>/state.md` — current progress state
+- `.ai/RepoSkills/_triage.md` — Phase 0's boundary candidates, detected platforms, repo classification, task skill flags
+- `.ai/RepoSkills/state.md` — current progress state
 - `.ai/skills/domain-context.md` in the target repo — business domain knowledge (if Phase 1 ran)
 - The target repository codebase (full filesystem access)
 
@@ -44,8 +45,11 @@ Copy this checklist into `state.md` under the Phase 2 entry. Mark each item `[x]
 - Per-module routing files for detected platforms (Layer 3, conditional)
 - `.ai/skills/Tools/skill-drift.sh` in the target repo — drift detection script (maintenance tool)
 - `.ai/skills/Tools/skill-drift-hook.sh` in the target repo — hook management script (maintenance tool)
-- `~/.claude/MEMORY/RepoSkills/<repo-slug>/_explore_<area>.md` — per-area exploration notes (working files, consumed during writing)
-- `~/.claude/MEMORY/RepoSkills/<repo-slug>/state.md` — updated with progress
+- `.ai/RepoSkills/_boundaries.md` — confirmed boundary map (persisted for re-runs)
+- `.ai/RepoSkills/_manifest.md` — disposition of every generated file (persisted for re-runs)
+- `.ai/RepoSkills/_questions.md` — questions for Phase 9
+- `.ai/RepoSkills/_explore_<area>.md`, `_skill_<name>.md` — subagent working files, deleted in Step 7
+- `.ai/RepoSkills/state.md` — updated with progress
 
 ---
 
@@ -85,7 +89,7 @@ Before writing ANY piece of information into a skill, ask: "Can the agent find t
 
 ## Step 1: Confirm Boundaries
 
-Read `~/.claude/MEMORY/RepoSkills/<repo-slug>/_triage.md` from Phase 0. This contains:
+Read `.ai/RepoSkills/_triage.md` from Phase 0. This contains:
 - Boundary candidates with evidence (package boundary, service boundary, domain boundary, deployment boundary, logical boundary)
 - Repo classification (small lib / standard app / large app / monorepo)
 - Detected platforms (which context file formats to generate)
@@ -115,24 +119,28 @@ For each boundary candidate from `_triage.md`:
 
 ### Produce Confirmed Boundary Map
 
-After verifying all candidates, write the confirmed boundary map to `~/.claude/MEMORY/RepoSkills/<repo-slug>/_boundaries.md`:
+After verifying all candidates, write the confirmed boundary map to `.ai/RepoSkills/_boundaries.md`:
 
 ```markdown
+Snapshot at <commit>. Pipeline bookkeeping, not documentation. Verify against code before trusting.
+
 # Confirmed Boundaries
 
 ## Repo Classification
 [small-lib | standard-app | large-app | monorepo]
 
 ## Boundaries (Tier 1 — full module skills)
-| Boundary | Type | Entry Point | Evidence |
-|----------|------|-------------|----------|
-| billing | package + domain | src/billing/index.ts | own package.json, own test dir, 28 source files |
+| Path | Boundary | Type | Entry Point | Evidence |
+|------|----------|------|-------------|----------|
+| src/billing | billing | package + domain | src/billing/index.ts | own package.json, own test dir, 28 source files |
+
+`Path` is the repo-relative directory of the boundary.
 
 (Adapt entry points and evidence to the repo's actual language — e.g., `main.go`, `lib.rs`, `__init__.py`, `Application.kt`.)
 
 ## Boundaries (Tier 2 — summary module skills, large repos only)
-| Boundary | Type | Entry Point | Evidence |
-|----------|------|-------------|----------|
+| Path | Boundary | Type | Entry Point | Evidence |
+|------|----------|------|-------------|----------|
 
 ## Merged (folded into parent)
 | Candidate | Merged Into | Reason |
@@ -157,7 +165,7 @@ After verifying all candidates, write the confirmed boundary map to `~/.claude/M
 
 ### Parallelisation: Boundary Verification
 
-If `_triage.md` lists **10+ boundary candidates**, parallelise verification using subagents. Each subagent verifies 3-5 boundaries and writes findings to `~/.claude/MEMORY/RepoSkills/<repo-slug>/_explore_boundaries_<batch>.md`.
+If `_triage.md` lists **10+ boundary candidates**, parallelise verification using subagents. Each subagent verifies 3-5 boundaries and writes findings to `.ai/RepoSkills/_explore_boundaries_<batch>.md`.
 
 **Subagent prompt template for boundary verification:**
 
@@ -573,7 +581,7 @@ Cover:
 
 If you find a module or capability but cannot determine how it works from the code alone (e.g., no tests, no config, unclear entry point):
 - Mark it `<!-- TODO: ask human — could not determine [specific thing] from source code -->`
-- Log the question in `~/.claude/MEMORY/RepoSkills/<repo-slug>/_questions.md` for Phase 9 (Human Checkpoint)
+- Log the question in `.ai/RepoSkills/_questions.md` for Phase 9 (Human Checkpoint)
 - Do NOT guess. Do NOT leave it undocumented. Flag it.
 
 ### Schema State Section (conditional)
@@ -1131,7 +1139,7 @@ Write three files to `.ai/skills/Tools/` in the target repo:
 
 #### 1. `skill-drift.sh` — the drift detection script
 
-Read the template from the RepoSkills skill directory (`templates/skill-drift.sh`) and customise it:
+Read the template from this skill's directory (`templates/skill-drift.sh`) and customise it:
 
 1. Populate the `CROSS_CUTTING` array from `_boundaries.md` (optional) — use the directories listed under "Cross-Cutting (not boundaries)". This array ONLY affects the unmapped directory report, not the core drift detection. If the repo has few cross-cutting directories (under ~5), leave the array empty — the unmapped report will be manageable without it. Populate it for repos with many shared packages (like a Go repo with 20+ utility packages in `pkg/`) where the unmapped report would otherwise be too noisy to act on.
 2. Populate the `SCAN_DIRS` array based on the repo's module structure — use the top-level directory patterns where modules live (e.g., `'src/*/'`, `'pkg/*/'`, `'cmd/*/'`). Derive these from the confirmed boundaries: look at the common parent directories of the boundary entry points.
@@ -1277,7 +1285,21 @@ All four root files (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md
 
 Fix any issues found. Then:
 
-**Update state:** Mark step 2.6 (review) complete in `state.md`. Update Phase 2 to complete with timestamp.
+**Update state:** Mark step 2.6 (review) complete in `state.md`.
+
+---
+
+## Step 7: Write the Manifest
+
+Write `.ai/RepoSkills/_manifest.md` in the format under "Manifest format" in
+[orchestration.md](orchestration.md#manifest-format-_manifestmd), one row per file this phase
+generated or preserved. Its first line is the persisted header with the `commit:` hash from
+`state.md`. Phases 3 to 9 and every re-run read this file, so Phase 2 is not complete without it.
+
+Then delete every `_explore_*.md` and `_skill_*.md` file from `.ai/RepoSkills/`. Keep
+`_triage.md`, `_boundaries.md`, `_manifest.md` and `_questions.md`.
+
+**Update state:** Mark step 2.7 complete in `state.md`. Update Phase 2 to complete with timestamp.
 
 ---
 
@@ -1296,7 +1318,7 @@ Fix any issues found. Then:
 
 1. **Define tasks:** List the independent work units
 2. **Write task context inline:** Each subagent prompt must include ALL context it needs — the full task description, relevant file paths, rules to follow, and output file path. Do NOT reference other files the subagent would need to read for instructions (except the codebase itself).
-3. **Assign output files:** Each subagent writes to a unique file in the MEMORY directory
+3. **Assign output files:** Each subagent writes to a unique file in the RepoSkills directory
 4. **Dispatch in parallel:** Use the Agent tool with `run_in_background: true`
 5. **Collect and merge:** When all subagents complete, read their output files and integrate
 

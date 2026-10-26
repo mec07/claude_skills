@@ -2,7 +2,7 @@
 
 Before generating any skills or documentation, you must understand the repository's shape, size, existing AI platform usage, architectural boundaries, and what task-specific skills are warranted. This phase produces a single triage file that all subsequent phases use as their starting point.
 
-**This phase is read-only. Do not modify any existing files in the target repo.** Your only output is `~/.claude/MEMORY/RepoSkills/<repo-slug>/_triage.md`.
+**This phase writes only to `.ai/RepoSkills/`; no other file in the target repo is created or modified.** Your only output is `.ai/RepoSkills/_triage.md`.
 
 ---
 
@@ -20,7 +20,7 @@ Copy this checklist into `state.md` under the Phase 0 entry. Mark each item `[x]
 - [ ] 0.4b: Decide create, update or confirm per candidate
 - [ ] 0.5: Detect task skills warranted by the codebase
 - [ ] 0.6: Check domain-context.md freshness
-- [ ] 0.7: Write _triage.md to MEMORY directory
+- [ ] 0.7: Write _triage.md to RepoSkills directory
 - [ ] 0.8: Update state.md — mark Phase 0 complete with timestamp
 ```
 
@@ -30,11 +30,11 @@ Copy this checklist into `state.md` under the Phase 0 entry. Mark each item `[x]
 
 | Direction | File | Location | Description |
 |---|---|---|---|
-| **Input** | `state.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Repo path, slug, phase progress |
+| **Input** | `state.md` | `.ai/RepoSkills/` | Phase progress |
 | **Input** | Codebase | Target repo on disk | All source files — read-only |
-| **Output** | `_triage.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Complete triage assessment |
+| **Output** | `_triage.md` | `.ai/RepoSkills/` | Complete triage assessment |
 
-This phase reads from the target repo and writes exclusively to the MEMORY directory. No files in the target repo are created or modified.
+This phase reads from the target repo and writes only to the RepoSkills directory. No other file in the target repo is created or modified.
 
 ---
 
@@ -51,7 +51,7 @@ Do not batch state updates. If context is lost between steps, the recovery proto
 
 ## Pre-check (Step 0.0)
 
-If `~/.claude/MEMORY/RepoSkills/<repo-slug>/_triage.md` already exists, this phase has already been completed in a previous run. **Mark Phase 0 complete in state.md** — check all Phase 0 sub-steps as done and add a completion timestamp. Then report to the orchestrator that Phase 0 can be skipped. Do not overwrite the existing triage.
+If `.ai/RepoSkills/_triage.md` already exists, this phase has already been completed in a previous run. **Mark Phase 0 complete in state.md** — check all Phase 0 sub-steps as done and add a completion timestamp. Then report to the orchestrator that Phase 0 can be skipped. Do not overwrite the existing triage.
 
 Update `state.md`: mark step 0.0 complete.
 
@@ -159,7 +159,7 @@ If the repo has more than 10 module-level READMEs, batch-assess: read them all, 
 
 ### Parallelisation for large repos
 
-If the repo contains **50 or more documentation files**, dispatch parallel subagents (model: `sonnet`) to read and categorise files concurrently. Split by directory tree. Each subagent writes to `~/.claude/MEMORY/RepoSkills/<repo-slug>/_discover_<dirname>.md`. Merge when complete, delete working files. If a subagent fails, re-dispatch once, then fall back to sequential.
+If the repo contains **50 or more documentation files**, dispatch parallel subagents (model: `sonnet`) to read and categorise files concurrently. Split by directory tree. Each subagent writes to `.ai/RepoSkills/_discover_<dirname>.md`. Merge when complete, delete working files. If a subagent fails, re-dispatch once, then fall back to sequential.
 
 Update `state.md`: mark step 0.3 complete.
 
@@ -452,13 +452,12 @@ Update `state.md`: mark step 0.6 complete.
 
 ## Step 7: Write `_triage.md` (Step 0.7)
 
-Write the triage assessment to `~/.claude/MEMORY/RepoSkills/<repo-slug>/_triage.md`:
+Write the triage assessment to `.ai/RepoSkills/_triage.md`:
 
 ```markdown
 # Repository Triage
 
 ## Classification
-- **Repo slug:** [slug]
 - **Repo path:** [absolute path]
 - **Classification:** Small | Standard | Large | Monorepo
 - **File count:** [N] source files (excluding dependencies/build output)
