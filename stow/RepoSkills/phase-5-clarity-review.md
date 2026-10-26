@@ -28,11 +28,11 @@ Copy this checklist into `state.md` under the Phase 5 entry. Mark each item `[x]
 
 | Direction | File | Location | Description |
 |---|---|---|---|
-| **Input** | `state.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Repo path, slug, tier, phase progress |
+| **Input** | `state.md` | `.ai/RepoSkills/` | Tier, phase progress |
 | **Input** | All skill files | Target repo: `.ai/skills/` | The generated documentation to test |
 | **Input** | Codebase | Target repo on disk | Source of truth (used ONLY by orchestrator for post-simulation verification, NOT by simulation subagents) |
-| **Output** | `_sim_N.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Per-simulation findings (temporary — deleted after merge) |
-| **Output** | `_simulation_report.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Merged findings with patterns and gap analysis |
+| **Output** | `_sim_N.md` | `.ai/RepoSkills/` | Per-simulation findings (temporary — deleted after merge) |
+| **Output** | `_simulation_report.md` | `.ai/RepoSkills/` | Merged findings with patterns and gap analysis |
 
 ---
 
@@ -146,7 +146,7 @@ For each simulation to run, prepare a brief that includes:
 2. **Skill files to read:** List every file under `.ai/skills/` plus `CLAUDE.md`, `.github/copilot-instructions.md`, and any local context files. Simulation 7 is the exception: list only the root platform file, as its section describes
 3. **Constraint:** "You have access ONLY to the skill files listed above. You must NOT read any source code files. Plan your task entirely from the documentation. Record every point where you get stuck, confused, or would need to guess."
 4. **Output format:** The simulation findings format (see below)
-5. **Output location:** `~/.claude/MEMORY/RepoSkills/<repo-slug>/_sim_N.md`
+5. **Output location:** `.ai/RepoSkills/_sim_N.md`
 
 Update `state.md`: mark step 5.2 complete.
 
@@ -186,7 +186,7 @@ Update `state.md`: mark step 5.3 complete.
 
 ## Simulation Output Format
 
-Each simulation subagent writes its findings to `~/.claude/MEMORY/RepoSkills/<repo-slug>/_sim_N.md`:
+Each simulation subagent writes its findings to `.ai/RepoSkills/_sim_N.md`:
 
 ```markdown
 ## Simulation N: [name]
@@ -257,7 +257,7 @@ After all simulations complete (including any failure recovery), create the merg
 
 ### Output: `_simulation_report.md`
 
-Write to `~/.claude/MEMORY/RepoSkills/<repo-slug>/_simulation_report.md`:
+Write to `.ai/RepoSkills/_simulation_report.md`:
 
 ```markdown
 # Simulation Report

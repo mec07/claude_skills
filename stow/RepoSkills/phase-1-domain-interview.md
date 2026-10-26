@@ -10,7 +10,7 @@ This phase captures knowledge that CANNOT be derived from source code: business 
 
 Before starting, check whether this phase should run:
 
-1. Read `~/.claude/MEMORY/RepoSkills/<repo-slug>/_triage.md`
+1. Read `.ai/RepoSkills/_triage.md`
 2. Check the "Domain Context Status" section
 3. **Skip if ALL of these are true:**
    - The `.ai/skills/domain-context.md` file exists AND the triage scored it as `fresh`
@@ -43,8 +43,8 @@ Copy this checklist into `state.md` under the Phase 1 entry. Mark each item `[x]
 
 | Direction | File | Location | Description |
 |---|---|---|---|
-| **Input** | `_triage.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Phase 0's triage assessment (informs skip logic and questions) |
-| **Input** | `state.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Phase progress |
+| **Input** | `_triage.md` | `.ai/RepoSkills/` | Phase 0's triage assessment (informs skip logic and questions) |
+| **Input** | `state.md` | `.ai/RepoSkills/` | Phase progress |
 | **Input** | Human input | Interactive | Text dumps, URLs, direct answers |
 | **Output** | `domain-context.md` | Target repo: `.ai/skills/` | Structured domain knowledge |
 
@@ -138,7 +138,7 @@ If the user provides URLs:
 
    On success (via MCP or WebFetch, AND the page contains actual rendered content):
    - Extract the domain knowledge categories listed above
-   - Write a structured summary (max 500 words) to `~/.claude/MEMORY/RepoSkills/<repo-slug>/_url_summary_<N>.md`
+   - Write a structured summary (max 500 words) to `.ai/RepoSkills/_url_summary_<N>.md`
 
 2. **Dispatch all URL subagents in parallel** using `run_in_background: true`
 

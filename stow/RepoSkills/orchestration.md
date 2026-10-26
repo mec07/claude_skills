@@ -195,6 +195,8 @@ Phase 9: Human Checkpoint
 All phases that read the manifest expect this exact format:
 
 ```markdown
+Snapshot at <commit>. Pipeline bookkeeping, not documentation. Verify against code before trusting.
+
 # Skill Manifest
 
 ## Core Skills

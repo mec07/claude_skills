@@ -31,18 +31,18 @@ Copy this checklist into `state.md` under a `## Drift Resolution` entry. Mark ea
 
 | Direction | File | Location | Description |
 |---|---|---|---|
-| **Input** | `state.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Repo path, slug, stored commit hash, tier |
-| **Input** | `_boundaries.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Confirmed module boundary map |
-| **Input** | `_manifest.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Skill file disposition tracking |
+| **Input** | `state.md` | `.ai/RepoSkills/` | Stored commit hash, tier |
+| **Input** | `_boundaries.md` | `.ai/RepoSkills/` | Confirmed module boundary map |
+| **Input** | `_manifest.md` | `.ai/RepoSkills/` | Skill file disposition tracking |
 | **Input** | All skill files | Target repo: `.ai/skills/` | Skills to assess and patch |
 | **Input** | Platform glue files | Target repo root | `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.github/copilot-instructions.md` |
 | **Input** | `skill-drift.sh --json` | Target repo (executed) | Drift signals and unmapped directories |
 | **Input** | Codebase + git history | Target repo on disk | Source of truth for all verification |
 | **Output** | Updated skill files | Target repo: `.ai/skills/` | Surgically patched skills |
 | **Output** | Updated platform glue | Target repo root | Updated routing tables (if routing changed) |
-| **Output** | `_drift_report.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Audit trail: triage, patches, validation |
-| **Output** | `_manifest.md` (updated) | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Dispositions updated for repaired skills |
-| **Output** | `state.md` (updated) | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Drift resolution recorded, commit hash advanced |
+| **Output** | `_drift_report.md` | `.ai/RepoSkills/` | Audit trail: triage, patches, validation |
+| **Output** | `_manifest.md` (updated) | `.ai/RepoSkills/` | Dispositions updated for repaired skills |
+| **Output** | `state.md` (updated) | `.ai/RepoSkills/` | Drift resolution recorded, commit hash advanced |
 
 ---
 
@@ -59,7 +59,7 @@ Do not batch state updates. If context is lost between steps, the recovery proto
 
 ## Working file: `_drift_report.md`
 
-Create `~/.claude/MEMORY/RepoSkills/<repo-slug>/_drift_report.md` at the start of DR.1. This is your audit trail. Write to it as you go. Do not rely on memory.
+Create `.ai/RepoSkills/_drift_report.md` at the start of DR.1. This is your audit trail. Write to it as you go. Do not rely on memory.
 
 This file is **not cleaned up** after drift resolution. It persists as an audit trail and is overwritten on the next drift resolution run.
 
@@ -172,10 +172,10 @@ Format:
 
 Verify prerequisites before running drift detection:
 
-1. **Read `state.md`** from `~/.claude/MEMORY/RepoSkills/<repo-slug>/`. If it does not exist, abort with: "No prior pipeline run found. Run the full RepoSkills pipeline first."
+1. **Read `state.md`** from `.ai/RepoSkills/`. If it does not exist, abort with: "No prior pipeline run found. Run the full RepoSkills pipeline first."
 2. **Verify skill files exist** in the target repo under `.ai/skills/`. If the directory is empty or missing, abort.
 3. **Verify `skill-drift.sh` exists** at `.ai/skills/Tools/skill-drift.sh` in the target repo. If missing, abort with: "Drift detection script not found. Run the full RepoSkills pipeline to generate it."
-4. **Record the current HEAD commit** for later use: `git rev-parse HEAD`
+4. **Record the current HEAD commit** for later use: `git rev-parse HEAD`. This is the HEAD recorded at the start of the run.
 
 Update `state.md`: mark step DR.0 complete.
 
@@ -614,7 +614,10 @@ Update `state.md`: mark step DR.10 complete.
 ## Step 11: Completion (DR.11)
 
 1. **Update `state.md`:**
-   - Update the `commit:` field to the current HEAD
+   - Update the `commit:` field to the HEAD recorded at the start of the run (DR.0 step 4), not the HEAD now. Rewrite the first line of `state.md`, `_boundaries.md` and `_manifest.md` with that hash:
+     ```
+     Snapshot at <commit>. Pipeline bookkeeping, not documentation. Verify against code before trusting.
+     ```
    - Add an entry to the `## Drift Resolution History` section:
      ```
      | Date | Drifts found | Confirmed | Patched | New skills | False positives | Accuracy rate | New commit |
@@ -630,6 +633,7 @@ Update `state.md`: mark step DR.10 complete.
    - Accuracy verification results (claims verified vs removed)
    - Whether any skills failed the 20% verification threshold and were flagged for `--update`
    - Whether any deep structural issues were found (recommend full pipeline re-run if so)
+   - In commit mode, name `.ai/RepoSkills/` among the files to commit
 
 ---
 
@@ -650,7 +654,7 @@ Update `state.md`: mark step DR.10 complete.
    - The triage classification from DR.2 (which changes are structural/interface)
    - The section-to-change mapping table from DR.4
    - The patch rules from DR.5 (surgical edit, preserve non-stale content, evidence standards)
-   - The output file path: `~/.claude/MEMORY/RepoSkills/<repo-slug>/_drift_patch_<skill-name>.md`
+   - The output file path: `.ai/RepoSkills/_drift_patch_<skill-name>.md`
 
 3. **Model selection:** Use `sonnet` for Analysis + Patch subagents. This is systematic reading-and-comparison work, not creative synthesis.
 

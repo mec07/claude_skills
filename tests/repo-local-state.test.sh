@@ -59,6 +59,9 @@ outside_section() {
     ' "$1"
 }
 
+# Link lines to the Migrating section (Task 4) are exempt from the MEMORY checks.
+without_migration_links() { grep -v 'Migrating from ~/.claude/MEMORY'; }
+
 echo "orchestration.md"
 
 need "location stated" "$O" 'All working files and state live in `.ai/RepoSkills/`'
@@ -77,7 +80,7 @@ absent "cleanup no longer advances to end HEAD" "$O" 'in case commits happened d
 absent "pipeline does not commit" "$O" 'Commit updated/new skill files'
 
 # The Migrating section (Task 4) may be linked from elsewhere; those link lines are exempt.
-outside_section "$O" '### Migrating from ~/.claude/MEMORY' | grep -v 'Migrating from ~/.claude/MEMORY' > "$TMP/outside.md"
+outside_section "$O" '### Migrating from ~/.claude/MEMORY' | without_migration_links > "$TMP/outside.md"
 absent "no MEMORY outside migration section" "$TMP/outside.md" 'MEMORY'
 absent "no slug field" "$TMP/outside.md" '^slug:'
 absent "no repo field" "$TMP/outside.md" '^repo:'
@@ -116,6 +119,27 @@ git -C "$R" commit -q -m "track state"
 printf "%s\n" "$NOCOMMIT_BLOCK" > "$R/.ai/RepoSkills/.gitignore"
 detect "$R/src"; rc=$?
 assert_rc "mode detection says no-commit mode from subdirectory, state.md tracked" "$rc" 0
+
+echo "phase files"
+
+PHASES="$REPO_ROOT/stow/RepoSkills"
+for f in "$PHASES"/phase-*.md; do
+    b="$(basename "$f")"
+    without_migration_links < "$f" > "$TMP/$b"
+    absent "$b: no MEMORY" "$TMP/$b" 'MEMORY'
+    absent "$b: no slug" "$f" 'slug'
+done
+
+need "phase 0 writes only to RepoSkills dir" "$PHASES/phase-0-discover.md" 'writes only to `.ai/RepoSkills/`'
+need "boundaries Path column" "$PHASES/phase-2-map-generate.md" '^| Path | Boundary | Type | Entry Point | Evidence |'
+need "boundaries header" "$PHASES/phase-2-map-generate.md" 'Snapshot at <commit>. Pipeline bookkeeping'
+extract_section "$O" '### Manifest format' > "$TMP/manifest.md"
+need "manifest header" "$TMP/manifest.md" 'Snapshot at <commit>. Pipeline bookkeeping'
+for f in phase-9-human-checkpoint.md phase-drift-resolve.md; do
+    need "$f: commit-mode summary" "$PHASES/$f" '`.ai/RepoSkills/` among the files to commit'
+    need "$f: start HEAD" "$PHASES/$f" 'HEAD recorded at the start of the run'
+done
+absent "phase 9 has no commit_hash" "$PHASES/phase-9-human-checkpoint.md" 'commit_hash:'
 
 echo
 echo "$TESTS_RUN run, $TESTS_FAILED failed"
