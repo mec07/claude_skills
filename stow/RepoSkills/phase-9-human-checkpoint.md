@@ -376,6 +376,7 @@ Pipeline complete.
 - Unresolvable issues answered by human: N
 - Deferred gaps (marked in docs): N
 - Commit recorded: [short SHA]
+- Files to commit: [every file the run wrote or changed outside the RepoSkills directory, by path: `.ai/skills/`, each root platform file, each per-module routing file]
 - In commit mode: `.ai/RepoSkills/` among the files to commit
 - Working files cleaned from the RepoSkills directory. State preserved in state.md.
 ```

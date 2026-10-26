@@ -354,7 +354,7 @@ When the pipeline completes (after Phase 9, or after Phase 8 if Phase 9 is skipp
 1. Delete all `_` prefixed working files from `.ai/RepoSkills/` **except** `_boundaries.md` and `_manifest.md` -- these are preserved for diff-based re-runs
 2. Update `state.md` to mark all phases complete
 3. Write the HEAD recorded at the start of the run to the `state.md` `commit:` field, and rewrite the headers of `state.md`, `_boundaries.md` and `_manifest.md` with it
-4. Report the final summary to the user including: number of skills generated, token budget compliance, platforms configured, and any known limitations. In commit mode, name `.ai/RepoSkills/` among the files to commit
+4. Report the final summary to the user including: number of skills generated, token budget compliance, platforms configured, and any known limitations. List the files to commit: every file the run wrote or changed outside the RepoSkills directory, by path (`.ai/skills/`, each root platform file, each per-module routing file). In commit mode, name `.ai/RepoSkills/` among the files to commit
 
 ---
 
