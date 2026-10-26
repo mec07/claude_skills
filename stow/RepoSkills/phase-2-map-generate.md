@@ -21,6 +21,7 @@ Copy this checklist into `state.md` under the Phase 2 entry. Mark each item `[x]
 - [ ] 2.4: Generate task skills (.ai/skills/tasks/<name>.md, conditional)
 - [ ] 2.5: Generate platform glue and maintenance tools (AGENTS.md, CLAUDE.md, .cursorrules, copilot-instructions.md, per-module routing, skill-drift.sh)
 - [ ] 2.6: Self-review checklist
+- [ ] 2.7: Write _manifest.md and delete the _explore_ and _skill_ working files
 ```
 
 ---
@@ -44,7 +45,10 @@ Copy this checklist into `state.md` under the Phase 2 entry. Mark each item `[x]
 - Per-module routing files for detected platforms (Layer 3, conditional)
 - `.ai/skills/Tools/skill-drift.sh` in the target repo — drift detection script (maintenance tool)
 - `.ai/skills/Tools/skill-drift-hook.sh` in the target repo — hook management script (maintenance tool)
-- `.ai/RepoSkills/_explore_<area>.md` — per-area exploration notes (working files, consumed during writing)
+- `.ai/RepoSkills/_boundaries.md` — confirmed boundary map (persisted for re-runs)
+- `.ai/RepoSkills/_manifest.md` — disposition of every generated file (persisted for re-runs)
+- `.ai/RepoSkills/_questions.md` — questions for Phase 9
+- `.ai/RepoSkills/_explore_<area>.md`, `_skill_<name>.md` — subagent working files, deleted in Step 7
 - `.ai/RepoSkills/state.md` — updated with progress
 
 ---
@@ -1281,7 +1285,21 @@ All four root files (CLAUDE.md, AGENTS.md, .cursorrules, copilot-instructions.md
 
 Fix any issues found. Then:
 
-**Update state:** Mark step 2.6 (review) complete in `state.md`. Update Phase 2 to complete with timestamp.
+**Update state:** Mark step 2.6 (review) complete in `state.md`.
+
+---
+
+## Step 7: Write the Manifest
+
+Write `.ai/RepoSkills/_manifest.md` in the format under "Manifest format" in
+[orchestration.md](orchestration.md#manifest-format-_manifestmd), one row per file this phase
+generated or preserved. Its first line is the persisted header with the `commit:` hash from
+`state.md`. Phases 3 to 9 and every re-run read this file, so Phase 2 is not complete without it.
+
+Then delete every `_explore_*.md` and `_skill_*.md` file from `.ai/RepoSkills/`. Keep
+`_triage.md`, `_boundaries.md`, `_manifest.md` and `_questions.md`.
+
+**Update state:** Mark step 2.7 complete in `state.md`. Update Phase 2 to complete with timestamp.
 
 ---
 

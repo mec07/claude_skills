@@ -133,6 +133,8 @@ done
 need "phase 0 writes only to RepoSkills dir" "$PHASES/phase-0-discover.md" 'writes only to `.ai/RepoSkills/`'
 need "boundaries Path column" "$PHASES/phase-2-map-generate.md" '^| Path | Boundary | Type | Entry Point | Evidence |'
 need "boundaries header" "$PHASES/phase-2-map-generate.md" 'Snapshot at <commit>. Pipeline bookkeeping'
+need "phase 2 writes the manifest" "$PHASES/phase-2-map-generate.md" 'Write `.ai/RepoSkills/_manifest.md`'
+need "phase 2 deletes its working files" "$PHASES/phase-2-map-generate.md" 'delete every `_explore_\*.md` and `_skill_\*.md`'
 extract_section "$O" '### Manifest format' > "$TMP/manifest.md"
 need "manifest header" "$TMP/manifest.md" 'Snapshot at <commit>. Pipeline bookkeeping'
 for f in phase-9-human-checkpoint.md phase-drift-resolve.md; do
