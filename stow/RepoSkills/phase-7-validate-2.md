@@ -11,7 +11,7 @@ This is a second validation pass. Phases 5 and 6 made changes to the skills — 
 Copy this checklist into `state.md` under the Phase 7 entry. Mark each item `[x]` immediately upon completion.
 
 ```
-- [ ] 7.0: Clear and rebuild _audit.md from scratch in MEMORY directory
+- [ ] 7.0: Clear and rebuild _audit.md from scratch in RepoSkills directory
 - [ ] 7.1: File path verification (all skill files)
 - [ ] 7.2: Command verification (all skill files)
 - [ ] 7.3: Architectural claim verification (all skill files)
@@ -36,13 +36,13 @@ Copy this checklist into `state.md` under the Phase 7 entry. Mark each item `[x]
 
 | Direction | File | Location | Description |
 |---|---|---|---|
-| **Input** | `state.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Repo path, slug, phase progress |
-| **Input** | `_audit.md` (stale) | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Phase 4 audit — delete contents, start fresh |
-| **Input** | `_simulation_report.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Clarity review findings and Phase 6 resolutions |
+| **Input** | `state.md` | `.ai/RepoSkills/` | Phase progress |
+| **Input** | `_audit.md` (stale) | `.ai/RepoSkills/` | Phase 4 audit — delete contents, start fresh |
+| **Input** | `_simulation_report.md` | `.ai/RepoSkills/` | Clarity review findings and Phase 6 resolutions |
 | **Input** | All skill files | Target repo: `.ai/skills/` | Skills to validate |
 | **Input** | Platform glue files | Target repo root | `AGENTS.md`, `CLAUDE.md`, etc. |
 | **Input** | Codebase | Target repo on disk | Source of truth for all claims |
-| **Output** | `_audit.md` (rebuilt) | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Fresh validation ledger with all findings |
+| **Output** | `_audit.md` (rebuilt) | `.ai/RepoSkills/` | Fresh validation ledger with all findings |
 
 ---
 
@@ -61,7 +61,7 @@ Do not batch state updates. If context is lost between steps, the recovery proto
 
 ### 1. Clear and rebuild `_audit.md` from scratch (Step 7.0)
 
-Delete the contents of `~/.claude/MEMORY/RepoSkills/<repo-slug>/_audit.md` and start a fresh audit. The Phase 4 audit is stale — the skills have changed since then. Do not carry over previous findings.
+Delete the contents of `.ai/RepoSkills/_audit.md` and start a fresh audit. The Phase 4 audit is stale — the skills have changed since then. Do not carry over previous findings.
 
 **Recovery note:** If Phase 7 fails after clearing `_audit.md` but before completing the new audit, the Phase 4 findings are lost. On resume, Phase 7 will re-run the full audit from scratch — this is safe because the audit is derived from skills + source code, both of which are still on disk.
 
@@ -112,7 +112,7 @@ Update `state.md`: mark step 7.12 complete.
 
 ### 4. Verify Phase 6 resolutions (Step 7.13)
 
-After completing the standard audit checks (steps 7.1-7.11), read `~/.claude/MEMORY/RepoSkills/<repo-slug>/_simulation_report.md`. For each issue marked `resolved` by Phase 6:
+After completing the standard audit checks (steps 7.1-7.11), read `.ai/RepoSkills/_simulation_report.md`. For each issue marked `resolved` by Phase 6:
 
 1. Find the skill file(s) Phase 6 claimed to have fixed
 2. Verify the fix is actually present and correct in the skill

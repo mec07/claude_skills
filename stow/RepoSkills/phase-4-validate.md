@@ -11,7 +11,7 @@ You are a **reviewer, not the author.** Your sole job is to find errors, fabrica
 Copy this checklist into `state.md` under the Phase 4 entry. Mark each item `[x]` immediately upon completion.
 
 ```
-- [ ] 4.0: Create _audit.md in MEMORY directory
+- [ ] 4.0: Create _audit.md in RepoSkills directory
 - [ ] 4.1: List all skill files to validate
 - [ ] 4.2: Decide parallelisation strategy (5+ skill files -> dispatch subagents)
 - [ ] 4.3: Check 1 — File path verification (all skill files)
@@ -37,13 +37,13 @@ Copy this checklist into `state.md` under the Phase 4 entry. Mark each item `[x]
 
 | Direction | File | Location | Description |
 |---|---|---|---|
-| **Input** | `state.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Repo path, slug, phase progress |
+| **Input** | `state.md` | `.ai/RepoSkills/` | Phase progress |
 | **Input** | All skill files | Target repo: `.ai/skills/` | Skills to validate |
 | **Input** | Platform glue files | Target repo root | `AGENTS.md`, `CLAUDE.md`, `.cursorrules`, `.github/copilot-instructions.md` |
 | **Input** | Codebase | Target repo on disk | Source of truth for all verification |
 | **Output** | Skill files with errors fixed | Target repo: `.ai/skills/` | Corrected skills |
-| **Output** | `_audit.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Validation ledger with all findings |
-| **Output** | Per-skill working files (if parallelised) | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | `_validate_<skill>.md` (temporary) |
+| **Output** | `_audit.md` | `.ai/RepoSkills/` | Validation ledger with all findings |
+| **Output** | Per-skill working files (if parallelised) | `.ai/RepoSkills/` | `_validate_<skill>.md` (temporary) |
 
 ---
 
@@ -60,7 +60,7 @@ Do not batch state updates. If context is lost between steps, the recovery proto
 
 ## Working file: `_audit.md`
 
-**Create `~/.claude/MEMORY/RepoSkills/<repo-slug>/_audit.md` at the start of this phase.** This is your validation ledger. Write to it as you go — do not rely on memory. This file is how your findings pass to later phases.
+**Create `.ai/RepoSkills/_audit.md` at the start of this phase.** This is your validation ledger. Write to it as you go — do not rely on memory. This file is how your findings pass to later phases.
 
 Format:
 
@@ -116,8 +116,8 @@ Update `state.md`: mark step 4.0 complete.
    - The full text of the skill file it is responsible for
    - The full audit procedure (all checks below) scoped to that single file
    - The rules section above
-   - The MEMORY directory path for output
-   - Instruction to write findings to `~/.claude/MEMORY/RepoSkills/<repo-slug>/_validate_<skill-name>.md`
+   - The RepoSkills directory path for output
+   - Instruction to write findings to `.ai/RepoSkills/_validate_<skill-name>.md`
 
 3. **Each subagent** performs all applicable checks on its assigned file, fixes errors as it goes, and writes all findings to its `_validate_<skill>.md` file.
 

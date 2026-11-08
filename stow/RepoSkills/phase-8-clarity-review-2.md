@@ -27,13 +27,13 @@ Copy this checklist into `state.md` under the Phase 8 entry. Mark each item `[x]
 
 | Direction | File | Location | Description |
 |---|---|---|---|
-| **Input** | `state.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Repo path, slug, phase progress |
-| **Input** | `_simulation_report.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Phase 5 findings + Phase 6 resolutions (preserve all entries) |
-| **Input** | `_audit.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Phase 7 validation findings |
+| **Input** | `state.md` | `.ai/RepoSkills/` | Phase progress |
+| **Input** | `_simulation_report.md` | `.ai/RepoSkills/` | Phase 5 findings + Phase 6 resolutions (preserve all entries) |
+| **Input** | `_audit.md` | `.ai/RepoSkills/` | Phase 7 validation findings |
 | **Input** | All skill files | Target repo: `.ai/skills/` | Skills to review |
 | **Input** | Platform glue files | Target repo root | `AGENTS.md`, `CLAUDE.md`, etc. |
 | **Input** | Codebase | Target repo on disk | For verifying fixes and simulating tasks |
-| **Output** | `_simulation_report.md` (updated) | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Existing entries preserved + new findings appended |
+| **Output** | `_simulation_report.md` (updated) | `.ai/RepoSkills/` | Existing entries preserved + new findings appended |
 
 ---
 
@@ -52,7 +52,7 @@ Do not batch state updates. If context is lost between steps, the recovery proto
 
 ### 1. Preserve resolved issues in `_simulation_report.md` (Step 8.0)
 
-Do NOT clear or overwrite `~/.claude/MEMORY/RepoSkills/<repo-slug>/_simulation_report.md`. Keep all existing entries, including the Phase 6 Resolution Summary — they are the record of what was found and fixed. Add new findings below the existing content under a clearly marked section:
+Do NOT clear or overwrite `.ai/RepoSkills/_simulation_report.md`. Keep all existing entries, including the Phase 6 Resolution Summary — they are the record of what was found and fixed. Add new findings below the existing content under a clearly marked section:
 
 ```markdown
 ## Phase 8 Clarity Review Findings

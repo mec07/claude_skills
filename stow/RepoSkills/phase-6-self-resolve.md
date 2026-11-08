@@ -28,13 +28,13 @@ Copy this checklist into `state.md` under the Phase 6 entry. Mark each item `[x]
 
 | Direction | File | Location | Description |
 |---|---|---|---|
-| **Input** | `state.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Repo path, slug, phase progress |
-| **Input** | `_simulation_report.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | All simulation findings from Phase 5 |
+| **Input** | `state.md` | `.ai/RepoSkills/` | Phase progress |
+| **Input** | `_simulation_report.md` | `.ai/RepoSkills/` | All simulation findings from Phase 5 |
 | **Input** | All skill files | Target repo: `.ai/skills/` | Documentation to update |
 | **Input** | Codebase | Target repo on disk | Source of truth for resolving issues |
 | **Output** | Updated skill files | Target repo: `.ai/skills/` | Documentation with gaps filled and errors corrected |
-| **Output** | `_simulation_report.md` (updated) | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Issues annotated with resolution status |
-| **Output** | `_unresolved.md` | `~/.claude/MEMORY/RepoSkills/<repo-slug>/` | Issues that require human input (input for Phase 9) |
+| **Output** | `_simulation_report.md` (updated) | `.ai/RepoSkills/` | Issues annotated with resolution status |
+| **Output** | `_unresolved.md` | `.ai/RepoSkills/` | Issues that require human input (input for Phase 9) |
 
 ---
 
@@ -51,7 +51,7 @@ Do not batch state updates. If context is lost between steps, the recovery proto
 
 ## Step 0: Read the Simulation Report (Step 6.0)
 
-Open `~/.claude/MEMORY/RepoSkills/<repo-slug>/_simulation_report.md`. Read every issue. Tally:
+Open `.ai/RepoSkills/_simulation_report.md`. Read every issue. Tally:
 
 - Total issues
 - Blocking issues
@@ -114,7 +114,7 @@ Update `state.md`: mark step 6.3 complete.
 
 ## Step 4: Compile Unresolvable Issues (Step 6.4)
 
-Create `~/.claude/MEMORY/RepoSkills/<repo-slug>/_unresolved.md` listing every issue that could not be resolved from source code:
+Create `.ai/RepoSkills/_unresolved.md` listing every issue that could not be resolved from source code:
 
 ```markdown
 # Unresolved Issues for Human Review
@@ -179,7 +179,7 @@ After all resolutions are complete, verify your fixes work by re-running **one**
 
 ### Output
 
-Write the re-simulation findings to `~/.claude/MEMORY/RepoSkills/<repo-slug>/_sim_verify.md`. After analysis, delete this file.
+Write the re-simulation findings to `.ai/RepoSkills/_sim_verify.md`. After analysis, delete this file.
 
 Update `_simulation_report.md` with a verification section:
 
