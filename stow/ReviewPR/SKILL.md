@@ -1,6 +1,6 @@
 ---
 name: ReviewPR
-description: Thorough PR review — fetches diff, analyzes changes, creates a PENDING GitHub review with inline comments on the actual diff lines. User reviews comments in GitHub UI, edits as needed, then submits themselves. USE WHEN review PR, review pull request, PR review, check PR, analyze PR, look at PR.
+description: Thorough PR/MR review — fetches diff, analyzes changes, creates a pending GitHub review or GitLab draft notes with inline comments on the actual diff lines. User reviews comments in the forge UI, edits as needed, then submits/publishes themselves. Falls back to a structured in-chat comment layout when drafts cannot be opened. USE WHEN review PR, review pull request, review MR, review merge request, PR review, MR review, check PR, analyze PR, look at PR.
 ---
 
 ## Customization
@@ -29,20 +29,26 @@ If this directory exists, load and apply any PREFERENCES.md, configurations, or 
 
 # ReviewPR
 
-Comprehensive pull request review that creates a **pending GitHub review with inline comments** on the actual diff lines. The user controls submission — this skill creates the review in PENDING state so the user can:
+Comprehensive pull request / merge request review that stages **pending inline comments** on the actual diff lines. The user controls submission:
 
-1. Go to the PR in GitHub
-2. See inline comments in context on the diff
-3. Edit, delete, or add to the comments
-4. Submit the review when satisfied
+| Forge | Pending mechanism | User finishes in |
+|-------|-------------------|------------------|
+| **GitHub** | `PENDING` review via `gh api` (omit `event`) | GitHub PR UI — edit, then submit |
+| **GitLab** | Draft Notes via `glab mr note draft create` (or Draft Notes REST via `glab api`) | GitLab MR UI — edit, then publish |
+| **Drafts unavailable** | Structured chat layout | [Reference/ConversationFallback.md](Reference/ConversationFallback.md) |
+
+GitLab **does** support pending reviews (Draft Notes). Official GitLab MCP review tools currently **publish** notes — never use them as a substitute for drafts. See [Reference/HostAndAuth.md](Reference/HostAndAuth.md).
+
+"PR" and "MR" are synonyms in triggers and docs.
 
 ## How It Works
 
-1. Fetches PR diff and project CLAUDE.md files for context
-2. Analyses changes using parallel specialist agents for large PRs (bug hunter, guidelines checker, security reviewer, git history checker)
-3. Scores every finding on 0-100 confidence scale — only surfaces issues with confidence >= 80
-4. Creates a `PENDING` review via GitHub API with inline comments on specific diff lines
-5. Pending reviews are **only visible to the review author** until submitted
+1. Resolves host + auth (`gh` / `glab` / GitLab MCP) — see HostAndAuth
+2. Fetches PR/MR diff and project CLAUDE.md files for context (via FetchPR or MCP)
+3. Analyses changes using parallel specialist agents for large changes (bug hunter, guidelines checker, security reviewer, git history checker)
+4. Scores every finding on 0-100 confidence scale — only surfaces issues with confidence >= 80
+5. Creates a pending/draft review with inline comments on specific diff lines (or conversation fallback)
+6. Pending/draft comments are **only visible to the review author** until submitted/published
 
 ## Key Design Decisions
 
@@ -52,46 +58,47 @@ Comprehensive pull request review that creates a **pending GitHub review with in
 - **Confidence scoring** filters noise — no pedantic nits, no false positives, no pre-existing issues
 - **CLAUDE.md awareness** — checks changes against project-specific rules, not just generic quality
 - **Positive framing** — acknowledges what's well done generously. If something looks wrong, asks questions to understand the author's reasoning first.
-- **GitHub permalinks** — links use full SHA for permanent references
+- **Forge permalinks** — links use full SHA for permanent references (GitHub or GitLab)
+- **Never auto-publish** — drafts only; conversation fallback if drafts cannot be opened
 
 ## Companion Skills
 
-ReviewPR is the **write** side of PR work — it produces a pending review. For **read-only** PR context, use the `FetchPR` skill, which is the dedicated counterpart:
+ReviewPR is the **write** side of PR/MR work — it produces a pending/draft review. For **read-only** context, use the `FetchPR` skill:
 
 | Need | Skill | Why |
 |------|-------|-----|
-| Brief me on a PR / pull metadata, CI, reviewer states | `FetchPR` (Full workflow) | Read-only, fast |
+| Brief me on a PR/MR / pull metadata, CI, reviewer states | `FetchPR` (Full workflow) | Read-only, fast |
 | Pull existing review comments / "what did X say" | `FetchPR` (Comments workflow) | Surfaces resolved/outdated state, splits inline threads vs review summaries |
 | Fetch the diff (especially large ones) | `FetchPR` (Diff workflow) | `--save` flag avoids dumping huge diffs into context |
-| Critique code without posting to GitHub | `CodeReview` | Writes findings into the conversation, not the PR |
-| Post a pending review with inline comments | `ReviewPR` (this skill) | Creates GitHub-side review |
+| Critique code without posting to the forge | `CodeReview` | Writes findings into the conversation, not the PR/MR |
+| Post a pending/draft review with inline comments | `ReviewPR` (this skill) | Creates forge-side pending review or chat fallback |
 
-The Review workflow below uses `FetchPR`'s tools internally for fetching PR data — see Steps 1-3 in `Workflows/Review.md`.
+The Review workflow below uses `FetchPR`'s tools internally for fetching data when the CLI is authed — see Steps 0–3 in `Workflows/Review.md`.
 
 ## Workflow Routing
 
 | Workflow | Trigger | File |
 |----------|---------|------|
-| **Review** | "review PR", PR number, "check this PR" | `Workflows/Review.md` |
+| **Review** | "review PR", "review MR", PR/MR number, "check this PR" | `Workflows/Review.md` |
 
 ## Examples
 
-**Example 1: Review a PR by number**
+**Example 1: Review a PR/MR by number**
 ```
 User: "/ReviewPR 5001"
--> Detects repo from git remote
--> Fetches PR metadata and diff
--> Analyzes all changes (parallel agents for large PRs)
--> Creates PENDING review with inline comments on diff lines
+-> Detects forge + repo from git remote; probes auth
+-> Fetches metadata and diff (FetchPR / glab / MCP)
+-> Analyzes all changes (parallel agents for large changes)
+-> Creates PENDING review (GitHub) or draft notes (GitLab)
 -> Shows summary in conversation
--> User goes to GitHub to review, edit, and submit
+-> User goes to GitHub/GitLab to review, edit, and submit/publish
 ```
 
-**Example 2: Review current branch's PR**
+**Example 2: Review current branch's PR/MR**
 ```
 User: "/ReviewPR"
--> Detects current branch, finds associated PR
--> Same analysis and pending review flow
+-> Detects current branch, finds associated PR/MR
+-> Same analysis and pending/draft flow
 ```
 
 **Example 3: Review with context**
@@ -99,4 +106,13 @@ User: "/ReviewPR"
 User: "/ReviewPR 42 — this is a database migration"
 -> Uses context to focus analysis on migration safety
 -> Inline comments prioritize data integrity, rollback, schema issues
+```
+
+**Example 4: GitLab without working drafts**
+```
+User: "/ReviewPR 88" on a GitLab remote where glab drafts fail
+-> Completes analysis
+-> Cannot stage draft notes
+-> Lays out every comment in chat (filename, line, ±2 context, body, separators)
+-> Does NOT publish notes via MCP as a workaround
 ```

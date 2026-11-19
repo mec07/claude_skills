@@ -1,6 +1,8 @@
 # FetchPR — Comments
 
-Focused on review feedback. Use when the user asks "what did <reviewer> say", "pull the review comments", "any unresolved threads", "fetch CodeRabbit's nitpicks", etc.
+Focused on review feedback on GitHub PRs and GitLab MRs. Use when the user asks "what did <reviewer> say", "pull the review comments", "any unresolved threads", "fetch CodeRabbit's nitpicks", etc.
+
+**First:** follow [Reference/HostAndAuth.md](../Reference/HostAndAuth.md). On GitLab, `fetch.sh` maps discussions/notes into the same `threads` / `reviews` / `issue_comments` JSON keys; resolved flags come from discussion notes when available.
 
 ## Never resolve a human's thread
 
