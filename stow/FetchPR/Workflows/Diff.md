@@ -1,6 +1,8 @@
 # FetchPR — Diff
 
-Fetch the actual diff content of a PR. Use when the user asks "show me the diff", "what changed in PR", "diff just file X", "list the changed files".
+Fetch the actual diff content of a GitHub PR or GitLab MR. Use when the user asks "show me the diff", "what changed in PR/MR", "diff just file X", "list the changed files".
+
+**First:** follow [Reference/HostAndAuth.md](../Reference/HostAndAuth.md). If only GitLab MCP is authed, fetch the diff via MCP instead of this script.
 
 ## Invocation
 
@@ -8,7 +10,7 @@ Fetch the actual diff content of a PR. Use when the user asks "show me the diff"
 ~/.claude/skills/FetchPR/Tools/diff.sh [args]
 ```
 
-(or the source path `~/src/github.com/mec07/claude_skills/stow/FetchPR/Tools/diff.sh`)
+(or the source path under `stow/FetchPR/Tools/diff.sh`)
 
 ### Common patterns
 

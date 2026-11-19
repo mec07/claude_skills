@@ -1,6 +1,8 @@
 # FetchPR — Full
 
-Comprehensive PR context fetch. Use when the user wants a complete picture: "brief me on PR 5315", "show me everything about this PR", "what's the state of #N", or any general PR-context request.
+Comprehensive PR/MR context fetch for GitHub and GitLab. Use when the user wants a complete picture: "brief me on PR 5315", "show me everything about this MR", "what's the state of #N", or any general PR/MR-context request.
+
+**First:** follow [Reference/HostAndAuth.md](../Reference/HostAndAuth.md). If only GitLab MCP is authed, fetch the same sections via MCP instead of this script.
 
 ## Invocation
 
@@ -8,14 +10,15 @@ Comprehensive PR context fetch. Use when the user wants a complete picture: "bri
 ~/.claude/skills/FetchPR/Tools/fetch.sh [args]
 ```
 
-(or the source path `~/src/github.com/mec07/claude_skills/stow/FetchPR/Tools/fetch.sh`)
+(or the source path under `stow/FetchPR/Tools/fetch.sh`)
 
 ### Defaults
 
-- **PR number**: from current branch via `gh pr list --head <branch>`. Pass `--pr N` to override.
-- **Repo**: from `git remote.origin.url`. Pass `--repo OWNER/NAME` to override.
+- **Forge**: detected from `git remote.origin.url` (GitHub → `gh`, GitLab → `glab`).
+- **PR/MR number**: from current branch (`gh pr list` or GitLab MRs by `source_branch`). Pass `--pr N` to override (GitLab IID).
+- **Repo**: from remote. Pass `--repo OWNER/NAME` or `group/subgroup/project` to override.
 - **Comment scope**: unresolved threads only. Pass `--all` to include resolved.
-- **Output**: human-readable. Pass `--json` for piping.
+- **Output**: human-readable. Pass `--json` for piping. JSON includes `pr.forge` (`github`|`gitlab`); GitLab also includes `pr.diff_refs` and `pr.iid`.
 - **Verbosity**: full. Pass `--brief` to skip body, files, commits, and issue comments.
 
 ## Sections in the output
@@ -30,9 +33,9 @@ Comprehensive PR context fetch. Use when the user wants a complete picture: "bri
 8. **Review-level summaries** — full body of each review (CodeRabbit nitpick sections, human reviewer summaries).
 9. **Inline thread comments** — line-anchored discussion with `[RESOLVED]` / `[OUTDATED]` flags.
 
-## Closed/merged PRs — early exit
+## Closed/merged PRs/MRs — early exit
 
-If the PR is not OPEN, the script exits with code 3 after printing the title + URL. Do not chase successor PRs from comment chatter — the convention isn't reliable. **Tell the user the PR is closed and ask for the new PR number.**
+If the PR/MR is not OPEN, the script exits with code 3 after printing the title + URL. Do not chase successors from comment chatter — the convention isn't reliable. **Tell the user it is closed/merged and ask for the new number/IID.**
 
 ## When briefing the user
 

@@ -1,6 +1,12 @@
 # Review Workflow
 
-Analyze a PR and create a pending GitHub review with inline comments on the diff.
+Analyze a PR/MR and create a **pending** review with inline comments on the diff:
+
+- **GitHub:** `PENDING` review via `gh api` (user submits in the GitHub UI)
+- **GitLab:** Draft Notes via `glab mr note draft` (user publishes in the GitLab UI)
+- **If drafts cannot be opened:** structured conversation fallback — see [Reference/ConversationFallback.md](../Reference/ConversationFallback.md)
+
+"PR" and "MR" are synonyms.
 
 ## Voice Notification
 
@@ -15,24 +21,37 @@ Running the **Review** workflow in the **ReviewPR** skill...
 
 ---
 
-## Step 1: Fetch PR Context via FetchPR
+## Step 0: Host and Auth Resolution
 
-Use the `FetchPR` skill's `fetch.sh` tool — it handles PR-number detection from the current branch, repo detection from `git remote.origin.url`, and pulls metadata + CI checks + reviewer states + mergeability + commits in a single call. Importantly, **it exits with code 3 on closed/merged PRs** so we don't waste effort building a review on a dead PR.
+**Before any forge call**, follow [Reference/HostAndAuth.md](../Reference/HostAndAuth.md) and FetchPR's matching doc:
+
+1. Detect forge from `git remote get-url origin` (GitHub vs GitLab).
+2. Probe auth: `gh auth status` (GitHub); `glab auth status` + GitLab MCP namespace `plugin-gitlab-GitLab` (GitLab).
+3. Prefer CLI. For GitLab fetch, if `glab` is missing but MCP is authed, fetch via MCP. For GitLab **write**, drafts require `glab` (or Draft Notes via `glab api`); never publish via MCP.
+4. If nothing usable is authenticated, stop and ask the user to auth — do not proceed to analysis hoping to post later.
+
+Record `forge` (`github` | `gitlab`) for Step 10.
+
+## Step 1: Fetch PR/MR Context via FetchPR
+
+Use the `FetchPR` skill's `fetch.sh` tool when the matching CLI is authed — it handles number detection from the current branch, repo detection from `git remote.origin.url`, and pulls metadata + CI checks + reviewer states + mergeability + commits in a single call. Importantly, **it exits with code 3 on closed/merged PRs/MRs** so we don't waste effort building a review on a dead change.
 
 ```bash
-# Default: PR from current branch, repo from origin
+# Default: PR/MR from current branch, repo from origin
 ~/.claude/skills/FetchPR/Tools/fetch.sh
 
-# Explicit PR / repo
+# Explicit number / repo (GitLab: IID; nested groups OK)
 ~/.claude/skills/FetchPR/Tools/fetch.sh --pr {PR_NUMBER} --repo {OWNER/REPO}
 ```
 
-If `fetch.sh` exits 3, the PR is closed or merged — stop and ask the user for the new PR number. Do not attempt to chase successor PRs.
+If only GitLab MCP is authed, gather the same sections via MCP per FetchPR HostAndAuth (do not call `fetch.sh`).
+
+If `fetch.sh` exits 3, the PR/MR is closed or merged — stop and ask the user for the new number. Do not attempt to chase successors.
 
 From the output, note:
 - **Scale** (additions, deletions, changed file count) — drives the review strategy in Step 4
-- **`mergeStateStatus`, `reviewDecision`, CI checks** — contextual; if CI is failing for unrelated reasons, mention briefly in the review body
-- **Head commit SHA** — needed for Step 10 (the pending-review payload). Either grab it from the commits section of the human-readable output, or rerun with `--json` and `jq '.pr.commits[-1].oid'`
+- **`mergeStateStatus`, `reviewDecision`, CI checks** — contextual; if CI is failing for unrelated reasons, mention briefly in the **chat** summary (Step 11), not on the forge
+- **Head commit SHA** — needed for Step 10. From commits, or `--json` → `jq '.pr.commits[-1].oid'`. On GitLab also note `pr.diff_refs` (`base_sha`, `start_sha`, `head_sha`) and `pr.project_path` / `pr.iid`.
 
 If you need the data structured for downstream parsing, pass `--json`. See `~/.claude/skills/FetchPR/Workflows/Full.md` for the full output schema.
 
@@ -53,7 +72,7 @@ If you need the data structured for downstream parsing, pass `--json`. See `~/.c
 ```
 
 For each existing comment, decide:
-- **Already raised, still open** — do not re-raise. If you have new evidence, add a follow-up reply rather than a fresh comment (note this in the review body).
+- **Already raised, still open** — do not re-raise. If you have new evidence, add a follow-up reply rather than a fresh comment (note this in the chat summary).
 - **Already raised and resolved** — only re-raise if you genuinely believe the resolution is wrong, and explicitly acknowledge the prior thread.
 - **Outdated (`[OUTDATED]` flag)** — the diff has shifted beneath the comment; treat as historical context, not a live concern.
 
@@ -111,7 +130,7 @@ Take every raw finding from Phase 1 and translate it into ReviewPR's output form
 | 🔴 Critical | 90-100 | Becomes an inline comment |
 | 🟠 Significant | 80-89 | Becomes an inline comment |
 | 🟡 Worth Noting | 60-79 | Dropped — below the >= 80 threshold |
-| 🟢 What's Good | N/A | Becomes a positive callout in the review summary body |
+| 🟢 What's Good | N/A | Becomes a 👍 inline comment on the relevant line, and/or a brief callout in the **chat** summary (Step 11) — never an overarching forge review body |
 
 **2. Severity emoji → ReviewPR intent emoji.** The CodeReview colour emojis (🔴🟠🟡🟢) must NEVER appear in PR comments. Replace them with the ReviewPR intent emojis from Step 8 (💭 ❓ 🔧 👍 ⛏️ etc.). Choose the intent emoji based on what the comment is doing:
 
@@ -241,7 +260,7 @@ inline comment:
 
 Length is earned by a genuinely complex finding, never by a thorough investigation.
 Investigate exhaustively, then report only the conclusion. If the evidence trail is worth
-having at all it goes in the review body, not in every comment.
+having at all it goes in the chat summary (Step 11), not in every inline comment.
 
 Too long: "💭 I noticed this diverges from how entity scope handles the same situation on a
 `subset` role, and I wanted to flag it rather than object to it. In `leftoverGroups.ts`,
@@ -337,8 +356,9 @@ Prefer 💭 and ❓ as your defaults. Use 💡 sparingly (it can read as patroni
 - **Never cite guidelines, rules, or documentation by name.** Do not reference "the coding guidelines", "the project guidelines", "CLAUDE.md", or any rule document in a comment. If a convention exists, just suggest it naturally as something the codebase does. No human reviewer says "per the coding guidelines" - they just know the convention and mention it casually.
 - **No em dashes (`—`).** Use a regular dash (`-`), a comma, or rephrase the sentence. Em dashes are a strong AI tell.
 - **No arrow characters (`→`).** If you need an arrow, use `->`.
-- **No attribution or signature lines.** Never add "Review by PAI", "Generated by", "Reviewed by AI", or any similar footer/signature to the review body or inline comments. The review should read as if a human teammate wrote it.
-- Use GitHub permalinks with full SHA: `https://github.com/{owner}/{repo}/blob/{full_sha}/{path}#L{start}-L{end}`
+- **No attribution or signature lines.** Never add "Review by PAI", "Generated by", "Reviewed by AI", or any similar footer/signature to inline comments. The review should read as if a human teammate wrote it.
+- **No overarching forge comment.** Never post an MR/PR-level summary note or non-empty GitHub review `body`. Inline comments only on the forge; chat summary only in conversation.
+- Use forge permalinks with full SHA (GitHub `blob/{sha}/...#L…`, GitLab `-/blob/{sha}/...#L…`) — see Step 10
 - One topic per comment, don't bundle unrelated things
 - Frame suggestions as questions or collaborative proposals ("would it make sense to...", "have you considered...", "what do you think about...")
 
@@ -352,7 +372,7 @@ The `line` field must reference a line that exists in the diff hunk. The line nu
 
 ## Step 9: Verify Comment Accuracy
 
-**GATE: Do NOT post any comments to GitHub until every comment has passed verification.**
+**GATE: Do NOT post any comments to the forge until every comment has passed verification.**
 
 The examples in this skill show detailed, well-researched comments that reference specific function names, method signatures, line numbers, and code behaviours. It is critical that every factual claim in a comment is verified against the actual codebase — never assume or fabricate details to match the level of detail shown in the examples. A shorter, accurate comment is always better than a detailed, wrong one.
 
@@ -368,7 +388,13 @@ For each drafted comment, verify:
 
 **If you are unsure whether something is true:** Do not include it. Uncertainty is not a reason to guess — it is a reason to omit or to phrase it as a genuine question (❓ or 🤔) rather than a factual statement.
 
-## Step 10: Create Pending Review via GitHub API
+## Step 10: Create Pending / Draft Review
+
+Branch on `forge` from Step 0. **Never auto-submit or publish.** The user edits and submits/publishes in the forge UI.
+
+**Hard ban (GitLab):** Do **not** use MCP `save_merge_request_review` (`create_diff_note`, `submit_review`, `create_note`, etc.) or `glab mr note draft publish` / Draft Notes `bulk_publish`. Those post under the user's name immediately. If drafts cannot be staged, use [ConversationFallback.md](../Reference/ConversationFallback.md).
+
+### 10A — GitHub: PENDING review via API
 
 Get the head commit SHA:
 ```bash
@@ -379,12 +405,13 @@ gh pr view {PR_NUMBER} --repo {OWNER/REPO} --json commits --jq '.commits[-1].oid
 
 1. **Do NOT pass `event`.** Omit it. Pending is the default state. Passing `event: "PENDING"` is rejected — the API only accepts `APPROVE`, `REQUEST_CHANGES`, or `COMMENT` here, and any of those would *submit* the review immediately, which is the opposite of what we want.
 2. **Do NOT mix `-f` flags with `--input` for nested arrays.** `comments` is an array of objects; that can't be expressed via `-f`. Build a single JSON object containing `commit_id`, `body`, and `comments` and pass the whole thing via `--input`. Mixing `-f body=...` with `--input file.json` causes `gh` to silently drop the `-f` fields (or send malformed payload) and the API rejects it.
+3. **No overarching review body.** Set `"body": ""`. Do **not** write an overall impression, "things I liked", comment counts, or "pending review" footer on the forge. That prose belongs only in the chat summary (Step 11). Inline `comments` are the only forge-side content.
 
 Write the **full review payload** to `/tmp/pr-review-{PR_NUMBER}.json` as a single object:
 ```json
 {
   "commit_id": "{HEAD_COMMIT_SHA}",
-  "body": "Nice work on this. {1-2 sentence overall impression, conversational tone.}\n\nA few things I liked: {specific callouts of what's well done, with file refs.}\n\nLeft {N} comments across {files reviewed}/{total files} files, mostly questions and suggestions.\n\n_This is a pending review, only visible to you. Edit or remove comments, then submit when you're happy with it._",
+  "body": "",
   "comments": [
     {
       "path": "src/handlers/auth.ts",
@@ -406,19 +433,54 @@ gh api repos/{OWNER}/{REPO}/pulls/{PR_NUMBER}/reviews \
 
 Expected response: `{"state":"PENDING", "html_url":"...#pullrequestreview-..."}`. If you get HTTP 422, re-check that `event` is absent and that no `-f` flags are mixed with `--input`.
 
-### Handling Large Numbers of Comments
-
 GitHub API accepts up to ~50 comments per review. If you have more:
 1. Include all Critical and Important findings as inline comments
 2. Group related Minor findings into a single comment on the most relevant line
-3. Put overflow Minor findings in the review body summary
+3. Put overflow Minor findings in the **chat** summary (Step 11), not in a forge review body
+
+### 10B — GitLab: Draft Notes via glab
+
+GitLab's pending equivalent is **Draft Notes** (author-only until published). Prefer the experimental CLI; fall back to the Draft Notes REST API via `glab api` if the subcommand fails.
+
+1. Resolve project path + MR IID + `diff_refs` (from Step 1 JSON: `pr.project_path`, `pr.iid`, `pr.diff_refs`).
+2. For each **inline** comment only (always pass `--file` and `--line`):
+```bash
+glab mr note draft create {IID} -R {GROUP/PROJECT} \
+  --file {path} --line {line} \
+  -m "{body}"
+```
+3. **Never** create an MR-level draft note without `--file` (no overarching summary on the forge). Keep praise, conflict heads-ups, and "left N comments" for the chat summary (Step 11) only.
+4. **Do not** run `glab mr note draft publish` or `bulk_publish`. The user publishes from the GitLab UI.
+5. If a single draft fails (bad position, experimental CLI error): put **that** comment into the conversation fallback format; continue creating drafts for the rest.
+6. If draft creation fails entirely (no `glab`, auth failure, API unavailable): full conversation fallback for **all** comments — see Step 12.
+
+**Where the user finds drafts in GitLab:** Changes tab → **Review** (pending comments). They do **not** appear as published discussions on Overview until the user publishes.
+
+Draft Notes REST fallback (when `mr note draft create` is missing/broken):
+```bash
+# project path URL-encoded; position uses diff_refs from the MR
+glab api --method POST "projects/{urlencoded_path}/merge_requests/{IID}/draft_notes" \
+  --field "note={body}" \
+  --field "position[base_sha]={base_sha}" \
+  --field "position[start_sha]={start_sha}" \
+  --field "position[head_sha]={head_sha}" \
+  --field "position[position_type]=text" \
+  --field "position[new_path]={path}" \
+  --field "position[old_path]={path}" \
+  --field "position[new_line]={line}"
+```
+
+### Permalinks in comments
+
+- GitHub: `https://github.com/{owner}/{repo}/blob/{full_sha}/{path}#L{start}-L{end}`
+- GitLab: `https://{host}/{project}/-/blob/{full_sha}/{path}#L{start}-{end}` (use `diff_refs.head_sha`)
 
 ## Step 11: Present Summary to User
 
-After creating the pending review:
+**When pending/draft posting succeeded** (all or most comments on the forge):
 
 ```
-PR #{NUMBER} review is up (pending): {PR_URL}
+PR/MR #{NUMBER} review is up (pending/draft): {URL}
 
 Left {N} comments on the diff. Mostly {brief characterisation, e.g. "questions about the migration logic and a couple of suggestions"}.
 
@@ -426,18 +488,30 @@ Things I liked:
 - {specific positive callout}
 - {another if warranted}
 
-The review is only visible to you. Have a look, edit or remove anything that doesn't land right, then submit when you're ready.
+The review is only visible to you. Have a look, edit or remove anything that doesn't land right, then submit/publish when you're ready.
 ```
 
-Also write the full review to `/tmp/pr-review-{PR_NUMBER}.md` as a local backup.
+Also write the full review to `/tmp/pr-review-{NUMBER}.md` or `/tmp/mr-review-{IID}.md` as a local backup.
 
-**DO NOT paste the full review into the conversation** — inline comments on the diff are the primary output. The conversation summary is a pointer.
+**DO NOT paste the full review into the conversation** when drafts succeeded — inline comments on the diff are the primary output. The conversation summary is a pointer.
 
-## Step 12: Handle Errors
+**When using conversation fallback** (Step 12): the chat **is** the primary output — follow ConversationFallback.md exactly (filename, line, ±2 context, comment, horizontal rule + padding).
 
-**If GitHub API rejects a comment** (e.g., line number not in diff): skip that comment, note it in the summary, include it in the review body instead.
+## Step 12: Handle Errors and Conversation Fallback
 
-**If pending review creation fails entirely:** Fall back to writing `/tmp/pr-review-{PR_NUMBER}.md`, paste it into conversation, explain what happened.
+**If the forge rejects a single comment** (e.g. line not in diff): skip attaching it as a draft/pending note, note it in the chat summary, and include it via ConversationFallback layout. Do not stuff rejected comments into an overarching forge review body.
+
+**If pending/draft creation fails entirely** (GitHub Create-Review failure, or GitLab drafts unavailable):
+
+1. Explain in one line why (e.g. "Couldn't open a draft review on GitLab; comments below for you to paste or submit manually.").
+2. Write `/tmp/pr-review-{N}.md` or `/tmp/mr-review-{N}.md` as backup.
+3. Lay out **every** comment in the conversation using the mandatory format in [Reference/ConversationFallback.md](../Reference/ConversationFallback.md):
+   - `filename:` / `line:`
+   - two lines above, comment line marked with `<<< >>>`, two lines below
+   - the comment body
+   - horizontal rule + padding between comments
+
+**Never** "recover" by publishing comments to GitLab/GitHub as a substitute for drafts.
 
 ## Review Aspects Reference
 
