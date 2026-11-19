@@ -21,5 +21,6 @@ Load when writing or editing review comments. The entrypoint `SKILL.md` only sum
 - **Positive framing** — acknowledges what's well done generously. If something looks wrong, asks questions to understand the author's reasoning first.
 - **Forge permalinks** — links use full SHA for permanent references (GitHub or GitLab)
 - **Never auto-publish** — drafts only; conversation fallback if drafts cannot be opened ([ConversationFallback.md](ConversationFallback.md))
+- **Inline only on the forge** — no overarching PR/MR summary comment (empty GitHub review `body`; no GitLab draft without `--file`/`--line`). Chat gets the short pointer summary.
 
 Tone, emoji, and comment-shape detail for inline bodies lives in `Workflows/Review.md` (Step 8).

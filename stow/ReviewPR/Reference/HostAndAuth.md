@@ -16,8 +16,8 @@ Same rules as FetchPR:
 
 | Forge | Pending / draft write path |
 |-------|----------------------------|
-| **GitHub** | `gh api` Create Review **without** `event` → `PENDING`. Never submit (`APPROVE` / `REQUEST_CHANGES` / `COMMENT`) from this skill. |
-| **GitLab** | Prefer `glab mr note draft create` (experimental draft notes). If that subcommand fails, try Draft Notes REST via `glab api` `POST projects/:id/merge_requests/:iid/draft_notes`. **Never** publish (`glab mr note draft publish`, `bulk_publish`, or MCP `submit_review` / `create_diff_note` / `create_note`). Those post under the user's name immediately. |
+| **GitHub** | `gh api` Create Review **without** `event` → `PENDING`, with **empty** `body` and inline `comments` only. Never submit (`APPROVE` / `REQUEST_CHANGES` / `COMMENT`) from this skill. |
+| **GitLab** | Prefer `glab mr note draft create` with `--file` + `--line` (experimental draft notes). If that subcommand fails, try Draft Notes REST via `glab api` `POST projects/:id/merge_requests/:iid/draft_notes` with a text position. **Never** create an MR-level draft without a file/line. **Never** publish (`glab mr note draft publish`, `bulk_publish`, or MCP `submit_review` / `create_diff_note` / `create_note`). Those post under the user's name immediately. |
 | **GitLab drafts unavailable** | Use `Reference/ConversationFallback.md` — lay out every comment in chat. Do not publish as a substitute. |
 
 ## 3. Why MCP must not write reviews for this skill
